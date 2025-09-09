@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ProjectData, PageInfo } from '../../../types/workflow.types';
 
 interface Step1BasicInfoProps {
@@ -55,6 +56,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
 
   // 페이지 추가 시 + 버튼이 보이도록 스크롤
   const scrollToAddButton = () => {
+    // 애니메이션이 완료된 후 스크롤
     setTimeout(() => {
       if (addButtonRef.current && scrollContainerRef.current) {
         const buttonRect = addButtonRef.current.getBoundingClientRect();
@@ -68,7 +70,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
           });
         }
       }
-    }, 100);
+    }, 400); // 애니메이션 완료 후 실행
   };
 
   // 페이지 추가 함수
@@ -415,15 +417,31 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
         {/* 페이지 구성 스크롤 영역 - 전체 화면 폭 사용 */}
         <div className="w-full">
           <div className="overflow-x-auto scroll-smooth" ref={scrollContainerRef}>
-            <div className="flex gap-6 pb-2" style={{ 
-              minWidth: 'max-content',
-              paddingLeft: `${scrollPadding}px`,
-              paddingRight: `${scrollPadding}px`
-            }}>
+            <motion.div 
+              className="flex gap-6 pb-2" 
+              style={{ 
+                minWidth: 'max-content',
+                paddingLeft: `${scrollPadding}px`,
+                paddingRight: `${scrollPadding}px`
+              }}
+              layout
+            >
+            <AnimatePresence mode="popLayout">
             {pages.map((page, index) => (
-              <div
+              <motion.div
                 key={page.id}
-                className="bg-white rounded-xl p-6 hover:shadow-lg transition-all h-96 flex flex-col w-[480px] flex-shrink-0 shadow-sm"
+                layout
+                initial={{ opacity: 0, scale: 0.8, x: 50 }}
+                animate={{ opacity: 1, scale: 1, x: 0 }}
+                exit={{ opacity: 0, scale: 0.8, x: -50 }}
+                transition={{ 
+                  duration: 0.3,
+                  type: "spring",
+                  stiffness: 300,
+                  damping: 25
+                }}
+                className="bg-white rounded-xl p-6 hover:shadow-lg h-96 flex flex-col w-[480px] flex-shrink-0 shadow-sm"
+                whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-lg font-semibold text-gray-700">
@@ -463,22 +481,30 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   placeholder="페이지 설명 (선택)"
                   className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent text-base focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all resize-none flex-1 text-gray-900 placeholder-gray-400"
                 />
-              </div>
+              </motion.div>
             ))}
+            </AnimatePresence>
             
             {/* 새 페이지 추가 버튼 - 아이콘 형태 */}
-            <div className="flex items-center justify-center w-20 flex-shrink-0">
-              <button
+            <motion.div 
+              className="flex items-center justify-center w-20 flex-shrink-0"
+              layout
+              transition={{ duration: 0.3 }}
+            >
+              <motion.button
                 ref={addButtonRef}
                 onClick={addNewPage}
-                className="w-14 h-14 rounded-full bg-white shadow-sm border-2 border-gray-200 hover:border-[#3e88ff] flex items-center justify-center transition-all hover:shadow-md hover:scale-110 group"
+                className="w-14 h-14 rounded-full bg-white shadow-sm border-2 border-gray-200 hover:border-[#3e88ff] flex items-center justify-center hover:shadow-md group"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.95 }}
+                transition={{ type: "spring", stiffness: 400, damping: 17 }}
               >
                 <svg className="w-7 h-7 text-gray-400 group-hover:text-[#3e88ff] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
                 </svg>
-              </button>
-            </div>
-            </div>
+              </motion.button>
+            </motion.div>
+            </motion.div>
           </div>
         </div>
       </div>
