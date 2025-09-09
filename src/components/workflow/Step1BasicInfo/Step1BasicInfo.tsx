@@ -76,13 +76,31 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   // 페이지 추가 함수
   const addNewPage = () => {
     const newId = Math.max(...pages.map(p => parseInt(p.id)), 0) + 1;
-    setPages([...pages, {
-      id: newId.toString(),
-      pageNumber: pages.length + 1,
-      topic: '',
-      description: ''
-    }]);
-    scrollToAddButton();
+    
+    // 새 페이지 추가 전에 미리 스크롤 시작
+    if (scrollContainerRef.current) {
+      const container = scrollContainerRef.current;
+      const currentScrollLeft = container.scrollLeft;
+      const cardWidth = 480; // 카드 너비
+      const cardGap = 24; // gap-6 = 1.5rem = 24px
+      const targetScrollLeft = currentScrollLeft + cardWidth + cardGap;
+      
+      // 부드러운 스크롤 시작
+      container.scrollTo({
+        left: targetScrollLeft,
+        behavior: 'smooth'
+      });
+    }
+    
+    // 약간의 지연 후 페이지 추가 (스크롤이 시작된 후)
+    setTimeout(() => {
+      setPages([...pages, {
+        id: newId.toString(),
+        pageNumber: pages.length + 1,
+        topic: '',
+        description: ''
+      }]);
+    }, 50);
   };
 
   // 페이지 삭제 함수
