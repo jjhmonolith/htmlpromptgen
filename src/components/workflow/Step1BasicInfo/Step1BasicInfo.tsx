@@ -148,8 +148,8 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
       {/* 상단 흰색 영역 - 뷰포트 전체 너비 */}
-      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-16 pb-8">
-        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 pt-2 pb-8">
+      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-12 pb-6">
+        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
           {/* 상단 영역: 기본 정보 + 프로젝트 설정 (3등분) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
           
