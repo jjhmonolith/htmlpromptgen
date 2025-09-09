@@ -4,9 +4,10 @@ import { Button, Input, Card } from '../common';
 
 interface ApiKeyManagerProps {
   onKeyValidated: (key: string) => void;
+  onCancel?: () => void;
 }
 
-export const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ onKeyValidated }) => {
+export const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ onKeyValidated, onCancel }) => {
   const [apiKey, setApiKey] = useState('');
   const [isValidating, setIsValidating] = useState(false);
   const [error, setError] = useState<string | null>(null);

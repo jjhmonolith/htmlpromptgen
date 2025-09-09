@@ -74,14 +74,14 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-16">
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 pt-2 pb-8">
           {/* 상단 영역: 기본 정보 + 프로젝트 설정 (3등분) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-[72px]">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
           
           {/* 1/3: 기본 정보 */}
           <div className="pb-6">
-            <div className="space-y-6">
+            <div className="space-y-10">
               {/* 프로젝트 제목 */}
               <div>
-                <label className="block text-xl font-semibold text-gray-900 mb-3">
+                <label className="block text-xl font-semibold text-gray-900 mb-4">
                   프로젝트 제목 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -89,7 +89,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   value={projectTitle}
                   onChange={(e) => setProjectTitle(e.target.value)}
                   placeholder="예: 초등학교 3학년 과학 - 물의 순환"
-                  className={`w-full px-5 py-4 rounded-xl bg-gray-50 border-2 ${
+                  className={`w-full px-4 py-3 rounded-xl bg-gray-50 border-2 ${
                     errors.projectTitle ? 'border-red-400 bg-red-50' : 'border-transparent'
                   } focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-lg text-gray-900 placeholder-gray-400`}
                 />
@@ -100,7 +100,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
 
               {/* 대상 학습자 */}
               <div>
-                <label className="block text-xl font-semibold text-gray-900 mb-3">
+                <label className="block text-xl font-semibold text-gray-900 mb-4">
                   대상 학습자 <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -108,7 +108,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   placeholder="예: 초등학교 3학년, 8-9세"
-                  className={`w-full px-5 py-4 rounded-xl bg-gray-50 border-2 ${
+                  className={`w-full px-4 py-3 rounded-xl bg-gray-50 border-2 ${
                     errors.targetAudience ? 'border-red-400 bg-red-50' : 'border-transparent'
                   } focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-lg text-gray-900 placeholder-gray-400`}
                 />
@@ -121,7 +121,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
 
           {/* 2/3: 레이아웃 */}
           <div className="pb-6">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">레이아웃</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">레이아웃</h3>
             <div className="grid grid-cols-2 gap-4">
               <label className="cursor-pointer group">
                 <input
@@ -135,7 +135,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   className={`relative overflow-hidden rounded-xl h-48 transition-all duration-300 ${
                     layoutMode === 'scrollable' 
                       ? 'ring-4 shadow-lg transform scale-105' 
-                      : 'hover:scale-105 hover:shadow-md'
+                      : 'grayscale hover:grayscale-0 hover:scale-105 hover:shadow-md'
                   }`}
                   style={{
                     backgroundImage: 'url(/scroll.png)',
@@ -175,7 +175,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   className={`relative overflow-hidden rounded-xl h-48 transition-all duration-300 ${
                     layoutMode === 'fixed' 
                       ? 'ring-4 shadow-lg transform scale-105' 
-                      : 'hover:scale-105 hover:shadow-md'
+                      : 'grayscale hover:grayscale-0 hover:scale-105 hover:shadow-md'
                   }`}
                   style={{
                     backgroundImage: 'url(/fixed.png)',
@@ -208,7 +208,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
 
           {/* 3/3: 생성 모드 */}
           <div className="pb-6 relative">
-            <h3 className="text-xl font-semibold text-gray-900 mb-6">생성 모드</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-4">생성 모드</h3>
             {/* Warning message when both fixed and enhanced are selected */}
             {layoutMode === 'fixed' && contentMode === 'enhanced' && (
               <div className="absolute top-0 right-0 bg-orange-100 text-orange-700 text-xs px-2 py-1 rounded-lg">
@@ -228,7 +228,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   className={`relative overflow-hidden rounded-xl h-48 transition-all duration-300 ${
                     contentMode === 'enhanced' 
                       ? 'ring-4 shadow-lg transform scale-105' 
-                      : 'hover:scale-105 hover:shadow-md'
+                      : 'grayscale hover:grayscale-0 hover:scale-105 hover:shadow-md'
                   }`}
                   style={{
                     backgroundImage: 'url(/aigen.png)',
@@ -268,7 +268,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   className={`relative overflow-hidden rounded-xl h-48 transition-all duration-300 ${
                     contentMode === 'restricted' 
                       ? 'ring-4 shadow-lg transform scale-105' 
-                      : 'hover:scale-105 hover:shadow-md'
+                      : 'grayscale hover:grayscale-0 hover:scale-105 hover:shadow-md'
                   }`}
                   style={{
                     backgroundImage: 'url(/limit.png)',
@@ -305,7 +305,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       {/* 나머지 콘텐츠 영역 */}
       <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 pb-8">
         {/* 중간 영역: 페이지 구성 헤더 */}
-        <div className="flex items-center justify-between mb-4 mt-6">
+        <div className="flex items-center justify-between mb-6 mt-8">
           <div>
             <h3 className="text-xl font-semibold text-gray-900">
               페이지 구성 <span className="text-red-500">*</span>
@@ -347,7 +347,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
             {pages.map((page, index) => (
               <div
                 key={page.id}
-                className="bg-white rounded-xl p-8 hover:shadow-md transition-all h-[416px] flex flex-col w-[544px] flex-shrink-0 shadow-sm"
+                className="bg-white rounded-xl p-6 hover:shadow-md transition-all h-96 flex flex-col w-[480px] flex-shrink-0 shadow-sm"
               >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-lg font-semibold text-gray-700">
@@ -374,7 +374,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                     setPages(updated);
                   }}
                   placeholder="페이지 주제"
-                  className="w-full px-5 py-4 mb-5 rounded-xl bg-gray-50 border-2 border-transparent text-lg focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-3 mb-4 rounded-xl bg-gray-50 border-2 border-transparent text-lg focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-gray-900 placeholder-gray-400"
                 />
                 
                 <textarea
@@ -385,10 +385,30 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                     setPages(updated);
                   }}
                   placeholder="페이지 설명 (선택)"
-                  className="w-full px-5 py-4 rounded-xl bg-gray-50 border-2 border-transparent text-base focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all resize-none flex-1 text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent text-base focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all resize-none flex-1 text-gray-900 placeholder-gray-400"
                 />
               </div>
             ))}
+            
+            {/* 새 페이지 추가 버튼 - 아이콘 형태 */}
+            <div className="flex items-center justify-center w-20 flex-shrink-0">
+              <button
+                onClick={() => {
+                  const newId = Math.max(...pages.map(p => parseInt(p.id)), 0) + 1;
+                  setPages([...pages, {
+                    id: newId.toString(),
+                    pageNumber: pages.length + 1,
+                    topic: '',
+                    description: ''
+                  }]);
+                }}
+                className="w-14 h-14 rounded-full bg-white shadow-sm border-2 border-gray-200 hover:border-[#3e88ff] flex items-center justify-center transition-all hover:shadow-md hover:scale-110 group"
+              >
+                <svg className="w-7 h-7 text-gray-400 group-hover:text-[#3e88ff] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+              </button>
+            </div>
             
           </div>
         </div>

@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ApiKeyManager } from '../ApiKeyManager';
 import { ResultDisplay } from '../ResultDisplay';
 import { WorkflowContainer } from '../workflow';
-import { Button } from '../common';
+import { AppleGrid, AppleGridItem, AppleCard, AppleButton } from '../apple';
+import { GNB } from '../common';
 import { Project } from '../../types';
 import { FinalPrompt } from '../../types/workflow.types';
 import { projectService } from '../../services/project.service';
@@ -48,7 +49,6 @@ export const WorkSpace: React.FC<WorkSpaceProps> = ({ project, onBack }) => {
     }));
   };
 
-
   const handleReset = () => {
     setGeneratedPrompt(null);
     setCurrentProject(prev => ({
@@ -58,7 +58,6 @@ export const WorkSpace: React.FC<WorkSpaceProps> = ({ project, onBack }) => {
       hasModifications: false
     }));
   };
-
 
   const handleWorkflowComplete = (finalPrompt: FinalPrompt) => {
     setGeneratedPrompt(finalPrompt.htmlPrompt);
@@ -97,35 +96,59 @@ export const WorkSpace: React.FC<WorkSpaceProps> = ({ project, onBack }) => {
     );
   };
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="container mx-auto px-4 py-8">
-        <header className="mb-8">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button
-                onClick={onBack}
-                variant="secondary"
-                size="sm"
-              >
-                ← 홈으로
-              </Button>
-              <h1 className="text-2xl font-bold text-gray-900">
-                {currentProject.name}
-              </h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-gray-500">
-                자동 저장됨
-              </div>
-            </div>
-          </div>
-        </header>
+  const getProgressPercentage = () => {
+    const steps = ['api-key', 'course-input', 'workflow', 'result'];
+    const currentIndex = steps.indexOf(currentProject.currentStep);
+    return Math.max(0, (currentIndex / (steps.length - 1)) * 100);
+  };
 
-        <main className="max-w-4xl mx-auto">
-          {getCurrentView()}
-        </main>
+  const getStepName = () => {
+    switch (currentProject.currentStep) {
+      case 'api-key': return 'API 키 설정';
+      case 'course-input': return '워크플로우 진행';
+      case 'workflow': return '프롬프트 생성';
+      case 'result': return '결과 확인';
+      default: return '준비 중';
+    }
+  };
+
+  // Get workflow steps for GNB
+  const getWorkflowSteps = () => {
+    const workflowSteps = [
+      { num: 1, title: '기본 정보', isCompleted: false },
+      { num: 2, title: '비주얼 아이덴티티', isCompleted: false },
+      { num: 3, title: '레이아웃 제안', isCompleted: false },
+      { num: 4, title: '애니메이션/상호작용', isCompleted: false },
+      { num: 5, title: '최종 프롬프트', isCompleted: false }
+    ];
+
+    // This is a simplified version - in real implementation, 
+    // you'd get the actual completion status from workflowState
+    return workflowSteps;
+  };
+
+  return (
+    <>
+      <GNB 
+        onLogoClick={onBack} 
+        projectName={currentProject.name || '새 프로젝트'}
+        lastSaved={currentProject.updatedAt}
+        currentStep={1}  // This should be from actual workflow state
+        steps={getWorkflowSteps()}
+      />
+      <div className="min-h-screen py-6" style={{ 
+        backgroundColor: '#f5f5f7'
+      }}>
+        <AppleGrid>
+
+        {/* Main Content Area */}
+        <AppleGridItem span={12}>
+          <div className="transition-all duration-300 ease-in-out">
+            {getCurrentView()}
+          </div>
+        </AppleGridItem>
+        </AppleGrid>
       </div>
-    </div>
+    </>
   );
 };

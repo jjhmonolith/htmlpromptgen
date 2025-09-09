@@ -151,38 +151,48 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     ];
 
     return (
-      <div className="flex justify-between mb-8">
-        {steps.map((step, index) => (
-          <div key={step.num} className="flex items-center">
-            <button
-              onClick={() => goToStep(step.num as any)}
-              disabled={step.num > workflowState.currentStep && !workflowState.stepCompletion[`step${step.num - 1}` as keyof typeof workflowState.stepCompletion]}
-              className={`
-                w-10 h-10 rounded-full flex items-center justify-center text-sm font-medium
-                ${workflowState.currentStep === step.num 
-                  ? 'bg-blue-600 text-white' 
-                  : workflowState.stepCompletion[`step${step.num}` as keyof typeof workflowState.stepCompletion]
-                    ? 'bg-green-600 text-white cursor-pointer hover:bg-green-700'
-                    : 'bg-gray-300 text-gray-600 cursor-not-allowed'
-                }
-              `}
-            >
-              {step.num}
-            </button>
-            <span className="ml-2 text-sm font-medium hidden sm:inline">
-              {step.name}
-            </span>
-            {index < steps.length - 1 && (
-              <div className={`
-                h-0.5 w-12 mx-2
-                ${workflowState.stepCompletion[`step${step.num}` as keyof typeof workflowState.stepCompletion]
-                  ? 'bg-green-600'
-                  : 'bg-gray-300'
-                }
-              `} />
-            )}
-          </div>
-        ))}
+      <div className="apple-card p-8 mb-8">
+        <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
+          {steps.map((step, index) => (
+            <div key={step.num} className="flex items-center">
+              <div className="flex flex-col items-center">
+                <button
+                  onClick={() => goToStep(step.num as any)}
+                  disabled={step.num > workflowState.currentStep && !workflowState.stepCompletion[`step${step.num - 1}` as keyof typeof workflowState.stepCompletion]}
+                  className={`
+                    w-16 h-16 rounded-full flex items-center justify-center text-sm font-bold transition-apple
+                    ${workflowState.currentStep === step.num 
+                      ? 'bg-apple-blue text-white shadow-apple-lg border-2 border-apple-blue/30' 
+                      : workflowState.stepCompletion[`step${step.num}` as keyof typeof workflowState.stepCompletion]
+                        ? 'bg-apple-green text-white cursor-pointer hover:bg-apple-green/90 shadow-apple-md'
+                        : 'bg-apple-gray-2 text-apple-gray-5 cursor-not-allowed'
+                    }
+                  `}
+                >
+                  {workflowState.stepCompletion[`step${step.num}` as keyof typeof workflowState.stepCompletion] ? (
+                    <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    step.num
+                  )}
+                </button>
+                <span className="mt-3 text-sm font-medium text-gray-900 text-center">
+                  {step.name}
+                </span>
+              </div>
+              {index < steps.length - 1 && (
+                <div className={`
+                  hidden sm:block h-1 w-20 mx-6 rounded-full
+                  ${workflowState.stepCompletion[`step${step.num}` as keyof typeof workflowState.stepCompletion]
+                    ? 'bg-apple-green'
+                    : 'bg-apple-gray-3'
+                  }
+                `} />
+              )}
+            </div>
+          ))}
+        </div>
       </div>
     );
   };
@@ -240,15 +250,14 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container mx-auto px-4">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">교육 콘텐츠 프롬프트 생성</h1>
-          <p className="text-gray-600 mt-2">5단계 프로세스를 통해 최적화된 프롬프트를 생성합니다</p>
+    <div className="min-h-screen py-6" style={{ 
+      backgroundColor: '#f5f5f7'
+    }}>
+      <div className="apple-grid">
+        {/* Current Step Content */}
+        <div className="col-span-12">
+          {renderCurrentStep()}
         </div>
-        
-        {renderStepIndicator()}
-        {renderCurrentStep()}
       </div>
     </div>
   );
