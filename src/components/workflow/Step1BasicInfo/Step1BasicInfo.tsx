@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { ProjectData, PageInfo } from '../../../types/workflow.types';
 
 interface Step1BasicInfoProps {
@@ -25,6 +25,83 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   );
   const [suggestions, setSuggestions] = useState(initialData?.suggestions || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const addButtonRef = useRef<HTMLButtonElement>(null);
+  const [scrollPadding, setScrollPadding] = useState<number>(0);
+  
+  // 패딩 계산 및 업데이트
+  useEffect(() => {
+    const updatePadding = () => {
+      const viewportWidth = window.innerWidth;
+      const maxWidth = 1280; // 80rem = 1280px
+      
+      // Tailwind 패딩 반응형 값 매칭: px-4 xl:px-8 2xl:px-12
+      let basePadding = 16; // px-4 = 1rem
+      if (viewportWidth >= 1536) { // 2xl
+        basePadding = 48; // px-12 = 3rem
+      } else if (viewportWidth >= 1280) { // xl
+        basePadding = 32; // px-8 = 2rem
+      }
+      
+      const marginPadding = Math.max(0, (viewportWidth - maxWidth) / 2);
+      setScrollPadding(marginPadding + basePadding);
+    };
+    
+    updatePadding();
+    window.addEventListener('resize', updatePadding);
+    return () => window.removeEventListener('resize', updatePadding);
+  }, []);
+
+  // 페이지 추가 시 + 버튼이 보이도록 스크롤
+  const scrollToAddButton = () => {
+    setTimeout(() => {
+      if (addButtonRef.current && scrollContainerRef.current) {
+        const buttonRect = addButtonRef.current.getBoundingClientRect();
+        const containerRect = scrollContainerRef.current.getBoundingClientRect();
+        
+        // + 버튼이 화면 밖에 있으면 스크롤
+        if (buttonRect.right > containerRect.right) {
+          scrollContainerRef.current.scrollTo({
+            left: scrollContainerRef.current.scrollLeft + (buttonRect.right - containerRect.right) + 20,
+            behavior: 'smooth'
+          });
+        }
+      }
+    }, 100);
+  };
+
+  // 페이지 추가 함수
+  const addNewPage = () => {
+    const newId = Math.max(...pages.map(p => parseInt(p.id)), 0) + 1;
+    setPages([...pages, {
+      id: newId.toString(),
+      pageNumber: pages.length + 1,
+      topic: '',
+      description: ''
+    }]);
+    scrollToAddButton();
+  };
+
+  // 페이지 삭제 함수
+  const removePage = (pageId: string) => {
+    const newPages = pages.filter(p => p.id !== pageId);
+    setPages(newPages);
+    
+    // 삭제 후 스크롤 위치 조정
+    setTimeout(() => {
+      if (scrollContainerRef.current) {
+        const container = scrollContainerRef.current;
+        const scrollWidth = container.scrollWidth;
+        const clientWidth = container.clientWidth;
+        
+        // 전체 콘텐츠가 화면보다 작으면 스크롤을 원위치로
+        if (scrollWidth <= clientWidth) {
+          container.scrollTo({ left: 0, behavior: 'smooth' });
+        }
+      }
+    }, 100);
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -71,7 +148,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
       {/* 상단 흰색 영역 - 뷰포트 전체 너비 */}
-      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-16">
+      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-16 pb-8">
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 pt-2 pb-8">
           {/* 상단 영역: 기본 정보 + 프로젝트 설정 (3등분) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
@@ -302,52 +379,51 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
         </div>
       </div>
 
-      {/* 나머지 콘텐츠 영역 */}
-      <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 pb-8">
-        {/* 중간 영역: 페이지 구성 헤더 */}
-        <div className="flex items-center justify-between mb-6 mt-8">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900">
-              페이지 구성 <span className="text-red-500">*</span>
-              <span className="text-sm text-gray-600 ml-2 font-normal">
-                {pages.filter(p => p.topic.trim()).length}개 페이지
-              </span>
-            </h3>
-            {errors.pages && (
-              <p className="text-red-500 text-sm mt-1">{errors.pages}</p>
-            )}
+      {/* 페이지 구성 영역 - 뷰포트 전체 너비, 회색 배경 */}
+      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] py-8" style={{ backgroundColor: '#f5f5f7' }}>
+        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
+          {/* 페이지 구성 헤더 */}
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900">
+                페이지 구성 <span className="text-red-500">*</span>
+                <span className="text-sm text-gray-600 ml-2 font-normal">
+                  {pages.filter(p => p.topic.trim()).length}개 페이지
+                </span>
+              </h3>
+              {errors.pages && (
+                <p className="text-red-500 text-sm mt-1">{errors.pages}</p>
+              )}
+            </div>
+            <button
+              onClick={addNewPage}
+              className="px-4 py-2 text-white rounded-full transition-all font-medium text-sm"
+              style={{
+                backgroundColor: '#3e88ff',
+                ':hover': {
+                  backgroundColor: '#2c6ae6'
+                }
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#2c6ae6'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#3e88ff'}
+            >
+              + 새 페이지
+            </button>
           </div>
-          <button
-            onClick={() => {
-              const newId = Math.max(...pages.map(p => parseInt(p.id)), 0) + 1;
-              setPages([...pages, {
-                id: newId.toString(),
-                pageNumber: pages.length + 1,
-                topic: '',
-                description: ''
-              }]);
-            }}
-            className="px-4 py-2 text-white rounded-full transition-all font-medium text-sm"
-            style={{
-              backgroundColor: '#3e88ff',
-              ':hover': {
-                backgroundColor: '#2c6ae6'
-              }
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#2c6ae6'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#3e88ff'}
-          >
-            + 새 페이지
-          </button>
         </div>
 
         {/* 페이지 구성 스크롤 영역 - 전체 화면 폭 사용 */}
-        <div className="overflow-x-auto pb-4 mb-6 -mx-4 xl:-mx-8 2xl:-mx-12">
-          <div className="flex gap-6 min-w-max px-4 xl:px-8 2xl:px-12">
+        <div className="w-full">
+          <div className="overflow-x-auto scroll-smooth" ref={scrollContainerRef}>
+            <div className="flex gap-6 pb-2" style={{ 
+              minWidth: 'max-content',
+              paddingLeft: `${scrollPadding}px`,
+              paddingRight: `${scrollPadding}px`
+            }}>
             {pages.map((page, index) => (
               <div
                 key={page.id}
-                className="bg-white rounded-xl p-6 hover:shadow-md transition-all h-96 flex flex-col w-[480px] flex-shrink-0 shadow-sm"
+                className="bg-white rounded-xl p-6 hover:shadow-lg transition-all h-96 flex flex-col w-[480px] flex-shrink-0 shadow-sm"
               >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-lg font-semibold text-gray-700">
@@ -355,7 +431,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   </span>
                   {pages.length > 1 && (
                     <button
-                      onClick={() => setPages(pages.filter(p => p.id !== page.id))}
+                      onClick={() => removePage(page.id)}
                       className="text-red-400 hover:text-red-600 transition-colors p-1"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -393,15 +469,8 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
             {/* 새 페이지 추가 버튼 - 아이콘 형태 */}
             <div className="flex items-center justify-center w-20 flex-shrink-0">
               <button
-                onClick={() => {
-                  const newId = Math.max(...pages.map(p => parseInt(p.id)), 0) + 1;
-                  setPages([...pages, {
-                    id: newId.toString(),
-                    pageNumber: pages.length + 1,
-                    topic: '',
-                    description: ''
-                  }]);
-                }}
+                ref={addButtonRef}
+                onClick={addNewPage}
                 className="w-14 h-14 rounded-full bg-white shadow-sm border-2 border-gray-200 hover:border-[#3e88ff] flex items-center justify-center transition-all hover:shadow-md hover:scale-110 group"
               >
                 <svg className="w-7 h-7 text-gray-400 group-hover:text-[#3e88ff] transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -409,12 +478,14 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                 </svg>
               </button>
             </div>
-            
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* 하단 영역: 추가 제안사항 */}
-        <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm">
+      {/* 하단 영역: 추가 제안사항 */}
+      <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 pb-8">
+        <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm mt-8">
           <h3 className="text-lg font-semibold text-gray-900 mb-6">추가 제안사항</h3>
           <textarea
             value={suggestions}
