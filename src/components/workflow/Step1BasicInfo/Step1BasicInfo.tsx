@@ -30,6 +30,28 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const [scrollPadding, setScrollPadding] = useState<number>(0);
+  const [shouldScrollToEnd, setShouldScrollToEnd] = useState(false);
+  
+  // 페이지가 추가될 때 스크롤
+  useEffect(() => {
+    if (shouldScrollToEnd && addButtonRef.current && scrollContainerRef.current) {
+      setTimeout(() => {
+        if (addButtonRef.current && scrollContainerRef.current) {
+          const buttonRect = addButtonRef.current.getBoundingClientRect();
+          const containerRect = scrollContainerRef.current.getBoundingClientRect();
+          
+          // + 버튼이 화면 밖에 있으면 스크롤
+          if (buttonRect.right > containerRect.right) {
+            scrollContainerRef.current.scrollTo({
+              left: scrollContainerRef.current.scrollLeft + (buttonRect.right - containerRect.right) + 20,
+              behavior: 'smooth'
+            });
+          }
+        }
+        setShouldScrollToEnd(false);
+      }, 300); // 애니메이션이 시작된 후 스크롤
+    }
+  }, [pages, shouldScrollToEnd]);
   
   // 패딩 계산 및 업데이트
   useEffect(() => {
@@ -85,21 +107,8 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       description: ''
     }]);
     
-    // 페이지 추가 후 스크롤 (애니메이션과 함께)
-    setTimeout(() => {
-      if (addButtonRef.current && scrollContainerRef.current) {
-        const buttonRect = addButtonRef.current.getBoundingClientRect();
-        const containerRect = scrollContainerRef.current.getBoundingClientRect();
-        
-        // + 버튼이 화면 밖에 있으면 스크롤
-        if (buttonRect.right > containerRect.right) {
-          scrollContainerRef.current.scrollTo({
-            left: scrollContainerRef.current.scrollLeft + (buttonRect.right - containerRect.right) + 20,
-            behavior: 'smooth'
-          });
-        }
-      }
-    }, 100); // 애니메이션 시작 후 스크롤
+    // 스크롤 플래그 설정
+    setShouldScrollToEnd(true);
   };
 
   // 페이지 삭제 함수
