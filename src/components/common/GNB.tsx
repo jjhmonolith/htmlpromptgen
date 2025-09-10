@@ -11,7 +11,7 @@ interface GNBProps {
   steps?: Array<{ num: number; title: string; isCompleted: boolean }>;
 }
 
-export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, progressPercentage, lastSaved, currentStep = 1, steps }) => {
+export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, currentStep = 1, steps }) => {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(
     localStorage.getItem('anthropic_api_key')
@@ -69,7 +69,7 @@ export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, progressPerc
                       <div className="relative group">
                         <div className={`
                           relative transition-all duration-300 flex items-center justify-center
-                          ${isActive ? 'scale-110' : 'scale-100'}
+                          ${scale}
                         `}>
                           {/* Step Icons - No Background */}
                           <div className={`

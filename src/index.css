@@ -301,8 +301,8 @@ body {
   -webkit-overflow-scrolling: touch; /* iOS 관성 스크롤 */
   overscroll-behavior-inline: contain; /* 가로 체인 방지 */
   scrollbar-gutter: stable; /* 레이아웃 점프 최소화 */
-  padding-bottom: 20px; /* 그림자 공간 확보 */
-  margin-bottom: -12px; /* 패딩 보정 */
+  padding-bottom: 12px; /* 그림자 공간 확보 - 줄임 */
+  margin-bottom: -8px; /* 패딩 보정 - 조정 */
   
   /* smooth 스크롤 강제 해제 - 네이티브 감각 유지 */
   scroll-behavior: auto !important;

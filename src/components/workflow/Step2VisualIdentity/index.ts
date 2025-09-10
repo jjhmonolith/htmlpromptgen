@@ -1,0 +1,1 @@
+export { Step2VisualIdentity } from './Step2VisualIdentity';

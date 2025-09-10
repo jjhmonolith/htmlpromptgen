@@ -27,6 +27,35 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   const [suggestions, setSuggestions] = useState(initialData?.suggestions || '');
   const [errors, setErrors] = useState<Record<string, string>>({});
   
+  // 테스트 모드용 목업 데이터
+  const mockData = {
+    projectTitle: '초등학교 3학년 과학 - 물의 순환',
+    targetAudience: '초등학교 3학년, 8-9세',
+    layoutMode: 'scrollable' as const,
+    contentMode: 'enhanced' as const,
+    pages: [
+      {
+        id: '1',
+        pageNumber: 1,
+        topic: '물의 순환이란 무엇일까?',
+        description: '물의 순환의 개념과 중요성에 대해 학습합니다. 일상생활에서 볼 수 있는 물의 변화를 관찰하고 이해합니다.'
+      },
+      {
+        id: '2', 
+        pageNumber: 2,
+        topic: '증발과 응결 과정',
+        description: '태양 에너지에 의한 물의 증발과 구름 형성 과정을 시각적 자료와 함께 학습합니다.'
+      },
+      {
+        id: '3',
+        pageNumber: 3,
+        topic: '강수와 지표수의 흐름',
+        description: '비와 눈이 내리는 과정, 강과 바다로 흘러가는 물의 흐름을 이해하고 물의 순환 사이클을 완성합니다.'
+      }
+    ],
+    suggestions: '시각적 애니메이션과 실험 활동을 포함해 주세요. 아이들이 직접 관찰할 수 있는 예시를 많이 넣어주시고, 퀴즈나 상호작용 요소도 추가해 주세요.'
+  };
+  
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const [scrollPadding, setScrollPadding] = useState<number>(0);
@@ -227,6 +256,17 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
+  // 테스트 모드 실행 함수
+  const handleTestMode = () => {
+    setProjectTitle(mockData.projectTitle);
+    setTargetAudience(mockData.targetAudience);
+    setLayoutMode(mockData.layoutMode);
+    setContentMode(mockData.contentMode);
+    setPages(mockData.pages);
+    setSuggestions(mockData.suggestions);
+    setErrors({});
+  };
+
   const handleSubmit = () => {
     if (!validateForm()) return;
 
@@ -252,13 +292,13 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
       {/* 상단 흰색 영역 - 뷰포트 전체 너비 */}
-      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-12 pb-6">
+      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-14 pb-5">
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
           {/* 상단 영역: 기본 정보 + 프로젝트 설정 (3등분) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
           
           {/* 1/3: 기본 정보 */}
-          <div className="pb-6">
+          <div className="pb-2">
             <div className="space-y-10">
               {/* 프로젝트 제목 */}
               <div>
@@ -301,7 +341,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
           </div>
 
           {/* 2/3: 레이아웃 */}
-          <div className="pb-6">
+          <div className="pb-2">
             <h3 className="text-xl font-semibold text-gray-900 mb-4">레이아웃</h3>
             <div className="grid grid-cols-2 gap-4">
               <label className="cursor-pointer group">
@@ -484,7 +524,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       </div>
 
       {/* 페이지 구성 영역 - 뷰포트 전체 너비, 회색 배경 */}
-      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] py-8" style={{ backgroundColor: '#f5f5f7' }}>
+      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] pt-8 pb-6" style={{ backgroundColor: '#f5f5f7' }}>
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
           {/* 페이지 구성 헤더 */}
           <div className="flex items-center justify-between mb-6">
@@ -520,7 +560,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
         <div className="w-full">
           <div className="scroll-container" ref={scrollContainerRef}>
             <motion.div 
-              className="flex gap-6 pb-6 pt-2" 
+              className="flex gap-6 pb-4 pt-2" 
               style={{ 
                 minWidth: 'max-content',
                 paddingLeft: `${scrollPadding}px`,
@@ -609,19 +649,23 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
             </motion.div>
           </div>
         </div>
+        
+        {/* 추가 제안사항 - 페이지 구성과 같은 회색 영역에 포함 */}
+        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-3">
+          <div className="bg-white rounded-2xl px-6 py-4 mb-3 shadow-sm">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">추가 제안사항</h3>
+            <textarea
+              value={suggestions}
+              onChange={(e) => setSuggestions(e.target.value)}
+              placeholder="특별한 요구사항이나 스타일 지침을 입력하세요. AI가 콘텐츠를 생성할 때 이를 참고합니다."
+              className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all resize-none h-24 text-gray-900 placeholder-gray-400"
+            />
+          </div>
+        </div>
       </div>
 
-      {/* 하단 영역: 추가 제안사항 */}
-      <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 pb-8">
-        <div className="bg-white rounded-2xl p-6 mb-6 shadow-sm mt-8">
-          <h3 className="text-lg font-semibold text-gray-900 mb-6">추가 제안사항</h3>
-          <textarea
-            value={suggestions}
-            onChange={(e) => setSuggestions(e.target.value)}
-            placeholder="특별한 요구사항이나 스타일 지침을 입력하세요. AI가 콘텐츠를 생성할 때 이를 참고합니다."
-            className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all resize-none h-24 text-gray-900 placeholder-gray-400"
-          />
-        </div>
+      {/* 하단 버튼 영역 */}
+      <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 pb-6">
 
         {/* 최하단 버튼 */}
         <div className="flex justify-between items-center">
@@ -633,17 +677,25 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
               이전으로
             </button>
           )}
-          <button
-            onClick={handleSubmit}
-            className="ml-auto px-8 py-3 text-white rounded-full transition-all font-medium shadow-sm"
-            style={{
-              backgroundColor: '#3e88ff'
-            }}
-            onMouseEnter={(e) => e.target.style.backgroundColor = '#2c6ae6'}
-            onMouseLeave={(e) => e.target.style.backgroundColor = '#3e88ff'}
-          >
-            다음 단계로 →
-          </button>
+          <div className="flex gap-3 ml-auto">
+            <button
+              onClick={handleTestMode}
+              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all font-medium shadow-sm border border-gray-300"
+            >
+              🧪 테스트 모드
+            </button>
+            <button
+              onClick={handleSubmit}
+              className="px-8 py-3 text-white rounded-full transition-all font-medium shadow-sm"
+              style={{
+                backgroundColor: '#3e88ff'
+              }}
+              onMouseEnter={(e) => e.target.style.backgroundColor = '#2c6ae6'}
+              onMouseLeave={(e) => e.target.style.backgroundColor = '#3e88ff'}
+            >
+              다음 단계로 →
+            </button>
+          </div>
         </div>
       </div>
     </div>
