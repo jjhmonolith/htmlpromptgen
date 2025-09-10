@@ -54,13 +54,13 @@ export class PromptGeneratorService {
       // Note: GPT-5 API structure based on provided documentation
       // Fallback to GPT-4 if GPT-5 is not available yet
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4-turbo-preview',
+        model: 'gpt-4o',
         messages: [
           { role: 'system', content: systemInstructions },
           { role: 'user', content: userInput }
         ],
         temperature: 0.7,
-        max_tokens: 2000
+        max_tokens: 8000
       });
 
       return this.extractPrompt(response);

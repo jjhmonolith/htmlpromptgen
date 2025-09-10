@@ -8,13 +8,15 @@ interface Step2VisualIdentityProps {
   initialData?: VisualIdentity | null;
   onComplete: (visualIdentity: VisualIdentity) => void;
   onBack: () => void;
+  onNext?: () => void; // 이미 완료된 경우 단순 이동
 }
 
 export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
   projectData,
   initialData,
   onComplete,
-  onBack
+  onBack,
+  onNext
 }) => {
   const [visualIdentity, setVisualIdentity] = useState<VisualIdentity | null>(initialData || null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -22,6 +24,7 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
   const [generationMessage, setGenerationMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [customizations, setCustomizations] = useState<Partial<VisualIdentity>>({});
+  const [hasModifications, setHasModifications] = useState(false); // 실제 수정 여부 추적
 
   const visualIdentityService = new VisualIdentityService();
 
@@ -69,6 +72,10 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
       setTimeout(() => {
         setVisualIdentity(result);
         setIsGenerating(false);
+        // 첫 생성도 수정으로 간주 (기존 데이터가 있었던 경우에만)
+        if (initialData) {
+          setHasModifications(true);
+        }
       }, 1000);
 
     } catch (err) {
@@ -101,6 +108,7 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
 
     setVisualIdentity(updated);
     setCustomizations(prev => ({ ...prev, colorPalette: updated.colorPalette }));
+    setHasModifications(true); // 수정 플래그 설정
   };
 
   // 프리셋 적용
@@ -114,6 +122,7 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
 
     setVisualIdentity(updated);
     setCustomizations(prev => ({ ...prev, colorPalette: preset.colorPalette }));
+    setHasModifications(true); // 수정 플래그 설정
   };
 
   // 완료 처리
@@ -125,13 +134,27 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
       ...customizations
     };
 
-    onComplete(finalVisualIdentity);
+    // 실제 수정이 있었다면 onComplete 호출 (데이터 변경으로 처리)
+    if (hasModifications) {
+      console.log('Step2: 수정사항 있음, onComplete 호출');
+      onComplete(finalVisualIdentity);
+      setHasModifications(false); // 수정 플래그 초기화
+    } else if (initialData && onNext) {
+      // 수정 없이 단순 이동
+      console.log('Step2: 수정사항 없음, onNext 호출');
+      onNext();
+    } else {
+      // 처음 완료하는 경우
+      console.log('Step2: 처음 완료, onComplete 호출');
+      onComplete(finalVisualIdentity);
+    }
   };
 
   // 재생성
   const handleRegenerate = () => {
     setVisualIdentity(null);
     setCustomizations({});
+    setHasModifications(true); // 재생성도 수정으로 간주
     startGeneration();
   };
 
@@ -140,29 +163,20 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
       {/* 상단 헤더 */}
-      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-14 pb-8">
+      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white pt-14 pb-5">
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
-          <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-3">
-              2단계: 비주얼 아이덴티티 생성
-            </h1>
-            <p className="text-lg text-gray-600">
-              AI가 프로젝트에 맞는 색상, 폰트, 스타일을 자동으로 생성합니다
-            </p>
-          </div>
-
           {/* 프로젝트 정보 요약 */}
-          <div className="bg-gray-50 rounded-2xl p-6 mb-8">
+          <div className="bg-gray-50 rounded-2xl p-6 mb-4">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div>
+              <div className="text-center">
                 <h3 className="font-semibold text-gray-900 mb-2">프로젝트</h3>
                 <p className="text-gray-700">{projectData.projectTitle}</p>
               </div>
-              <div>
+              <div className="text-center">
                 <h3 className="font-semibold text-gray-900 mb-2">대상 학습자</h3>
                 <p className="text-gray-700">{projectData.targetAudience}</p>
               </div>
-              <div>
+              <div className="text-center">
                 <h3 className="font-semibold text-gray-900 mb-2">페이지 수</h3>
                 <p className="text-gray-700">{projectData.pages.length}개 페이지</p>
               </div>
@@ -336,7 +350,7 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
                   </div>
 
                   {/* 타이포그래피 */}
-                  <div className="bg-white rounded-2xl p-6 shadow-sm">
+                  <div className="bg-white rounded-2xl p-8 shadow-sm">
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">타이포그래피</h3>
                     <div className="space-y-6">
                       <div>
@@ -545,9 +559,9 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
             <div className="flex gap-4 items-center">
               <button
                 onClick={handleRegenerate}
-                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all font-medium"
+                className="px-6 py-3 bg-white text-gray-700 rounded-full hover:bg-gray-50 transition-all font-medium shadow-sm border border-gray-200"
               >
-                🔄 재생성
+                재생성
               </button>
               <button
                 onClick={handleComplete}

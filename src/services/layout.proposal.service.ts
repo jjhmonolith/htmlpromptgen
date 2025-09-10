@@ -21,15 +21,48 @@ export class LayoutProposalService {
     
     try {
       const prompt = this.buildPrompt(projectData, visualIdentity);
-      const response = await this.openaiService.generateCompletion(prompt);
+      const response = await this.openaiService.generateCompletion(
+        prompt, 
+        `Step3 레이아웃 생성 (${projectData.pages.length}페이지)`
+      );
       
-      // JSON 파싱 시도
+      // JSON 파싱 시도 - 코드 블록 제거 후 파싱
       let parsedResponse;
       try {
-        parsedResponse = JSON.parse(response);
+        // GPT-4o가 ```json 코드 블록으로 감쌀 수 있으므로 제거
+        let cleanedResponse = response.content.trim();
+        
+        // 코드 블록 마커 제거
+        if (cleanedResponse.startsWith('```json')) {
+          cleanedResponse = cleanedResponse.replace(/^```json\s*/, '');
+        }
+        if (cleanedResponse.endsWith('```')) {
+          cleanedResponse = cleanedResponse.replace(/\s*```$/, '');
+        }
+        
+        // 추가적인 마크다운 제거
+        cleanedResponse = cleanedResponse.replace(/^```\s*/, '').replace(/\s*```$/, '');
+        
+        parsedResponse = JSON.parse(cleanedResponse);
       } catch (parseError) {
         console.error('JSON 파싱 실패:', parseError);
+        console.error('원본 응답:', response.content);
         throw new Error('서버 응답을 처리할 수 없습니다. 다시 시도해주세요.');
+      }
+
+      // 토큰 사용량 상세 정보 로그
+      if (response.usage) {
+        console.group(`📊 레이아웃 생성 완료 - 상세 분석`);
+        console.log(`📄 처리된 페이지 수: ${projectData.pages.length}개`);
+        console.log(`🎯 레이아웃 모드: ${projectData.layoutMode === 'scrollable' ? '스크롤형' : '고정형'}`);
+        console.log(`📐 페이지당 평균 토큰: ${Math.round(response.usage.total_tokens / projectData.pages.length)}개`);
+        
+        // 페이지별 예상 토큰 분배
+        projectData.pages.forEach((page, index) => {
+          const avgTokensPerPage = Math.round(response.usage.total_tokens / projectData.pages.length);
+          console.log(`  └ 페이지 ${page.pageNumber} (${page.topic}): ~${avgTokensPerPage} 토큰`);
+        });
+        console.groupEnd();
       }
 
       // 페이지별 레이아웃 제안으로 변환
@@ -86,6 +119,13 @@ ${projectData.pages.map((page, index) => `
 - 설명: ${page.description || '상세 설명 없음'}
 `).join('')}
 
+**중요: 이미지 description은 AI 이미지 생성 도구(DALL-E, Midjourney 등)에서 바로 사용할 수 있도록 매우 구체적으로 작성해주세요:**
+- 스타일: 사진, 일러스트, 벡터, 미니멀 등
+- 구도: 정면, 측면, 버드아이뷰, 클로즈업 등
+- 색상톤: 파스텔, 비비드, 모노톤, 웜톤, 쿨톤 등
+- 분위기: 전문적인, 친근한, 모던한, 클래식한 등
+- 객체와 배경: 구체적인 사물, 인물, 환경 묘사
+
 다음 JSON 형식으로 응답해주세요:
 
 {
@@ -100,7 +140,7 @@ ${projectData.pages.map((page, index) => `
       "images": [
         {
           "filename": "이미지파일명.jpg",
-          "description": "이미지 설명 및 목적",
+          "description": "AI 이미지 생성용 상세 프롬프트 (스타일, 구도, 색상, 분위기, 객체 등을 포함한 매우 구체적인 설명으로 작성)",
           "position": "배치 위치"
         }
       ],

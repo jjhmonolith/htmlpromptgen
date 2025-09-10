@@ -27,9 +27,9 @@ export class OpenAIService {
       
       // Simple validation call with minimal token usage
       const response = await tempClient.chat.completions.create({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o',
         messages: [{ role: 'user', content: 'test' }],
-        max_tokens: 1
+        max_tokens: 10
       });
       
       return !!response;
@@ -46,16 +46,28 @@ export class OpenAIService {
     return this.openai;
   }
 
-  async generateCompletion(prompt: string): Promise<string> {
+  async generateCompletion(prompt: string, context?: string): Promise<{ content: string; usage?: any }> {
     const client = this.getClient();
     
     const response = await client.chat.completions.create({
-      model: 'gpt-3.5-turbo',
+      model: 'gpt-4o',
       messages: [{ role: 'user', content: prompt }],
       temperature: 0.7,
-      max_tokens: 2000
+      max_tokens: 8000
     });
 
-    return response.choices[0]?.message?.content || '';
+    // 토큰 사용량 로그 (개발 환경에서만)
+    if (response.usage && context) {
+      console.group(`🔥 토큰 사용량 - ${context}`);
+      console.log(`📥 입력 토큰: ${response.usage.prompt_tokens?.toLocaleString() || 0}`);
+      console.log(`📤 출력 토큰: ${response.usage.completion_tokens?.toLocaleString() || 0}`);
+      console.log(`🔢 총 토큰: ${response.usage.total_tokens?.toLocaleString() || 0}`);
+      console.groupEnd();
+    }
+
+    return {
+      content: response.choices[0]?.message?.content || '',
+      usage: response.usage
+    };
   }
 }

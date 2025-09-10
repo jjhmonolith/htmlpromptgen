@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Step1BasicInfo } from './Step1BasicInfo';
 import { Step2VisualIdentity } from './Step2VisualIdentity';
+import { Step3LayoutProposal } from './Step3LayoutProposal';
 import { Button, GNB } from '../common';
 import { projectService } from '../../services/project.service';
 import { 
@@ -11,6 +12,11 @@ import {
   PageEnhancement,
   FinalPrompt
 } from '../../types/workflow.types';
+import { 
+  hasProjectDataChanged, 
+  hasVisualIdentityChanged, 
+  hasLayoutProposalsChanged 
+} from '../../utils/dataComparison.utils';
 
 interface WorkflowContainerProps {
   projectId: string;
@@ -45,11 +51,24 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
 
   const [isLoading, setIsLoading] = useState(true);
   const [saveStatus, setSaveStatus] = useState<'saving' | 'saved' | 'error' | null>(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   // 워크플로우 데이터 저장 함수
   const saveWorkflowData = React.useCallback((state: WorkflowState) => {
     try {
       setSaveStatus('saving');
+      
+      // 프로젝트 이름 업데이트 (Step1 데이터가 있을 때)
+      if (state.projectData?.projectTitle) {
+        const currentProject = projectService.getProject(projectId);
+        if (currentProject && currentProject.name !== state.projectData.projectTitle) {
+          projectService.updateProject({
+            ...currentProject,
+            name: state.projectData.projectTitle
+          });
+        }
+      }
+      
       projectService.saveWorkflowData(projectId, state);
       setSaveStatus('saved');
       setTimeout(() => setSaveStatus(null), 2000);
@@ -103,33 +122,131 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   }, [projectId, workflowState, isLoading]);
 
   const handleStep1Complete = (data: ProjectData) => {
-    setWorkflowState(prev => ({
-      ...prev,
-      projectData: data,
-      stepCompletion: { ...prev.stepCompletion, step1: true },
-      currentStep: 2
-    }));
+    setWorkflowState(prev => {
+      // Step1이 수정된 경우 뒷 단계들 초기화
+      const shouldResetLaterSteps = hasProjectDataChanged(prev.projectData, data);
+
+      if (shouldResetLaterSteps) {
+        return {
+          ...prev,
+          projectData: data,
+          visualIdentity: null,
+          layoutProposals: [],
+          pageEnhancements: [],
+          finalPrompt: null,
+          stepCompletion: { 
+            step1: true, 
+            step2: false, 
+            step3: false, 
+            step4: false, 
+            step5: false 
+          },
+          currentStep: 2
+        };
+      }
+
+      return {
+        ...prev,
+        projectData: data,
+        stepCompletion: { ...prev.stepCompletion, step1: true },
+        currentStep: 2
+      };
+    });
   };
 
   const handleStep2Complete = (data: VisualIdentity) => {
+    setWorkflowState(prev => {
+      // Step2가 수정된 경우 뒷 단계들 초기화 (Step3 이후)
+      const shouldResetLaterSteps = hasVisualIdentityChanged(prev.visualIdentity, data);
+      console.log('handleStep2Complete 호출됨 - 데이터 변경 감지', { 
+        prevVisualIdentity: prev.visualIdentity ? 'exists' : 'null', 
+        newData: data ? 'exists' : 'null',
+        shouldReset: shouldResetLaterSteps,
+        currentLayoutProposals: prev.layoutProposals.length,
+        prevStepCompletion: prev.stepCompletion
+      });
+
+      if (shouldResetLaterSteps) {
+        console.log('Step2 데이터 변경 감지, 뒷 단계 초기화', { 
+          prev: prev.visualIdentity, 
+          current: data,
+          hasChanged: shouldResetLaterSteps
+        });
+        return {
+          ...prev,
+          visualIdentity: data,
+          layoutProposals: [],
+          pageEnhancements: [],
+          finalPrompt: null,
+          stepCompletion: { 
+            ...prev.stepCompletion,
+            step2: true, 
+            step3: false, 
+            step4: false, 
+            step5: false 
+          },
+          currentStep: 3
+        };
+      }
+
+      console.log('Step2 데이터 변경 없음, 단순 이동');
+      // 데이터 변경이 없으면 단순히 단계 이동과 완료 상태만 업데이트
+      return {
+        ...prev,
+        visualIdentity: data,
+        stepCompletion: { ...prev.stepCompletion, step2: true },
+        currentStep: 3
+      };
+    });
+  };
+
+  // Step3에서 proposals 생성 시 완료 상태만 설정 (자동 이동 없음)
+  const handleStep3ProposalsGenerated = (data: LayoutProposal[]) => {
+    console.log('Step3 proposals 생성 완료:', { proposalsCount: data.length });
+    
+    setWorkflowState(prev => {
+      const shouldResetLaterSteps = hasLayoutProposalsChanged(prev.layoutProposals, data);
+      
+      if (shouldResetLaterSteps) {
+        console.log('Layout proposals 변경 감지, 뒷 단계 초기화');
+        return {
+          ...prev,
+          layoutProposals: data,
+          pageEnhancements: [],
+          finalPrompt: null,
+          stepCompletion: { 
+            ...prev.stepCompletion,
+            step3: true, // 생성 완료로 표시 
+            step4: false, 
+            step5: false 
+          },
+          // currentStep은 변경하지 않음 - 사용자가 수동으로 이동해야 함
+        };
+      }
+
+      // 데이터 변경이 없으면 단순히 완료 상태만 업데이트
+      return {
+        ...prev,
+        layoutProposals: data,
+        stepCompletion: { ...prev.stepCompletion, step3: true },
+        // currentStep은 변경하지 않음 - 사용자가 수동으로 이동해야 함
+      };
+    });
+  };
+
+  // Step3 완료 (다음 단계로 버튼 클릭 시)
+  const handleStep3Complete = (data: LayoutProposal[]) => {
+    console.log('Step3 완료 - 다음 단계로 이동:', { proposalsCount: data.length });
+    
     setWorkflowState(prev => ({
       ...prev,
-      visualIdentity: data,
-      stepCompletion: { ...prev.stepCompletion, step2: true },
-      currentStep: 3
+      layoutProposals: data,
+      stepCompletion: { ...prev.stepCompletion, step3: true },
+      currentStep: 4 // 명시적으로 다음 단계로 이동
     }));
   };
 
-  // TODO: Step 3-5 구현 시 활성화 예정
-  // const handleStep3Complete = (data: LayoutProposal[]) => {
-  //   setWorkflowState(prev => ({
-  //     ...prev,
-  //     layoutProposals: data,
-  //     stepCompletion: { ...prev.stepCompletion, step3: true },
-  //     currentStep: 4
-  //   }));
-  // };
-
+  // TODO: Step 4-5 구현 시 활성화 예정
   // const handleStep4Complete = (data: PageEnhancement[]) => {
   //   setWorkflowState(prev => ({
   //     ...prev,
@@ -157,6 +274,10 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   // };
 
   const goToStep = (step: 1 | 2 | 3 | 4 | 5) => {
+    console.log(`goToStep 호출됨: ${workflowState.currentStep} -> ${step}`, {
+      currentLayoutProposals: workflowState.layoutProposals.length,
+      willKeepData: true
+    });
     // 수정사항이 있으면 이전 상태 저장
     if (workflowState.modifications[`step${workflowState.currentStep}`]) {
       setWorkflowState(prev => ({
@@ -187,6 +308,7 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
 
   // GNB용 워크플로우 스텝 생성
   const getWorkflowSteps = () => {
+    console.log('getWorkflowSteps - stepCompletion:', workflowState.stepCompletion);
     return [
       { num: 1, title: '기본 정보', isCompleted: workflowState.stepCompletion.step1 },
       { num: 2, title: '비주얼 아이덴티티', isCompleted: workflowState.stepCompletion.step2 },
@@ -231,6 +353,7 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
             initialData={workflowState.visualIdentity}
             onComplete={handleStep2Complete}
             onBack={() => goToStep(1)}
+            onNext={() => goToStep(3)}
           />
         ) : (
           <div className="text-center py-12">
@@ -241,11 +364,21 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         );
       
       case 3:
-        return (
+        return workflowState.projectData && workflowState.visualIdentity ? (
+          <Step3LayoutProposal
+            projectData={workflowState.projectData}
+            visualIdentity={workflowState.visualIdentity}
+            initialData={workflowState.layoutProposals.length > 0 ? workflowState.layoutProposals : null}
+            onComplete={handleStep3Complete}
+            onBack={() => goToStep(2)}
+            onGeneratingChange={setIsGenerating}
+            onProposalsGenerated={handleStep3ProposalsGenerated}
+          />
+        ) : (
           <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-4">Step 3: 레이아웃 제안</h2>
-            <p className="text-gray-600 mb-8">개발 진행 중...</p>
-            <Button onClick={() => goToStep(2)}>이전 단계로</Button>
+            <h2 className="text-2xl font-bold mb-4">데이터 오류</h2>
+            <p className="text-gray-600 mb-8">이전 단계의 데이터가 없습니다. 처음부터 다시 시작해주세요.</p>
+            <Button onClick={() => goToStep(1)}>1단계로 돌아가기</Button>
           </div>
         );
       
@@ -272,15 +405,24 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     }
   };
 
+  // 실시간 프로젝트 이름 가져오기
+  const getCurrentProjectName = () => {
+    if (workflowState.projectData?.projectTitle) {
+      return workflowState.projectData.projectTitle;
+    }
+    return projectName || '새 프로젝트';
+  };
+
   return (
     <>
       <GNB 
         onLogoClick={onBack} 
-        projectName={projectName || '새 프로젝트'}
+        projectName={getCurrentProjectName()}
         lastSaved={new Date()}
         currentStep={workflowState.currentStep}
         steps={getWorkflowSteps()}
         onStepClick={handleStepClick}
+        isGenerating={isGenerating}
       />
       <div className="min-h-screen py-6" style={{ 
         backgroundColor: '#f5f5f7'

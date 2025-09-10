@@ -10,9 +10,10 @@ interface GNBProps {
   currentStep?: number;
   steps?: Array<{ num: number; title: string; isCompleted: boolean }>;
   onStepClick?: (stepNum: number) => void;
+  isGenerating?: boolean; // 진행 중 상태 표시용
 }
 
-export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, currentStep = 1, steps, onStepClick }) => {
+export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, currentStep = 1, steps, onStepClick, isGenerating = false }) => {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(
     localStorage.getItem('anthropic_api_key')
@@ -63,52 +64,58 @@ export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, c
                 {steps.map((step, index) => {
                   const isActive = step.num === currentStep;
                   const isCompleted = step.isCompleted;
-                  const scale = isActive ? 'scale-120' : 'scale-100';
+                  const canAccess = step.num <= currentStep || isCompleted;
+                  
+                  // 크기와 애니메이션 설정
+                  const scale = isActive ? 'scale-125' : 'scale-100'; // 현재 단계를 조금만 크게
+                  const pulseAnimation = isActive && isGenerating ? 'animate-pulse' : '';
                   
                   return (
                     <React.Fragment key={step.num}>
                       <div className="relative group">
                         <div 
                           className={`
-                            relative transition-all duration-300 flex items-center justify-center cursor-pointer
-                            ${scale}
+                            relative transition-all duration-500 flex items-center justify-center cursor-pointer
+                            ${scale} ${pulseAnimation}
+                            ${canAccess ? 'hover:scale-125' : 'cursor-not-allowed opacity-50'}
                           `}
-                          onClick={() => onStepClick && onStepClick(step.num)}
+                          onClick={() => canAccess && onStepClick && onStepClick(step.num)}
                         >
-                          {/* Step Icons - No Background */}
+                          {/* 진행 중 애니메이션 효과 - 동그라미 효과 제거 */}
+                          
+                                  {/* Step Icons - 새로운 색상 로직 */}
                           <div className={`
-                            ${isCompleted ? 'text-transparent bg-gradient-to-br from-blue-500 to-purple-600 bg-clip-text' : 
-                              isActive ? 'text-gray-700' : 
-                              'text-gray-400'}
+                            ${isCompleted || isActive ? 'text-blue-500' : 'text-gray-400'}
                             transition-all duration-300
-                            hover:scale-110
+                            ${canAccess ? 'hover:scale-110' : ''}
                             ${isActive ? 'filter drop-shadow-lg' : ''}
+                            ${isActive && isGenerating ? 'animate-pulse' : ''}
                           `}>
                             {/* Step Icons */}
                             {step.num === 1 && (
-                              <svg className={`w-6 h-6 ${isCompleted ? 'fill-blue-500' : isActive ? 'fill-gray-700' : 'fill-gray-400'}`} viewBox="0 0 20 20">
+                              <svg className={`w-7 h-7 ${isCompleted || isActive ? 'fill-blue-500' : 'fill-gray-400'}`} viewBox="0 0 20 20">
                                 <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z"/>
                                 <path fillRule="evenodd" d="M4 5a2 2 0 012-2 1 1 0 000 2H6a2 2 0 100 4h2a2 2 0 100-4h2a1 1 0 100-2 2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2H6a2 2 0 00-2 2v11z" clipRule="evenodd"/>
                               </svg>
                             )}
                             {step.num === 2 && (
-                              <svg className={`w-6 h-6 ${isCompleted ? 'fill-purple-500' : isActive ? 'fill-gray-700' : 'fill-gray-400'}`} viewBox="0 0 20 20">
+                              <svg className={`w-7 h-7 ${isCompleted || isActive ? 'fill-blue-500' : 'fill-gray-400'}`} viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd"/>
                               </svg>
                             )}
                             {step.num === 3 && (
-                              <svg className={`w-6 h-6 ${isCompleted ? 'fill-blue-500' : isActive ? 'fill-gray-700' : 'fill-gray-400'}`} viewBox="0 0 20 20">
+                              <svg className={`w-7 h-7 ${isCompleted || isActive ? 'fill-blue-500' : 'fill-gray-400'}`} viewBox="0 0 20 20">
                                 <path d="M2 5a2 2 0 012-2h7a2 2 0 012 2v4a2 2 0 01-2 2H9l-3 3v-3H4a2 2 0 01-2-2V5z"/>
                                 <path d="M15 7v2a4 4 0 01-4 4H9.828l-1.766 1.767c.28.149.599.233.938.233h2l3 3v-3h2a2 2 0 002-2V9a2 2 0 00-2-2h-1z"/>
                               </svg>
                             )}
                             {step.num === 4 && (
-                              <svg className={`w-6 h-6 ${isCompleted ? 'fill-purple-500' : isActive ? 'fill-gray-700' : 'fill-gray-400'}`} viewBox="0 0 20 20">
+                              <svg className={`w-7 h-7 ${isCompleted || isActive ? 'fill-blue-500' : 'fill-gray-400'}`} viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
                               </svg>
                             )}
                             {step.num === 5 && (
-                              <svg className={`w-6 h-6 ${isCompleted ? 'fill-blue-500' : isActive ? 'fill-gray-700' : 'fill-gray-400'}`} viewBox="0 0 20 20">
+                              <svg className={`w-7 h-7 ${isCompleted || isActive ? 'fill-blue-500' : 'fill-gray-400'}`} viewBox="0 0 20 20">
                                 <path fillRule="evenodd" d="M6.267 3.455a3.066 3.066 0 001.745-.723 3.066 3.066 0 013.976 0 3.066 3.066 0 001.745.723 3.066 3.066 0 012.812 2.812c.051.643.304 1.254.723 1.745a3.066 3.066 0 010 3.976 3.066 3.066 0 00-.723 1.745 3.066 3.066 0 01-2.812 2.812 3.066 3.066 0 00-1.745.723 3.066 3.066 0 01-3.976 0 3.066 3.066 0 00-1.745-.723 3.066 3.066 0 01-2.812-2.812 3.066 3.066 0 00-.723-1.745 3.066 3.066 0 010-3.976 3.066 3.066 0 00.723-1.745 3.066 3.066 0 012.812-2.812zm7.44 5.252a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd"/>
                               </svg>
                             )}
@@ -116,16 +123,20 @@ export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, c
                         </div>
                         
                         {/* Tooltip */}
-                        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+                        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
                           <div className="bg-gray-800 text-white text-xs px-2 py-1 rounded">
                             {step.title}
                           </div>
                         </div>
                       </div>
                       
-                      {/* Connector Line */}
+                      {/* Connector Line - 완료된 단계들은 파란색 연결선 */}
                       {index < steps.length - 1 && (
-                        <div className={`w-6 h-0.5 ${step.isCompleted ? 'bg-gradient-to-r from-blue-500 to-purple-600' : 'bg-gray-300'}`}></div>
+                        <div className={`
+                          w-8 h-0.5 transition-all duration-500
+                          ${step.isCompleted ? 'bg-blue-500' : 'bg-gray-300'}
+                          ${isActive && isGenerating ? 'animate-pulse' : ''}
+                        `}></div>
                       )}
                     </React.Fragment>
                   );
