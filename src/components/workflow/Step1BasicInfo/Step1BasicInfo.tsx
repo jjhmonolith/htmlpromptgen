@@ -523,7 +523,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
               style={{ 
                 minWidth: 'max-content',
                 paddingLeft: `${scrollPadding}px`,
-                paddingRight: `${Math.max(scrollPadding, 100)}px` // 우측 패딩은 최소 100px 보장
+                paddingRight: '24px' // 카드 간 간격과 동일하게 설정 (gap-6 = 24px)
               }}
               layout
             >
