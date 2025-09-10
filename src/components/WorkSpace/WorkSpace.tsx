@@ -90,6 +90,7 @@ export const WorkSpace: React.FC<WorkSpaceProps> = ({ project, onBack }) => {
     return (
       <WorkflowContainer
         projectId={currentProject.id}
+        projectName={currentProject.name}
         onComplete={handleWorkflowComplete}
         onBack={onBack}
       />
@@ -127,15 +128,20 @@ export const WorkSpace: React.FC<WorkSpaceProps> = ({ project, onBack }) => {
     return workflowSteps;
   };
 
+  const isWorkflowView = currentProject.currentStep === 'workflow' && !generatedPrompt;
+
   return (
     <>
-      <GNB 
-        onLogoClick={onBack} 
-        projectName={currentProject.name || '새 프로젝트'}
-        lastSaved={currentProject.updatedAt}
-        currentStep={1}  // This should be from actual workflow state
-        steps={getWorkflowSteps()}
-      />
+      {/* Only show GNB when not in workflow view (WorkflowContainer handles its own GNB) */}
+      {!isWorkflowView && (
+        <GNB 
+          onLogoClick={onBack} 
+          projectName={currentProject.name || '새 프로젝트'}
+          lastSaved={currentProject.updatedAt}
+          currentStep={1}  // This should be from actual workflow state
+          steps={getWorkflowSteps()}
+        />
+      )}
       <div className="min-h-screen py-6" style={{ 
         backgroundColor: '#f5f5f7'
       }}>

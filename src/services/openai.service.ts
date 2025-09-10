@@ -45,4 +45,17 @@ export class OpenAIService {
     }
     return this.openai;
   }
+
+  async generateCompletion(prompt: string): Promise<string> {
+    const client = this.getClient();
+    
+    const response = await client.chat.completions.create({
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: prompt }],
+      temperature: 0.7,
+      max_tokens: 2000
+    });
+
+    return response.choices[0]?.message?.content || '';
+  }
 }

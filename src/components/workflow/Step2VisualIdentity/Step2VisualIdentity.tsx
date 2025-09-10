@@ -262,21 +262,13 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
               exit={{ opacity: 0, y: -20 }}
               className="space-y-8"
             >
-              {/* 액션 버튼들 */}
-              <div className="flex justify-center gap-4 mb-8">
-                <button
-                  onClick={handleRegenerate}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all font-medium"
-                >
-                  🔄 재생성
-                </button>
-              </div>
 
               {/* 메인 미리보기 영역 */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-stretch">
                 
                 {/* 좌측: 색상 팔레트 및 타이포그래피 */}
-                <div className="space-y-6">
+                <div className="flex flex-col h-full">
+                  <div className="space-y-6 flex-1">
                   {/* 분위기 & 톤 */}
                   <div className="bg-white rounded-2xl p-6 shadow-sm">
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">분위기 & 톤</h3>
@@ -346,7 +338,7 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
                   {/* 타이포그래피 */}
                   <div className="bg-white rounded-2xl p-6 shadow-sm">
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">타이포그래피</h3>
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       <div>
                         <p className="text-sm text-gray-600 mb-2">제목 폰트</p>
                         <p 
@@ -376,16 +368,18 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
                       </div>
                     </div>
                   </div>
+                  </div>
                 </div>
 
                 {/* 우측: 실제 적용 미리보기 */}
-                <div className="space-y-6">
+                <div className="flex flex-col h-full">
+                  <div className="space-y-6 flex-1">
                   {/* 컴포넌트 미리보기 */}
                   <div className="bg-white rounded-2xl p-6 shadow-sm">
                     <h3 className="text-xl font-semibold text-gray-900 mb-4">컴포넌트 미리보기</h3>
                     
                     {/* 버튼 미리보기 */}
-                    <div className="mb-6">
+                    <div className="mb-8">
                       <p className="text-sm text-gray-600 mb-3">버튼</p>
                       <div className="flex gap-3">
                         <button
@@ -410,8 +404,56 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
                       </div>
                     </div>
 
+                    {/* 타임라인 컴포넌트 */}
+                    <div className="mb-8">
+                      <p className="text-sm text-gray-600 mb-3">타임라인</p>
+                      <div className="space-y-4">
+                        {[
+                          { title: "1단계: 기본 개념 학습", completed: true },
+                          { title: "2단계: 실습 진행", completed: true },
+                          { title: "3단계: 응용 문제 해결", completed: false },
+                          { title: "4단계: 최종 평가", completed: false }
+                        ].map((step, index) => (
+                          <div key={index} className="flex items-start gap-3">
+                            <div className="flex flex-col items-center">
+                              <div 
+                                className={`w-4 h-4 rounded-full flex items-center justify-center ${step.completed ? '' : 'border-2'}`}
+                                style={{
+                                  backgroundColor: step.completed ? visualIdentity.colorPalette.primary : 'transparent',
+                                  borderColor: step.completed ? visualIdentity.colorPalette.primary : '#D1D5DB'
+                                }}
+                              >
+                                {step.completed && (
+                                  <svg className="w-2.5 h-2.5 text-white" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                )}
+                              </div>
+                              {index < 3 && (
+                                <div 
+                                  className="w-px h-6 mt-1"
+                                  style={{ backgroundColor: step.completed ? visualIdentity.colorPalette.primary : '#E5E7EB' }}
+                                />
+                              )}
+                            </div>
+                            <div className="flex-1 pb-2">
+                              <p 
+                                className={`text-sm font-medium ${step.completed ? '' : 'text-gray-500'}`}
+                                style={{ 
+                                  color: step.completed ? visualIdentity.colorPalette.text : '#9CA3AF',
+                                  fontFamily: visualIdentity.typography.bodyFont
+                                }}
+                              >
+                                {step.title}
+                              </p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
                     {/* 카드 미리보기 */}
-                    <div className="mb-6">
+                    <div className="mb-8">
                       <p className="text-sm text-gray-600 mb-3">카드</p>
                       <div 
                         className="p-4 rounded-xl border"
@@ -468,6 +510,7 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
                         </p>
                       </div>
                     </div>
+
                   </div>
 
                   {/* 컴포넌트 스타일 가이드 */}
@@ -479,6 +522,7 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
                     >
                       {visualIdentity.componentStyle}
                     </div>
+                  </div>
                   </div>
                 </div>
               </div>
@@ -498,12 +542,20 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
               ← 이전 단계
             </button>
             
-            <button
-              onClick={handleComplete}
-              className="px-8 py-3 bg-[#3e88ff] text-white rounded-full hover:bg-[#2c6ae6] transition-all font-medium shadow-sm"
-            >
-              다음 단계로 →
-            </button>
+            <div className="flex gap-4 items-center">
+              <button
+                onClick={handleRegenerate}
+                className="px-6 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all font-medium"
+              >
+                🔄 재생성
+              </button>
+              <button
+                onClick={handleComplete}
+                className="px-8 py-3 bg-[#3e88ff] text-white rounded-full hover:bg-[#2c6ae6] transition-all font-medium shadow-sm"
+              >
+                다음 단계로 →
+              </button>
+            </div>
           </div>
         </div>
       )}

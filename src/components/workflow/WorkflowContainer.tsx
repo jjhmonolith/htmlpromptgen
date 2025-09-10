@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Step1BasicInfo } from './Step1BasicInfo';
 import { Step2VisualIdentity } from './Step2VisualIdentity';
-import { Button } from '../common';
+import { Button, GNB } from '../common';
 import { projectService } from '../../services/project.service';
 import { 
   WorkflowState, 
@@ -14,12 +14,14 @@ import {
 
 interface WorkflowContainerProps {
   projectId: string;
+  projectName?: string;
   onComplete?: (finalPrompt: FinalPrompt) => void;
   onBack?: () => void;
 }
 
 export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   projectId,
+  projectName,
   onComplete,
   onBack
 }) => {
@@ -183,89 +185,23 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     }
   };
 
-  const renderStepIndicator = () => {
-    const steps = [
-      { num: 1, name: '기본 정보' },
-      { num: 2, name: '비주얼 아이덴티티' },
-      { num: 3, name: '레이아웃' },
-      { num: 4, name: '애니메이션' },
-      { num: 5, name: '최종 프롬프트' }
+  // GNB용 워크플로우 스텝 생성
+  const getWorkflowSteps = () => {
+    return [
+      { num: 1, title: '기본 정보', isCompleted: workflowState.stepCompletion.step1 },
+      { num: 2, title: '비주얼 아이덴티티', isCompleted: workflowState.stepCompletion.step2 },
+      { num: 3, title: '레이아웃 제안', isCompleted: workflowState.stepCompletion.step3 },
+      { num: 4, title: '애니메이션/상호작용', isCompleted: workflowState.stepCompletion.step4 },
+      { num: 5, title: '최종 프롬프트', isCompleted: workflowState.stepCompletion.step5 }
     ];
+  };
 
-    return (
-      <div className="apple-card p-8 mb-8">
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-6">
-          {steps.map((step, index) => (
-            <div key={step.num} className="flex items-center">
-              <div className="flex flex-col items-center">
-                <button
-                  onClick={() => goToStep(step.num as any)}
-                  disabled={step.num > workflowState.currentStep && !workflowState.stepCompletion[`step${step.num - 1}` as keyof typeof workflowState.stepCompletion]}
-                  className={`
-                    w-16 h-16 rounded-full flex items-center justify-center text-sm font-bold transition-apple
-                    ${workflowState.currentStep === step.num 
-                      ? 'bg-apple-blue text-white shadow-apple-lg border-2 border-apple-blue/30' 
-                      : workflowState.stepCompletion[`step${step.num}` as keyof typeof workflowState.stepCompletion]
-                        ? 'bg-apple-green text-white cursor-pointer hover:bg-apple-green/90 shadow-apple-md'
-                        : 'bg-apple-gray-2 text-apple-gray-5 cursor-not-allowed'
-                    }
-                  `}
-                >
-                  {workflowState.stepCompletion[`step${step.num}` as keyof typeof workflowState.stepCompletion] ? (
-                    <svg className="w-7 h-7" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    step.num
-                  )}
-                </button>
-                <span className="mt-3 text-sm font-medium text-gray-900 text-center">
-                  {step.name}
-                </span>
-              </div>
-              {index < steps.length - 1 && (
-                <div className={`
-                  hidden sm:block h-1 w-20 mx-6 rounded-full
-                  ${workflowState.stepCompletion[`step${step.num}` as keyof typeof workflowState.stepCompletion]
-                    ? 'bg-apple-green'
-                    : 'bg-apple-gray-3'
-                  }
-                `} />
-              )}
-            </div>
-          ))}
-        </div>
-
-        {/* 저장 상태 표시 */}
-        <div className="mt-4 text-center">
-          {saveStatus === 'saving' && (
-            <div className="text-sm text-gray-600 flex items-center justify-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-600" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              저장 중...
-            </div>
-          )}
-          {saveStatus === 'saved' && (
-            <div className="text-sm text-green-600 flex items-center justify-center">
-              <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-              </svg>
-              자동 저장됨
-            </div>
-          )}
-          {saveStatus === 'error' && (
-            <div className="text-sm text-red-600 flex items-center justify-center">
-              <svg className="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-              </svg>
-              저장 실패
-            </div>
-          )}
-        </div>
-      </div>
-    );
+  // GNB에서 스텝 클릭 처리
+  const handleStepClick = (stepNum: number) => {
+    // 완료된 스텝이나 현재 스텝으로만 이동 가능
+    if (stepNum <= workflowState.currentStep || workflowState.stepCompletion[`step${stepNum}` as keyof typeof workflowState.stepCompletion]) {
+      goToStep(stepNum as 1 | 2 | 3 | 4 | 5);
+    }
   };
 
   const renderCurrentStep = () => {
@@ -337,22 +273,25 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   };
 
   return (
-    <div className="min-h-screen py-6" style={{ 
-      backgroundColor: '#f5f5f7'
-    }}>
-      <div className="apple-grid">
-        {/* Step Indicator - 2단계 이상일 때만 표시 */}
-        {workflowState.currentStep > 1 && !isLoading && (
-          <div className="col-span-12 mb-8">
-            {renderStepIndicator()}
+    <>
+      <GNB 
+        onLogoClick={onBack} 
+        projectName={projectName || '새 프로젝트'}
+        lastSaved={new Date()}
+        currentStep={workflowState.currentStep}
+        steps={getWorkflowSteps()}
+        onStepClick={handleStepClick}
+      />
+      <div className="min-h-screen py-6" style={{ 
+        backgroundColor: '#f5f5f7'
+      }}>
+        <div className="apple-grid">
+          {/* Current Step Content */}
+          <div className="col-span-12">
+            {renderCurrentStep()}
           </div>
-        )}
-
-        {/* Current Step Content */}
-        <div className="col-span-12">
-          {renderCurrentStep()}
         </div>
       </div>
-    </div>
+    </>
   );
 };

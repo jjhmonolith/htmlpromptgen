@@ -83,45 +83,127 @@ export class VisualIdentityService {
   }
 
   private buildPrompt(projectData: ProjectData): string {
+    if (projectData.layoutMode === 'scrollable') {
+      return this.buildScrollablePrompt(projectData);
+    } else {
+      return this.buildFixedPrompt(projectData);
+    }
+  }
+
+  private buildScrollablePrompt(projectData: ProjectData): string {
     return `
 당신은 교육 콘텐츠 디자인 전문가입니다. 
-다음 프로젝트의 비주얼 아이덴티티를 디자인해주세요:
+📜 **스크롤 가능 레이아웃**을 위한 비주얼 아이덴티티를 디자인해주세요.
 
-프로젝트 정보:
+## 프로젝트 정보
 - 프로젝트명: ${projectData.projectTitle}
 - 대상 학습자: ${projectData.targetAudience}
 - 페이지 주제: ${projectData.pages.map(p => p.topic).join(', ')}
-- 레이아웃 모드: ${projectData.layoutMode === 'fixed' ? '고정 크기 1600x1000px' : '스크롤 가능'}
 - 콘텐츠 모드: ${projectData.contentMode === 'enhanced' ? 'AI 보강' : '원본 유지'}
 - 사용자 제안: ${projectData.suggestions || '없음'}
+
+## 📜 스크롤 가능 레이아웃 전용 디자인 원칙
+
+**콘텐츠 우선 접근으로 자연스러운 흐름을 만듭니다.**
+
+### 1. 공간 활용 철학
+- 가로: 1600px 고정, 세로: 콘텐츠 양에 따라 **자유롭게 확장**
+- **길이 제한 없이** 완전한 정보 전달 우선
+- **충분한 간격**으로 가독성 확보
+- 섹션 간 **여유로운 여백** (60-80px)
+
+### 2. 시각적 흐름 설계
+- 스크롤 진행에 따른 **점진적 정보 공개**
+- **자연스러운 읽기 흐름** 유지
+- 긴 콘텐츠도 **피로감 없는** 색상 조합
+- **스크롤 유도** 시각적 단서 포함
 
 다음 항목들을 JSON 형식으로 제공해주세요:
 
 {
-  "moodAndTone": "4개 형용사를 쉼표로 구분 (예: 친근한, 호기심을 자극하는, 명료한, 활기찬)",
+  "moodAndTone": "스크롤형에 적합한 4개 형용사 (예: 여유로운, 탐험적인, 몰입감 있는, 친근한)",
   
   "colorPalette": {
-    "primary": "#HEX코드 (메인 브랜드 색상)",
-    "secondary": "#HEX코드 (보조 색상)",
-    "accent": "#HEX코드 (강조 색상)",
-    "text": "#HEX코드 (본문 텍스트)",
-    "background": "#HEX코드 (배경색)"
+    "primary": "#HEX코드 (부드러운 메인 색상 - 긴 스크롤에도 피로감 없도록)",
+    "secondary": "#HEX코드 (차분한 보조 색상)",
+    "accent": "#HEX코드 (스크롤 진행 표시용 강조색)",
+    "text": "#HEX코드 (긴 텍스트 읽기에 최적화된 색상)",
+    "background": "#HEX코드 (아이보호를 위한 따뜻한 배경)"
   },
   
   "typography": {
-    "headingFont": "제목용 폰트 스택 (한글 폰트 포함)",
-    "bodyFont": "본문용 폰트 스택 (한글 폰트 포함)",
-    "baseSize": "기본 폰트 크기 (최소 18px)"
+    "headingFont": "스크롤형 제목용 폰트 (계층 구조 명확)",
+    "bodyFont": "긴 텍스트 읽기용 최적화 폰트",
+    "baseSize": "스크롤 환경 최적 크기 (최소 18px)"
   },
   
-  "componentStyle": "UI 컴포넌트 스타일 가이드라인 (버튼, 카드, 입력 요소, 코드 블록 등 200자 이내)"
+  "componentStyle": "스크롤형 UI 가이드라인: 카드형 섹션, 부드러운 모서리, 스크롤 인디케이터, 점진적 공개 애니메이션, 충분한 패딩 (200자 이내)"
 }
 
-요구사항:
-1. 대상 학습자의 연령과 특성을 고려
-2. 교육 콘텐츠의 가독성과 접근성 우선
-3. 색상 대비는 WCAG AA 기준 충족 (4.5:1)
-4. 한국어 텍스트 렌더링 최적화
+**스크롤형 특화 요구사항:**
+1. 긴 스크롤에도 **피로감 없는** 색상 선택
+2. 섹션 구분이 **자연스럽게** 보이는 디자인
+3. 스크롤 진행 상황을 **시각적으로 안내**하는 요소
+4. 모바일 환경에서도 **편안한** 스크롤 경험
+5. JSON 형식으로만 응답하고 다른 설명은 포함하지 마세요
+    `;
+  }
+
+  private buildFixedPrompt(projectData: ProjectData): string {
+    return `
+당신은 교육 콘텐츠 디자인 전문가입니다. 
+📐 **고정 크기 레이아웃**을 위한 비주얼 아이덴티티를 디자인해주세요.
+
+## 프로젝트 정보
+- 프로젝트명: ${projectData.projectTitle}
+- 대상 학습자: ${projectData.targetAudience}
+- 페이지 주제: ${projectData.pages.map(p => p.topic).join(', ')}
+- 콘텐츠 모드: ${projectData.contentMode === 'enhanced' ? 'AI 보강' : '원본 유지'}
+- 사용자 제안: ${projectData.suggestions || '없음'}
+
+## 📐 고정 크기 레이아웃 전용 디자인 원칙
+
+**정확히 1600x1000px 프레임 안에서 최대 효율을 달성합니다.**
+
+### 1. 공간 효율 극대화
+- **엄격히 고정된** 1600x1000px 프레임
+- **여백 최소화**로 콘텐츠 밀도 극대화  
+- **압축적 표현**으로 핵심 정보 전달
+- 모든 요소가 **한 화면에 완결**
+
+### 2. 시각적 임팩트 집중
+- **강렬한 첫인상**으로 즉시 관심 유도
+- **명확한 시각적 계층**으로 정보 우선순위 표현
+- **대비 강화**로 제한된 공간에서 가독성 확보
+- **일목요연한** 레이아웃으로 직관적 이해
+
+다음 항목들을 JSON 형식으로 제공해주세요:
+
+{
+  "moodAndTone": "고정형에 적합한 4개 형용사 (예: 명료한, 집중된, 임팩트 있는, 효율적인)",
+  
+  "colorPalette": {
+    "primary": "#HEX코드 (강렬한 메인 색상 - 즉시 시선 집중)",
+    "secondary": "#HEX코드 (명확한 보조 색상)",
+    "accent": "#HEX코드 (핵심 정보 강조용 고대비 색상)",
+    "text": "#HEX코드 (제한 공간에서 최고 가독성)",
+    "background": "#HEX코드 (콘텐츠 밀도 고려한 배경)"
+  },
+  
+  "typography": {
+    "headingFont": "고정형 제목용 폰트 (임팩트와 압축성)",
+    "bodyFont": "제한 공간 최적화 폰트 (밀도와 가독성)",
+    "baseSize": "고정 프레임 최적 크기 (최소 16px)"
+  },
+  
+  "componentStyle": "고정형 UI 가이드라인: 컴팩트한 카드, 날카로운 모서리, 고대비 경계선, 정보 밀도 우선, 최소 패딩으로 공간 효율 (200자 이내)"
+}
+
+**고정형 특화 요구사항:**
+1. 제한된 공간에서 **최대 정보 전달량** 달성
+2. **즉석에서 이해** 가능한 직관적 디자인
+3. **픽셀 단위 정확도**로 레이아웃 최적화
+4. 스크롤 없이 **완결된 경험** 제공
 5. JSON 형식으로만 응답하고 다른 설명은 포함하지 마세요
     `;
   }
