@@ -77,30 +77,29 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   const addNewPage = () => {
     const newId = Math.max(...pages.map(p => parseInt(p.id)), 0) + 1;
     
-    // 새 페이지 추가 전에 미리 스크롤 시작
-    if (scrollContainerRef.current) {
-      const container = scrollContainerRef.current;
-      const currentScrollLeft = container.scrollLeft;
-      const cardWidth = 480; // 카드 너비
-      const cardGap = 24; // gap-6 = 1.5rem = 24px
-      const targetScrollLeft = currentScrollLeft + cardWidth + cardGap;
-      
-      // 부드러운 스크롤 시작
-      container.scrollTo({
-        left: targetScrollLeft,
-        behavior: 'smooth'
-      });
-    }
+    // 새 페이지 추가
+    setPages([...pages, {
+      id: newId.toString(),
+      pageNumber: pages.length + 1,
+      topic: '',
+      description: ''
+    }]);
     
-    // 약간의 지연 후 페이지 추가 (스크롤이 시작된 후)
+    // 페이지 추가 후 스크롤 (애니메이션과 함께)
     setTimeout(() => {
-      setPages([...pages, {
-        id: newId.toString(),
-        pageNumber: pages.length + 1,
-        topic: '',
-        description: ''
-      }]);
-    }, 50);
+      if (addButtonRef.current && scrollContainerRef.current) {
+        const buttonRect = addButtonRef.current.getBoundingClientRect();
+        const containerRect = scrollContainerRef.current.getBoundingClientRect();
+        
+        // + 버튼이 화면 밖에 있으면 스크롤
+        if (buttonRect.right > containerRect.right) {
+          scrollContainerRef.current.scrollTo({
+            left: scrollContainerRef.current.scrollLeft + (buttonRect.right - containerRect.right) + 20,
+            behavior: 'smooth'
+          });
+        }
+      }
+    }, 100); // 애니메이션 시작 후 스크롤
   };
 
   // 페이지 삭제 함수
