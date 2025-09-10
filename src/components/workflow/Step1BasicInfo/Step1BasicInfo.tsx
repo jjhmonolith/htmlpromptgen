@@ -523,7 +523,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
               style={{ 
                 minWidth: 'max-content',
                 paddingLeft: `${scrollPadding}px`,
-                paddingRight: `${scrollPadding}px`
+                paddingRight: `${Math.min(scrollPadding, 100)}px` // 우측 패딩은 최대 100px로 제한
               }}
               layout
             >
