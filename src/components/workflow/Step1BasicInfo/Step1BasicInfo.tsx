@@ -91,11 +91,13 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
         // 먼저 카드 추가 (오른쪽에 새 카드가 생김)
         setPages([...pages, newPage]);
         
-        // 그 다음 새 카드가 보이도록 스크롤
+        // 카드 추가 후 + 버튼이 화면 우측 끝에 오도록 스크롤
+        // 카드가 추가되면 버튼이 newCardSpace만큼 오른쪽으로 이동
+        // 따라서 스크롤도 newCardSpace만큼 해야 버튼이 원래 위치로 돌아옴
         setTimeout(() => {
           if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTo({
-              left: scrollContainerRef.current.scrollLeft + cardWidth,
+              left: scrollContainerRef.current.scrollLeft + newCardSpace,
               behavior: 'smooth'
             });
           }
@@ -104,17 +106,23 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       // Case 3: 중간 상태 - 필요한 만큼만 스크롤
       else {
         console.log('Case 3: Partial scroll');
-        // 새 카드가 들어갈 공간이 부족한 만큼 스크롤
-        const needToScroll = newCardSpace + buttonWidth + cardGap - rightSpace;
-        
         // 먼저 카드 추가
         setPages([...pages, newPage]);
         
-        // 그 다음 필요한 만큼 스크롤
+        // 카드 추가 후 + 버튼이 화면 우측 끝에 오도록 스크롤
+        // 새 버튼 위치 = 현재 버튼 위치 + newCardSpace
+        // 목표 위치 = viewportWidth - cardGap
+        // 스크롤 양 = (현재 버튼 위치 + newCardSpace) - (viewportWidth - cardGap)
+        const newButtonPosition = buttonRect.right + newCardSpace;
+        const targetPosition = viewportWidth - cardGap;
+        const scrollAmount = newButtonPosition - targetPosition;
+        
+        console.log('Case 3 - newButtonPos:', newButtonPosition, 'target:', targetPosition, 'scroll:', scrollAmount);
+        
         setTimeout(() => {
           if (scrollContainerRef.current) {
             scrollContainerRef.current.scrollTo({
-              left: scrollContainerRef.current.scrollLeft + needToScroll,
+              left: scrollContainerRef.current.scrollLeft + scrollAmount,
               behavior: 'smooth'
             });
           }
