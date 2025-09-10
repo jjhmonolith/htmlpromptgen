@@ -87,42 +87,33 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       }
       // Case 2: + 버튼이 이미 화면 우측 끝 근처에 있는 경우 - 기존 카드들을 좌측으로 이동
       else if (rightSpace <= buttonWidth + cardGap * 2) { // 버튼 너비 + 여유 공간
-        console.log('Case 2: Scroll left for new space');
+        console.log('Case 2: Scroll to max after adding card');
         // 먼저 카드 추가 (오른쪽에 새 카드가 생김)
         setPages([...pages, newPage]);
         
-        // 카드 추가 후 + 버튼이 화면 우측 끝에 오도록 스크롤
-        // 카드가 추가되면 버튼이 newCardSpace만큼 오른쪽으로 이동
-        // 따라서 스크롤도 newCardSpace만큼 해야 버튼이 원래 위치로 돌아옴
+        // 스크롤을 최대 한도까지
         setTimeout(() => {
           if (scrollContainerRef.current) {
+            const maxScroll = scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth;
             scrollContainerRef.current.scrollTo({
-              left: scrollContainerRef.current.scrollLeft + newCardSpace,
+              left: maxScroll,
               behavior: 'smooth'
             });
           }
         }, 100);
       }
-      // Case 3: 중간 상태 - 필요한 만큼만 스크롤
+      // Case 3: 중간 상태 - 스크롤을 끝까지
       else {
-        console.log('Case 3: Partial scroll');
+        console.log('Case 3: Scroll to max after adding card');
         // 먼저 카드 추가
         setPages([...pages, newPage]);
         
-        // 카드 추가 후 + 버튼이 화면 우측 끝에 오도록 스크롤
-        // 새 버튼 위치 = 현재 버튼 위치 + newCardSpace
-        // 목표 위치 = viewportWidth - cardGap
-        // 스크롤 양 = (현재 버튼 위치 + newCardSpace) - (viewportWidth - cardGap)
-        const newButtonPosition = buttonRect.right + newCardSpace;
-        const targetPosition = viewportWidth - cardGap;
-        const scrollAmount = newButtonPosition - targetPosition;
-        
-        console.log('Case 3 - newButtonPos:', newButtonPosition, 'target:', targetPosition, 'scroll:', scrollAmount);
-        
+        // 스크롤을 최대 한도까지
         setTimeout(() => {
           if (scrollContainerRef.current) {
+            const maxScroll = scrollContainerRef.current.scrollWidth - scrollContainerRef.current.clientWidth;
             scrollContainerRef.current.scrollTo({
-              left: scrollContainerRef.current.scrollLeft + scrollAmount,
+              left: maxScroll,
               behavior: 'smooth'
             });
           }
