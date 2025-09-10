@@ -273,3 +273,48 @@ body {
     }
   }
 }
+
+/* 스크롤바 스타일 개선 */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.5);
+}
+
+/* 페이지 구성 영역 - 네이티브한 가로 스크롤 */
+.scroll-container {
+  overflow-x: auto;
+  overflow-y: hidden; /* 수직 스크롤 방지 */
+  -webkit-overflow-scrolling: touch; /* iOS 관성 스크롤 */
+  overscroll-behavior-inline: contain; /* 가로 체인 방지 */
+  scrollbar-gutter: stable; /* 레이아웃 점프 최소화 */
+  padding-bottom: 20px; /* 그림자 공간 확보 */
+  margin-bottom: -12px; /* 패딩 보정 */
+  
+  /* smooth 스크롤 강제 해제 - 네이티브 감각 유지 */
+  scroll-behavior: auto !important;
+  
+  /* 스크롤바 완전 숨김 - 모든 브라우저 지원 */
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+}
+
+/* Webkit 브라우저(Chrome, Safari 등) 스크롤바 숨김 */
+.scroll-container::-webkit-scrollbar {
+  display: none;
+  height: 0;
+  width: 0;
+}

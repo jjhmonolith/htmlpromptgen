@@ -54,6 +54,68 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     return () => window.removeEventListener('resize', updatePadding);
   }, []);
 
+  // 마우스 휠로 가로 스크롤 - 정확한 픽셀 정규화와 네이티브 감각
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+
+    // 라인 높이 정확히 계산
+    const getLineHeightPx = (element: HTMLElement) => {
+      const lh = getComputedStyle(element).lineHeight;
+      if (lh.endsWith('px')) return parseFloat(lh);
+      // normal 등 숫자 아님 → 폰트 크기 추정치 사용
+      const fs = parseFloat(getComputedStyle(element).fontSize) || 16;
+      return Math.round(fs * 1.2);
+    };
+
+    // 휠 이벤트를 픽셀 단위로 정규화
+    const normalizeWheelPixels = (e: WheelEvent, element: HTMLElement) => {
+      // 픽셀 단위로 환산
+      if (e.deltaMode === 0) {
+        return { pxX: e.deltaX, pxY: e.deltaY };
+      }
+      if (e.deltaMode === 1) {
+        const linePx = getLineHeightPx(element);   // 환경 맞춘 라인 픽셀
+        return { pxX: e.deltaX * linePx, pxY: e.deltaY * linePx };
+      }
+      // PAGE 단위: 요소 높이 기준
+      return { pxX: e.deltaX * element.clientHeight, pxY: e.deltaY * element.clientHeight };
+    };
+    
+    const handleWheel = (e: WheelEvent) => {
+      // 이미 가로 휠이거나 Shift 중이면 네이티브에 맡김
+      if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+
+      // 가로로 스크롤할 여지가 없으면 반환
+      if (el.scrollWidth <= el.clientWidth) return;
+
+      // 끝단에서 반대 방향으로는 상위로 넘겨 세로 스크롤 허용
+      const atStart = el.scrollLeft <= 0;
+      const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
+      const tryingLeft = e.deltaY < 0;
+      const tryingRight = e.deltaY > 0;
+      const blocked = (tryingLeft && atStart) || (tryingRight && atEnd);
+      if (blocked) return;
+
+      // 여기서부터 가로로 전환
+      e.preventDefault();
+
+      const { pxY } = normalizeWheelPixels(e, el);
+
+      // 일부 마우스(특히 Windows/Chrome)에서는 픽셀 단위가 작게 들어와
+      // 시프트+휠 대비 느리게 느껴질 수 있어 약간 가속(speed) 계수 적용
+      const speed = 1.0; // 1.2~2.0 사이에서 환경에 맞게 미세조정 (낮을수록 느림)
+      const dx = pxY * speed;
+
+      // 네이티브 감각 유지를 위해 즉시 적용 (smooth 금지)
+      el.scrollBy({ left: dx, top: 0, behavior: 'auto' });
+    };
+
+    el.addEventListener('wheel', handleWheel, { passive: false });
+    return () => el.removeEventListener('wheel', handleWheel);
+  }, []);
+
+
 
   // 페이지 추가 함수
   const addNewPage = () => {
@@ -456,9 +518,9 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
 
         {/* 페이지 구성 스크롤 영역 - 전체 화면 폭 사용 */}
         <div className="w-full">
-          <div className="overflow-x-auto scroll-smooth" ref={scrollContainerRef}>
+          <div className="scroll-container" ref={scrollContainerRef}>
             <motion.div 
-              className="flex gap-6 pb-2" 
+              className="flex gap-6 pb-6 pt-2" 
               style={{ 
                 minWidth: 'max-content',
                 paddingLeft: `${scrollPadding}px`,
