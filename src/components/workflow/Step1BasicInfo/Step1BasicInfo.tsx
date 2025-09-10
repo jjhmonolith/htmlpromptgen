@@ -73,47 +73,52 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       const cardWidth = 480;
       const cardGap = 24; 
       const newCardSpace = cardWidth + cardGap;
-      const buttonWidth = 80; // + 버튼의 대략적인 너비
+      const buttonWidth = buttonRect.width || 80; // 실제 버튼 너비 사용
       
       // + 버튼의 우측 여백 계산 (화면 기준)
       const rightSpace = viewportWidth - buttonRect.right;
       
-      console.log('Debug - rightSpace:', rightSpace, 'newCardSpace:', newCardSpace);
+      console.log('Debug - rightSpace:', rightSpace, 'buttonWidth:', buttonWidth, 'newCardSpace:', newCardSpace);
       
       // Case 1: + 버튼이 새 카드를 추가해도 화면 안에 있는 경우 - 스크롤 없음
       if (rightSpace >= newCardSpace + buttonWidth) {
         console.log('Case 1: No scroll needed');
         setPages([...pages, newPage]);
       }
-      // Case 2: + 버튼이 이미 화면 우측 끝 근처에 있는 경우 - 좌측으로 스크롤
-      else if (rightSpace <= buttonWidth + cardGap) { // 버튼 너비 + gap만큼의 여백
+      // Case 2: + 버튼이 이미 화면 우측 끝 근처에 있는 경우 - 기존 카드들을 좌측으로 이동
+      else if (rightSpace <= buttonWidth + cardGap * 2) { // 버튼 너비 + 여유 공간
         console.log('Case 2: Scroll left for new space');
-        // 새 카드가 들어갈 공간만큼 스크롤
-        container.scrollTo({
-          left: container.scrollLeft + cardWidth + cardGap,
-          behavior: 'smooth'
-        });
+        // 먼저 카드 추가 (오른쪽에 새 카드가 생김)
+        setPages([...pages, newPage]);
         
-        // 스크롤 완료 후 카드 추가
+        // 그 다음 새 카드가 보이도록 스크롤
         setTimeout(() => {
-          setPages([...pages, newPage]);
-        }, 350);
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+              left: scrollContainerRef.current.scrollLeft + cardWidth,
+              behavior: 'smooth'
+            });
+          }
+        }, 100);
       }
       // Case 3: 중간 상태 - 필요한 만큼만 스크롤
       else {
         console.log('Case 3: Partial scroll');
-        // + 버튼을 우측 끝으로 보내기 위한 스크롤 양 계산
-        const scrollAmount = rightSpace - buttonWidth - cardGap;
+        // 새 카드가 들어갈 공간이 부족한 만큼 스크롤
+        const needToScroll = newCardSpace + buttonWidth + cardGap - rightSpace;
         
-        container.scrollTo({
-          left: container.scrollLeft + scrollAmount,
-          behavior: 'smooth'
-        });
+        // 먼저 카드 추가
+        setPages([...pages, newPage]);
         
-        // 약간의 지연 후 카드 추가
+        // 그 다음 필요한 만큼 스크롤
         setTimeout(() => {
-          setPages([...pages, newPage]);
-        }, 150);
+          if (scrollContainerRef.current) {
+            scrollContainerRef.current.scrollTo({
+              left: scrollContainerRef.current.scrollLeft + needToScroll,
+              behavior: 'smooth'
+            });
+          }
+        }, 100);
       }
     } else {
       // fallback
