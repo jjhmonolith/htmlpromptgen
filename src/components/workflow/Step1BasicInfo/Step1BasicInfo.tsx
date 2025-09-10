@@ -30,28 +30,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const addButtonRef = useRef<HTMLButtonElement>(null);
   const [scrollPadding, setScrollPadding] = useState<number>(0);
-  const [shouldScrollToEnd, setShouldScrollToEnd] = useState(false);
-  
-  // 페이지가 추가될 때 스크롤 (fallback 케이스용)
-  useEffect(() => {
-    if (shouldScrollToEnd && addButtonRef.current && scrollContainerRef.current) {
-      setTimeout(() => {
-        if (addButtonRef.current && scrollContainerRef.current) {
-          const buttonRect = addButtonRef.current.getBoundingClientRect();
-          const containerRect = scrollContainerRef.current.getBoundingClientRect();
-          
-          // + 버튼이 화면 밖에 있으면 스크롤
-          if (buttonRect.right > containerRect.right) {
-            scrollContainerRef.current.scrollTo({
-              left: scrollContainerRef.current.scrollLeft + (buttonRect.right - containerRect.right) + 20,
-              behavior: 'smooth'
-            });
-          }
-        }
-        setShouldScrollToEnd(false);
-      }, 300); // 애니메이션이 시작된 후 스크롤
-    }
-  }, [pages, shouldScrollToEnd]);
   
   // 패딩 계산 및 업데이트
   useEffect(() => {
@@ -76,113 +54,60 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     return () => window.removeEventListener('resize', updatePadding);
   }, []);
 
-  // 페이지 추가 시 + 버튼이 보이도록 스크롤
-  const scrollToAddButton = () => {
-    // 애니메이션이 완료된 후 스크롤
-    setTimeout(() => {
-      if (addButtonRef.current && scrollContainerRef.current) {
-        const buttonRect = addButtonRef.current.getBoundingClientRect();
-        const containerRect = scrollContainerRef.current.getBoundingClientRect();
-        
-        // + 버튼이 화면 밖에 있으면 스크롤
-        if (buttonRect.right > containerRect.right) {
-          scrollContainerRef.current.scrollTo({
-            left: scrollContainerRef.current.scrollLeft + (buttonRect.right - containerRect.right) + 20,
-            behavior: 'smooth'
-          });
-        }
-      }
-    }, 400); // 애니메이션 완료 후 실행
-  };
 
   // 페이지 추가 함수
   const addNewPage = () => {
     const newId = Math.max(...pages.map(p => parseInt(p.id)), 0) + 1;
+    const newPage = {
+      id: newId.toString(),
+      pageNumber: pages.length + 1,
+      topic: '',
+      description: ''
+    };
     
-    // + 버튼 위치 확인
     if (addButtonRef.current && scrollContainerRef.current) {
-      const buttonRect = addButtonRef.current.getBoundingClientRect();
-      const containerRect = scrollContainerRef.current.getBoundingClientRect();
       const container = scrollContainerRef.current;
+      const buttonRect = addButtonRef.current.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
       
-      const cardWidth = 480; // 카드 너비
-      const cardGap = 24; // gap-6 = 1.5rem = 24px
+      const cardWidth = 480;
+      const cardGap = 24; 
       const newCardSpace = cardWidth + cardGap;
       
-      // + 버튼이 현재 보이는지 확인
-      const isButtonVisible = buttonRect.right <= containerRect.right && buttonRect.left >= containerRect.left;
+      // + 버튼의 우측 여백 계산 (화면 기준)
+      const rightSpace = viewportWidth - buttonRect.right;
       
-      // + 버튼의 우측 여백 계산 (컨테이너 기준)
-      const rightSpace = containerRect.right - buttonRect.right;
-      
-      // Case 1: 버튼이 보이고 우측에 충분한 공간이 있는 경우 - 스크롤 없이 카드만 추가
-      if (isButtonVisible && rightSpace >= newCardSpace) {
-        setPages([...pages, {
-          id: newId.toString(),
-          pageNumber: pages.length + 1,
-          topic: '',
-          description: ''
-        }]);
+      // Case 1: + 버튼이 새 카드를 추가해도 화면 안에 있는 경우 - 스크롤 없음
+      if (rightSpace >= newCardSpace + 24) { // 24px는 우측 끝 여백
+        setPages([...pages, newPage]);
       }
-      // Case 2: 버튼이 보이고 우측 끝에 있는 경우 - 기존 카드들을 좌측으로 이동 후 추가
-      else if (isButtonVisible && rightSpace < 100) { // 100px 미만이면 끝으로 간주
-        // 먼저 스크롤을 왼쪽으로 이동
+      // Case 2: + 버튼이 이미 화면 우측 끝에 있는 경우 - 좌측으로 스크롤
+      else if (rightSpace <= 24 + 20) { // 끝 여백 24px + 여유 20px
         container.scrollTo({
           left: container.scrollLeft + newCardSpace,
           behavior: 'smooth'
         });
         
-        // 스크롤 애니메이션 후 카드 추가
         setTimeout(() => {
-          setPages([...pages, {
-            id: newId.toString(),
-            pageNumber: pages.length + 1,
-            topic: '',
-            description: ''
-          }]);
+          setPages([...pages, newPage]);
         }, 300);
       }
-      // Case 3: 버튼이 보이지 않거나 중간 상태 - 버튼을 먼저 보이게 한 후 처리
+      // Case 3: 중간 상태 - 필요한 만큼만 스크롤
       else {
-        // 버튼이 보이지 않으면 먼저 버튼이 보이도록 스크롤
-        if (!isButtonVisible) {
-          // 버튼이 우측에 숨어있는 경우
-          if (buttonRect.left > containerRect.right) {
-            const scrollToButton = buttonRect.right - containerRect.right + 50;
-            container.scrollTo({
-              left: container.scrollLeft + scrollToButton,
-              behavior: 'smooth'
-            });
-          }
-        } else {
-          // 버튼은 보이지만 공간이 애매한 경우
-          const scrollAmount = newCardSpace - rightSpace + 50; // 50px 여유
-          
-          container.scrollTo({
-            left: container.scrollLeft + scrollAmount,
-            behavior: 'smooth'
-          });
-        }
+        const scrollAmount = newCardSpace - rightSpace + 24;
         
-        // 카드 추가
+        container.scrollTo({
+          left: container.scrollLeft + scrollAmount,
+          behavior: 'smooth'
+        });
+        
         setTimeout(() => {
-          setPages([...pages, {
-            id: newId.toString(),
-            pageNumber: pages.length + 1,
-            topic: '',
-            description: ''
-          }]);
-        }, 50);
+          setPages([...pages, newPage]);
+        }, 100);
       }
     } else {
-      // fallback: ref가 없으면 기본 동작
-      setPages([...pages, {
-        id: newId.toString(),
-        pageNumber: pages.length + 1,
-        topic: '',
-        description: ''
-      }]);
-      setShouldScrollToEnd(true);
+      // fallback
+      setPages([...pages, newPage]);
     }
   };
 
