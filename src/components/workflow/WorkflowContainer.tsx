@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Step1BasicInfo } from './Step1BasicInfo';
 import { Step2VisualIdentity } from './Step2VisualIdentity';
 import { Step3LayoutProposal } from './Step3LayoutProposal';
+import { Step4AnimationInteraction } from './Step4AnimationInteraction';
+import { Step5FinalPrompt } from './Step5FinalPrompt';
 import { Button, GNB } from '../common';
 import { projectService } from '../../services/project.service';
 import { 
@@ -246,15 +248,47 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     }));
   };
 
-  // TODO: Step 4-5 구현 시 활성화 예정
-  // const handleStep4Complete = (data: PageEnhancement[]) => {
-  //   setWorkflowState(prev => ({
-  //     ...prev,
-  //     pageEnhancements: data,
-  //     stepCompletion: { ...prev.stepCompletion, step4: true },
-  //     currentStep: 5
-  //   }));
-  // };
+  // Step4에서 enhancements 생성 시 완료 상태만 설정
+  const handleStep4EnhancementsGenerated = (data: PageEnhancement[]) => {
+    console.log('Step4 enhancements 생성 완료:', { enhancementsCount: data.length });
+    
+    setWorkflowState(prev => ({
+      ...prev,
+      pageEnhancements: data,
+      stepCompletion: { ...prev.stepCompletion, step4: true },
+      // currentStep은 변경하지 않음 - 사용자가 수동으로 이동해야 함
+    }));
+  };
+
+  // Step4 완료 (다음 단계로 버튼 클릭 시)
+  const handleStep4Complete = (data: PageEnhancement[]) => {
+    console.log('Step4 완료 - 다음 단계로 이동:', { enhancementsCount: data.length });
+    
+    setWorkflowState(prev => ({
+      ...prev,
+      pageEnhancements: data,
+      stepCompletion: { ...prev.stepCompletion, step4: true },
+      currentStep: 5 // 명시적으로 다음 단계로 이동
+    }));
+  };
+
+  // Step5 완료
+  const handleStep5Complete = (data: FinalPrompt) => {
+    const finalState = {
+      ...workflowState,
+      finalPrompt: data,
+      stepCompletion: { ...workflowState.stepCompletion, step5: true }
+    };
+    
+    setWorkflowState(finalState);
+    
+    // 즉시 저장
+    projectService.saveWorkflowData(projectId, finalState);
+    
+    if (onComplete) {
+      onComplete(data);
+    }
+  };
 
   // const handleStep5Complete = (data: FinalPrompt) => {
   //   const finalState = {
@@ -383,20 +417,40 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         );
       
       case 4:
-        return (
+        return workflowState.projectData && workflowState.visualIdentity && workflowState.layoutProposals.length > 0 ? (
+          <Step4AnimationInteraction
+            projectData={workflowState.projectData}
+            visualIdentity={workflowState.visualIdentity}
+            layoutProposals={workflowState.layoutProposals}
+            initialData={workflowState.pageEnhancements.length > 0 ? workflowState.pageEnhancements : null}
+            onComplete={handleStep4Complete}
+            onBack={() => goToStep(3)}
+            onGeneratingChange={setIsGenerating}
+            onEnhancementsGenerated={handleStep4EnhancementsGenerated}
+          />
+        ) : (
           <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-4">Step 4: 애니메이션/상호작용</h2>
-            <p className="text-gray-600 mb-8">개발 진행 중...</p>
-            <Button onClick={() => goToStep(3)}>이전 단계로</Button>
+            <h2 className="text-2xl font-bold mb-4">데이터 오류</h2>
+            <p className="text-gray-600 mb-8">이전 단계의 데이터가 없습니다. 처음부터 다시 시작해주세요.</p>
+            <Button onClick={() => goToStep(1)}>1단계로 돌아가기</Button>
           </div>
         );
       
       case 5:
-        return (
+        return workflowState.projectData && workflowState.visualIdentity && workflowState.layoutProposals.length > 0 && workflowState.pageEnhancements.length > 0 ? (
+          <Step5FinalPrompt
+            projectData={workflowState.projectData}
+            visualIdentity={workflowState.visualIdentity}
+            layoutProposals={workflowState.layoutProposals}
+            pageEnhancements={workflowState.pageEnhancements}
+            onComplete={handleStep5Complete}
+            onBack={() => goToStep(4)}
+          />
+        ) : (
           <div className="text-center py-12">
-            <h2 className="text-2xl font-bold mb-4">Step 5: 최종 프롬프트 생성</h2>
-            <p className="text-gray-600 mb-8">개발 진행 중...</p>
-            <Button onClick={() => goToStep(4)}>이전 단계로</Button>
+            <h2 className="text-2xl font-bold mb-4">데이터 오류</h2>
+            <p className="text-gray-600 mb-8">이전 단계의 데이터가 없습니다. 처음부터 다시 시작해주세요.</p>
+            <Button onClick={() => goToStep(1)}>1단계로 돌아가기</Button>
           </div>
         );
       

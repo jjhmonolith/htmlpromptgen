@@ -51,10 +51,50 @@ export interface Typography {
 export interface LayoutProposal {
   pageId: string;
   pageTitle: string;
-  layout: LayoutStructure;
+  layoutDescription: string;
+  detailedElements: DetailedElement[];
+  designSpecs: DesignSpecs;
   images: ImageSpec[];
-  contentBlocks: ContentBlock[];
   metadata: PageMetadata;
+}
+
+export interface DetailedElement {
+  elementType: 'header' | 'content' | 'sidebar' | 'footer' | 'media' | 'static_interactive';
+  elementName: string;
+  position: ElementPosition;
+  styling: ElementStyling;
+  content: string;
+  purpose: string;
+  interactionPlaceholder: string; // Step4에서 추가될 인터랙션 유형
+}
+
+export interface ElementPosition {
+  top: string;
+  left: string;
+  width: string;
+  height: string;
+}
+
+export interface ElementStyling {
+  backgroundColor?: string;
+  color?: string;
+  fontSize?: string;
+  fontWeight?: string;
+  border?: string;
+  borderRadius?: string;
+  padding?: string;
+  margin?: string;
+  [key: string]: any;
+}
+
+export interface DesignSpecs {
+  primaryLayout: string;
+  colorScheme: string;
+  typography: string;
+  spacing: string;
+  visualFlow: string;
+  educationalStrategy: string;
+  interactionReadiness: string; // Step4 준비 상태
 }
 
 export interface LayoutStructure {
@@ -79,16 +119,120 @@ export interface PageMetadata {
   pageNumber: number;
   totalPages: number;
   generatedAt: string;
+  tokensUsed?: number;
+  fallback?: boolean;
 }
 
-// Step 4: 애니메이션/상호작용
+// Step 4: 애니메이션/상호작용 (요소 중심)
 export interface PageEnhancement {
   pageId: string;
-  animations: Animation[];
-  interactions: Interaction[];
-  gamification: Gamification;
-  microAnimations: MicroAnimation[];
-  transitions: Transitions;
+  pageTitle: string;
+  elementInteractions: ElementInteraction[];
+  pageTransitions: PageTransitions;
+  globalAnimations: GlobalAnimations;
+}
+
+export interface ElementInteraction {
+  elementId: string;
+  elementType: string;
+  staticState: StaticState;
+  loadAnimation: LoadAnimation;
+  interactionStates: InteractionStates;
+  feedbackAnimations: FeedbackAnimations;
+  educationalEnhancements: EducationalEnhancements;
+  technicalSpecs: TechnicalSpecs;
+}
+
+export interface StaticState {
+  description: string;
+  initialStyling: { [key: string]: any };
+}
+
+export interface LoadAnimation {
+  type: string;
+  duration: string;
+  delay: string;
+  timing: string;
+  keyframes: string;
+  educationalPurpose: string;
+}
+
+export interface InteractionStates {
+  hover?: InteractionState;
+  focus?: InteractionState;
+  active?: InteractionState;
+  disabled?: InteractionState;
+  [key: string]: InteractionState | undefined;
+}
+
+export interface InteractionState {
+  description: string;
+  styling: { [key: string]: any };
+  additionalEffects: string;
+}
+
+export interface FeedbackAnimations {
+  success?: FeedbackAnimation;
+  error?: FeedbackAnimation;
+  loading?: FeedbackAnimation;
+  [key: string]: FeedbackAnimation | undefined;
+}
+
+export interface FeedbackAnimation {
+  trigger: string;
+  animation: string;
+  duration: string;
+}
+
+export interface EducationalEnhancements {
+  learningSupport: string;
+  specialInteractions: SpecialInteraction[];
+}
+
+export interface SpecialInteraction {
+  name: string;
+  description: string;
+  trigger: string;
+  effect: string;
+  purpose: string;
+}
+
+export interface TechnicalSpecs {
+  cssClasses: string[];
+  jsEvents: string[];
+  accessibility: AccessibilitySpecs;
+}
+
+export interface AccessibilitySpecs {
+  ariaLabels: string;
+  keyboardSupport: string;
+  screenReader: string;
+}
+
+export interface PageTransitions {
+  pageLoad: PageLoadSequence;
+  pageExit: PageExitAnimation;
+}
+
+export interface PageLoadSequence {
+  sequence: LoadSequenceStep[];
+}
+
+export interface LoadSequenceStep {
+  elements: string[];
+  delay: string;
+  description: string;
+}
+
+export interface PageExitAnimation {
+  description: string;
+  animation: string;
+}
+
+export interface GlobalAnimations {
+  scrollBehavior: string;
+  responsiveAnimations: string;
+  performanceOptimizations: string;
 }
 
 export interface Animation {

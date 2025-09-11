@@ -553,125 +553,264 @@ const LayoutProposalDetail: React.FC<LayoutProposalDetailProps> = ({
   visualIdentity,
   onRegenerate
 }) => {
-  return (
-    <div className="space-y-8">
-      {/* 레이아웃 구조 */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm">
-        <div className="flex items-start justify-between mb-4">
-          <div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              페이지 {proposal.metadata.pageNumber}: {proposal.pageTitle}
-            </h3>
-            <p className="text-gray-600">레이아웃 구조 및 콘텐츠 배치</p>
+  // 새로운 상세 구조 렌더링
+  if (proposal.detailedElements && proposal.designSpecs) {
+    return (
+      <div className="space-y-8">
+        {/* 페이지 헤더 */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                페이지 {proposal.metadata.pageNumber}: {proposal.pageTitle}
+              </h3>
+              <p className="text-gray-600">
+                상세 레이아웃 설계 • {proposal.detailedElements.length}개 요소
+                {proposal.metadata.tokensUsed && ` • ${proposal.metadata.tokensUsed} 토큰`}
+              </p>
+            </div>
+            <button
+              onClick={onRegenerate}
+              className="px-4 py-2 text-[#3e88ff] border border-[#3e88ff] rounded-full hover:bg-[#3e88ff] hover:text-white transition-all text-sm font-medium"
+            >
+              재생성
+            </button>
           </div>
-          <button
-            onClick={onRegenerate}
-            className="px-4 py-2 text-[#3e88ff] border border-[#3e88ff] rounded-full hover:bg-[#3e88ff] hover:text-white transition-all text-sm font-medium"
-          >
-            재생성
-          </button>
+
+          {/* 디자인 사양 개요 */}
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            <div className="bg-blue-50 rounded-lg p-3">
+              <div className="text-sm text-blue-600 font-medium">레이아웃</div>
+              <div className="text-blue-800 font-semibold">{proposal.designSpecs.primaryLayout}</div>
+            </div>
+            <div className="bg-purple-50 rounded-lg p-3">
+              <div className="text-sm text-purple-600 font-medium">색상 조합</div>
+              <div className="text-purple-800 font-semibold">{proposal.designSpecs.colorScheme}</div>
+            </div>
+            <div className="bg-green-50 rounded-lg p-3">
+              <div className="text-sm text-green-600 font-medium">교육 전략</div>
+              <div className="text-green-800 font-semibold">{proposal.designSpecs.educationalStrategy}</div>
+            </div>
+          </div>
+
+          {/* 전체 레이아웃 설명 */}
+          <div className="mb-6">
+            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+              <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-bold">📐</span>
+              전체 레이아웃 개요
+            </h4>
+            <div className="bg-gray-50 rounded-lg p-4">
+              <pre className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap font-mono">
+                {proposal.layoutDescription}
+              </pre>
+            </div>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* 좌측: 구조 설명 */}
+        {/* 상세 요소별 분석 */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-sm font-bold">🔍</span>
+            페이지 요소 상세 분석
+          </h4>
+          
           <div className="space-y-6">
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-bold">1</span>
-                레이아웃 구조
-              </h4>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
-                  {proposal.layout.structure}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <span className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-sm font-bold">2</span>
-                메인 콘텐츠
-              </h4>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
-                  {proposal.layout.mainContent}
-                </p>
-              </div>
-            </div>
-
-            <div>
-              <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 text-sm font-bold">3</span>
-                시각적 요소
-              </h4>
-              <div className="bg-gray-50 rounded-lg p-4">
-                <p className="text-gray-700 text-sm leading-relaxed whitespace-pre-line">
-                  {proposal.layout.visualElements}
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* 우측: 이미지 및 콘텐츠 블록 */}
-          <div className="space-y-6">
-            {/* 필요한 이미지 */}
-            {proposal.images && proposal.images.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">필요한 이미지</h4>
-                <div className="space-y-3">
-                  {proposal.images.map((image, index) => (
-                    <div key={index} className="border border-gray-200 rounded-lg p-4">
-                      <div className="flex items-start gap-3">
-                        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                          <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                          </svg>
+            {proposal.detailedElements.map((element, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-4 hover:border-blue-200 transition-colors">
+                <div className="flex items-start gap-4">
+                  {/* 요소 타입 아이콘 */}
+                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                    element.elementType === 'header' ? 'bg-blue-100 text-blue-600' :
+                    element.elementType === 'content' ? 'bg-green-100 text-green-600' :
+                    element.elementType === 'sidebar' ? 'bg-purple-100 text-purple-600' :
+                    element.elementType === 'footer' ? 'bg-gray-100 text-gray-600' :
+                    element.elementType === 'media' ? 'bg-orange-100 text-orange-600' :
+                    'bg-pink-100 text-pink-600'
+                  }`}>
+                    {element.elementType === 'header' ? '🏠' :
+                     element.elementType === 'content' ? '📄' :
+                     element.elementType === 'sidebar' ? '📋' :
+                     element.elementType === 'footer' ? '👇' :
+                     element.elementType === 'media' ? '🖼️' : '⚡'}
+                  </div>
+                  
+                  <div className="flex-1">
+                    {/* 요소명과 타입 */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <h5 className="font-medium text-gray-900">{element.elementName}</h5>
+                      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">{element.elementType}</span>
+                    </div>
+                    
+                    {/* 위치 정보 */}
+                    <div className="grid grid-cols-2 gap-4 mb-3">
+                      <div>
+                        <div className="text-sm text-gray-500">위치 & 크기</div>
+                        <div className="text-sm font-mono text-gray-700">
+                          {element.position.width} × {element.position.height}<br/>
+                          top: {element.position.top}, left: {element.position.left}
                         </div>
-                        <div className="flex-1">
-                          <h5 className="font-medium text-gray-900 mb-1">{image.filename}</h5>
-                          <p className="text-sm text-gray-600 leading-relaxed">{image.description}</p>
-                          {image.position && (
-                            <p className="text-xs text-gray-500 mt-1">위치: {image.position}</p>
-                          )}
+                      </div>
+                      <div>
+                        <div className="text-sm text-gray-500">주요 스타일</div>
+                        <div className="text-sm font-mono text-gray-700">
+                          {element.styling.backgroundColor && `bg: ${element.styling.backgroundColor}`}<br/>
+                          {element.styling.fontSize && `font: ${element.styling.fontSize}`}
                         </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* 콘텐츠 블록 */}
-            {proposal.contentBlocks && proposal.contentBlocks.length > 0 && (
-              <div>
-                <h4 className="font-semibold text-gray-900 mb-3">콘텐츠 블록 구성</h4>
-                <div className="space-y-2">
-                  {proposal.contentBlocks
-                    .sort((a, b) => a.order - b.order)
-                    .map((block, index) => (
-                      <div key={index} className="flex items-center gap-3 py-2">
-                        <span className="w-6 h-6 bg-gray-200 rounded-full flex items-center justify-center text-gray-600 text-xs font-bold">
-                          {block.order}
-                        </span>
-                        <span className={`px-2 py-1 rounded text-xs font-medium ${
-                          block.type === 'heading' ? 'bg-blue-100 text-blue-700' :
-                          block.type === 'body' ? 'bg-green-100 text-green-700' :
-                          block.type === 'point' ? 'bg-yellow-100 text-yellow-700' :
-                          'bg-purple-100 text-purple-700'
-                        }`}>
-                          {block.type === 'heading' ? '제목' :
-                           block.type === 'body' ? '본문' :
-                           block.type === 'point' ? '포인트' : '활동'}
-                        </span>
-                        <span className="text-sm text-gray-700">{block.content}</span>
+                    
+                    {/* 콘텐츠 */}
+                    <div className="mb-3">
+                      <div className="text-sm text-gray-500 mb-1">콘텐츠</div>
+                      <div className="text-sm text-gray-700 bg-gray-50 rounded p-2 max-h-20 overflow-y-auto">
+                        {element.content}
                       </div>
-                    ))}
+                    </div>
+                    
+                    {/* 교육적 목적 */}
+                    <div className="mb-2">
+                      <div className="text-sm text-gray-500 mb-1">교육적 목적</div>
+                      <div className="text-sm text-blue-700 bg-blue-50 rounded p-2">
+                        {element.purpose}
+                      </div>
+                    </div>
+                    
+                    {/* Step4 인터랙션 예정 */}
+                    {element.interactionPlaceholder && element.interactionPlaceholder !== '없음' && (
+                      <div>
+                        <div className="text-sm text-gray-500 mb-1">예정된 인터랙션 (Step4에서 구현)</div>
+                        <div className="text-sm text-purple-700 bg-purple-50 rounded p-2">
+                          {element.interactionPlaceholder}
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-            )}
-
+            ))}
           </div>
         </div>
+
+        {/* 디자인 시스템 상세 */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+            <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 text-sm font-bold">🎨</span>
+            디자인 시스템 사양
+          </h4>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm font-medium text-gray-900 mb-2">타이포그래피</div>
+                <div className="text-sm text-gray-700 bg-gray-50 rounded p-3">
+                  {proposal.designSpecs.typography}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-900 mb-2">간격 시스템</div>
+                <div className="text-sm text-gray-700 bg-gray-50 rounded p-3">
+                  {proposal.designSpecs.spacing}
+                </div>
+              </div>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <div className="text-sm font-medium text-gray-900 mb-2">시선 흐름</div>
+                <div className="text-sm text-gray-700 bg-gray-50 rounded p-3">
+                  {proposal.designSpecs.visualFlow}
+                </div>
+              </div>
+              <div>
+                <div className="text-sm font-medium text-gray-900 mb-2">Step4 인터랙션 준비도</div>
+                <div className="text-sm text-purple-700 bg-purple-50 rounded p-3">
+                  {proposal.designSpecs.interactionReadiness || '인터랙션 요소 준비 완료'}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* 이미지 및 미디어 */}
+        {proposal.images && proposal.images.length > 0 && (
+          <div className="bg-white rounded-2xl p-6 shadow-sm">
+            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+              <span className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-sm font-bold">🖼️</span>
+              필요한 이미지 및 미디어
+            </h4>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              {proposal.images.map((image, index) => (
+                <div key={index} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <h5 className="font-medium text-gray-900 mb-1">{image.filename}</h5>
+                      <div className="text-sm text-gray-600 mb-2">{image.description}</div>
+                      {image.position && (
+                        <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1 inline-block mb-2">
+                          위치: {image.position}
+                        </div>
+                      )}
+                      {image.aiPrompt && (
+                        <div className="text-xs text-purple-600 bg-purple-50 rounded p-2 font-mono">
+                          AI 프롬프트: {image.aiPrompt}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 폴백: 기존 단순 구조
+  if (proposal.layoutDescription) {
+    return (
+      <div className="space-y-8">
+        <div className="bg-white rounded-2xl p-6 shadow-sm">
+          <div className="flex items-start justify-between mb-4">
+            <div>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                페이지 {proposal.metadata.pageNumber}: {proposal.pageTitle}
+              </h3>
+              <p className="text-gray-600">기본 레이아웃 명세</p>
+            </div>
+            <button
+              onClick={onRegenerate}
+              className="px-4 py-2 text-[#3e88ff] border border-[#3e88ff] rounded-full hover:bg-[#3e88ff] hover:text-white transition-all text-sm font-medium"
+            >
+              재생성
+            </button>
+          </div>
+
+          <div className="bg-gray-50 rounded-lg p-4">
+            <pre className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap font-mono">
+              {proposal.layoutDescription}
+            </pre>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // 기본 fallback
+  return (
+    <div className="space-y-8">
+      <div className="bg-white rounded-2xl p-6 shadow-sm text-center py-12">
+        <p className="text-gray-500">레이아웃 정보를 불러올 수 없습니다.</p>
+        <button
+          onClick={onRegenerate}
+          className="mt-4 px-4 py-2 text-[#3e88ff] border border-[#3e88ff] rounded-full hover:bg-[#3e88ff] hover:text-white transition-all text-sm font-medium"
+        >
+          다시 생성하기
+        </button>
       </div>
     </div>
   );

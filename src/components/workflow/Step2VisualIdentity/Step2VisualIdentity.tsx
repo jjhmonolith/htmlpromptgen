@@ -406,11 +406,20 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
                           기본 버튼
                         </button>
                         <button
+                          className="px-6 py-3 rounded-full font-medium transition-all"
+                          style={{
+                            backgroundColor: visualIdentity.colorPalette.secondary,
+                            color: '#ffffff'
+                          }}
+                        >
+                          보조 버튼
+                        </button>
+                        <button
                           className="px-6 py-3 rounded-full font-medium transition-all border-2"
                           style={{
                             backgroundColor: 'transparent',
-                            color: visualIdentity.colorPalette.primary,
-                            borderColor: visualIdentity.colorPalette.primary
+                            color: visualIdentity.colorPalette.secondary,
+                            borderColor: visualIdentity.colorPalette.secondary
                           }}
                         >
                           테두리 버튼
@@ -434,7 +443,7 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
                                 className={`w-4 h-4 rounded-full flex items-center justify-center ${step.completed ? '' : 'border-2'}`}
                                 style={{
                                   backgroundColor: step.completed ? visualIdentity.colorPalette.primary : 'transparent',
-                                  borderColor: step.completed ? visualIdentity.colorPalette.primary : '#D1D5DB'
+                                  borderColor: step.completed ? visualIdentity.colorPalette.primary : visualIdentity.colorPalette.secondary
                                 }}
                               >
                                 {step.completed && (
@@ -446,7 +455,7 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
                               {index < 3 && (
                                 <div 
                                   className="w-px h-6 mt-1"
-                                  style={{ backgroundColor: step.completed ? visualIdentity.colorPalette.primary : '#E5E7EB' }}
+                                  style={{ backgroundColor: step.completed ? visualIdentity.colorPalette.primary : `${visualIdentity.colorPalette.secondary}40` }}
                                 />
                               )}
                             </div>
@@ -469,59 +478,146 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
                     {/* 카드 미리보기 */}
                     <div className="mb-8">
                       <p className="text-sm text-gray-600 mb-3">카드</p>
-                      <div 
-                        className="p-4 rounded-xl border"
-                        style={{ 
-                          backgroundColor: visualIdentity.colorPalette.background,
-                          borderColor: `${visualIdentity.colorPalette.primary}20`
-                        }}
-                      >
-                        <h4 
-                          className="font-semibold mb-2"
+                      <div className="grid grid-cols-2 gap-3">
+                        <div 
+                          className="p-4 rounded-xl border"
                           style={{ 
-                            color: visualIdentity.colorPalette.primary,
-                            fontFamily: visualIdentity.typography.headingFont
+                            backgroundColor: visualIdentity.colorPalette.background,
+                            borderColor: `${visualIdentity.colorPalette.primary}20`
                           }}
                         >
-                          학습 카드 제목
-                        </h4>
-                        <p 
-                          className="text-sm"
+                          <h4 
+                            className="font-semibold mb-2 text-sm"
+                            style={{ 
+                              color: visualIdentity.colorPalette.primary,
+                              fontFamily: visualIdentity.typography.headingFont
+                            }}
+                          >
+                            기본 카드
+                          </h4>
+                          <p 
+                            className="text-xs"
+                            style={{ 
+                              color: visualIdentity.colorPalette.text,
+                              fontFamily: visualIdentity.typography.bodyFont
+                            }}
+                          >
+                            Primary 색상을 사용한 카드입니다.
+                          </p>
+                        </div>
+                        <div 
+                          className="p-4 rounded-xl border"
                           style={{ 
-                            color: visualIdentity.colorPalette.text,
-                            fontFamily: visualIdentity.typography.bodyFont
+                            backgroundColor: `${visualIdentity.colorPalette.secondary}10`,
+                            borderColor: `${visualIdentity.colorPalette.secondary}30`
                           }}
                         >
-                          카드 내용입니다. 교육 콘텐츠가 표시되는 영역입니다.
-                        </p>
+                          <h4 
+                            className="font-semibold mb-2 text-sm"
+                            style={{ 
+                              color: visualIdentity.colorPalette.secondary,
+                              fontFamily: visualIdentity.typography.headingFont
+                            }}
+                          >
+                            보조 카드
+                          </h4>
+                          <p 
+                            className="text-xs"
+                            style={{ 
+                              color: visualIdentity.colorPalette.text,
+                              fontFamily: visualIdentity.typography.bodyFont
+                            }}
+                          >
+                            Secondary 색상을 사용한 카드입니다.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 배지 컴포넌트 */}
+                    <div className="mb-8">
+                      <p className="text-sm text-gray-600 mb-3">배지</p>
+                      <div className="flex gap-2 flex-wrap">
+                        <span 
+                          className="px-3 py-1 rounded-full text-sm font-medium"
+                          style={{
+                            backgroundColor: visualIdentity.colorPalette.primary,
+                            color: '#ffffff'
+                          }}
+                        >
+                          Primary
+                        </span>
+                        <span 
+                          className="px-3 py-1 rounded-full text-sm font-medium"
+                          style={{
+                            backgroundColor: visualIdentity.colorPalette.secondary,
+                            color: '#ffffff'
+                          }}
+                        >
+                          Secondary
+                        </span>
+                        <span 
+                          className="px-3 py-1 rounded-full text-sm font-medium"
+                          style={{
+                            backgroundColor: visualIdentity.colorPalette.accent,
+                            color: '#ffffff'
+                          }}
+                        >
+                          Accent
+                        </span>
                       </div>
                     </div>
 
                     {/* 강조 요소 */}
                     <div>
                       <p className="text-sm text-gray-600 mb-3">강조 요소</p>
-                      <div 
-                        className="p-4 rounded-xl"
-                        style={{ backgroundColor: `${visualIdentity.colorPalette.accent}20` }}
-                      >
-                        <div className="flex items-center gap-2 mb-2">
-                          <div 
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: visualIdentity.colorPalette.accent }}
-                          />
-                          <span 
-                            className="font-medium"
-                            style={{ color: visualIdentity.colorPalette.accent }}
-                          >
-                            중요 포인트
-                          </span>
-                        </div>
-                        <p 
-                          className="text-sm"
-                          style={{ color: visualIdentity.colorPalette.text }}
+                      <div className="space-y-3">
+                        <div 
+                          className="p-4 rounded-xl"
+                          style={{ backgroundColor: `${visualIdentity.colorPalette.accent}20` }}
                         >
-                          학습자가 꼭 알아야 할 핵심 내용입니다.
-                        </p>
+                          <div className="flex items-center gap-2 mb-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: visualIdentity.colorPalette.accent }}
+                            />
+                            <span 
+                              className="font-medium text-sm"
+                              style={{ color: visualIdentity.colorPalette.accent }}
+                            >
+                              중요 포인트
+                            </span>
+                          </div>
+                          <p 
+                            className="text-xs"
+                            style={{ color: visualIdentity.colorPalette.text }}
+                          >
+                            Accent 색상을 사용한 강조 영역입니다.
+                          </p>
+                        </div>
+                        <div 
+                          className="p-4 rounded-xl"
+                          style={{ backgroundColor: `${visualIdentity.colorPalette.secondary}20` }}
+                        >
+                          <div className="flex items-center gap-2 mb-2">
+                            <div 
+                              className="w-3 h-3 rounded-full"
+                              style={{ backgroundColor: visualIdentity.colorPalette.secondary }}
+                            />
+                            <span 
+                              className="font-medium text-sm"
+                              style={{ color: visualIdentity.colorPalette.secondary }}
+                            >
+                              보조 정보
+                            </span>
+                          </div>
+                          <p 
+                            className="text-xs"
+                            style={{ color: visualIdentity.colorPalette.text }}
+                          >
+                            Secondary 색상을 사용한 보조 정보 영역입니다.
+                          </p>
+                        </div>
                       </div>
                     </div>
 
