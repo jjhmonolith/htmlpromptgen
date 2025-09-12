@@ -6,26 +6,101 @@ interface Step1BasicInfoProps {
   initialData?: ProjectData | null;
   onComplete: (data: ProjectData) => void;
   onBack?: () => void;
+  onDataChange?: (data: Partial<ProjectData>) => void; // 실시간 데이터 변경 알림
 }
 
 export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({ 
   initialData, 
   onComplete,
-  onBack
+  onBack,
+  onDataChange
 }) => {
-  const [projectTitle, setProjectTitle] = useState(initialData?.projectTitle || '');
-  const [targetAudience, setTargetAudience] = useState(initialData?.targetAudience || '');
-  const [pages, setPages] = useState<PageInfo[]>(initialData?.pages || [
+  const [projectTitle, setProjectTitle] = useState('');
+  const [targetAudience, setTargetAudience] = useState('');
+  const [pages, setPages] = useState<PageInfo[]>([
     { id: '1', pageNumber: 1, topic: '', description: '' }
   ]);
-  const [layoutMode, setLayoutMode] = useState<'fixed' | 'scrollable'>(
-    initialData?.layoutMode || 'scrollable'
-  );
-  const [contentMode, setContentMode] = useState<'enhanced' | 'restricted'>(
-    initialData?.contentMode || 'enhanced'
-  );
-  const [suggestions, setSuggestions] = useState(initialData?.suggestions || '');
+  const [layoutMode, setLayoutMode] = useState<'fixed' | 'scrollable'>('scrollable');
+  const [contentMode, setContentMode] = useState<'original' | 'enhanced' | 'restricted'>('enhanced');
+  const [suggestions, setSuggestions] = useState('');
+  
+  // 초기 데이터 로딩 (한 번만 실행)
+  const hasLoadedInitialData = useRef(false);
+  
+  useEffect(() => {
+    // 초기 데이터가 있고, 아직 로드하지 않은 경우에만 실행
+    if (initialData && !hasLoadedInitialData.current) {
+      setProjectTitle(initialData.projectTitle || '');
+      setTargetAudience(initialData.targetAudience || '');
+      setPages(initialData.pages || [{ id: '1', pageNumber: 1, topic: '', description: '' }]);
+      setLayoutMode(initialData.layoutMode || 'scrollable');
+      setContentMode(initialData.contentMode || 'enhanced');
+      setSuggestions(
+        typeof initialData.suggestions === 'string' 
+          ? initialData.suggestions 
+          : Array.isArray(initialData.suggestions) 
+            ? initialData.suggestions[0] || '' 
+            : ''
+      );
+      
+      hasLoadedInitialData.current = true;
+      setIsDataLoaded(true);
+    }
+  }, [initialData]);
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
+
+  // 현재 폼 데이터를 ProjectData 형태로 변환하는 함수
+  const getCurrentFormData = (): Partial<ProjectData> => ({
+    id: initialData?.id || `project_${Date.now()}`,
+    projectTitle: projectTitle.trim(),
+    targetAudience: targetAudience.trim(),
+    pages: pages.filter(p => p.topic.trim()).map((p, idx) => ({
+      id: p.id,
+      pageNumber: idx + 1,
+      topic: p.topic,
+      description: p.description
+    })),
+    layoutMode,
+    contentMode,
+    suggestions: suggestions.trim() ? [suggestions.trim()] : undefined,
+    createdAt: initialData?.createdAt || new Date()
+  });
+
+  // 이전 데이터 해시 추적용 ref
+  const lastDataHashRef = useRef('');
+
+  // 실시간 데이터 변경 알림 (디바운스 적용)
+  useEffect(() => {
+    // 데이터가 로드되지 않았으면 스킵
+    if (!isDataLoaded) {
+      return;
+    }
+    
+    const timeoutId = setTimeout(() => {
+      if (onDataChange) {
+        const currentData = getCurrentFormData();
+        
+        // 현재 데이터의 해시 생성 (변경 감지용)
+        const currentHash = JSON.stringify({
+          projectTitle: projectTitle.trim(),
+          targetAudience: targetAudience.trim(),
+          pages: pages.filter(p => p.topic.trim()),
+          layoutMode,
+          contentMode,
+          suggestions: suggestions.trim() || null // 빈 문자열은 null로 통일
+        });
+        
+        // 실제로 변경된 경우에만 알림 및 로그
+        if (currentHash !== lastDataHashRef.current) {
+          lastDataHashRef.current = currentHash;
+          onDataChange(currentData);
+        }
+      }
+    }, 500); // 0.5초 디바운스
+
+    return () => clearTimeout(timeoutId);
+  }, [projectTitle, targetAudience, pages, layoutMode, contentMode, suggestions, onDataChange]); // isDataLoaded 제거
   
   // 테스트 모드용 목업 데이터
   const mockData = {
@@ -157,7 +232,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     };
     
     if (addButtonRef.current && scrollContainerRef.current) {
-      const container = scrollContainerRef.current;
       const buttonRect = addButtonRef.current.getBoundingClientRect();
       const viewportWidth = window.innerWidth;
       
@@ -276,14 +350,15 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       projectTitle: projectTitle.trim(),
       targetAudience: targetAudience.trim(),
       pages: validPages.map((p, idx) => ({
-        ...p,
-        pageNumber: idx + 1
+        id: p.id,
+        pageNumber: idx + 1,
+        topic: p.topic,
+        description: p.description
       })),
       layoutMode,
       contentMode,
-      suggestions: suggestions.trim() || undefined,
-      createdAt: initialData?.createdAt || new Date(),
-      updatedAt: new Date()
+      suggestions: suggestions.trim() ? [suggestions.trim()] : undefined,
+      createdAt: initialData?.createdAt || new Date()
     };
 
     onComplete(projectData);
@@ -543,13 +618,10 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
               onClick={addNewPage}
               className="px-4 py-2 text-white rounded-full transition-all font-medium text-sm"
               style={{
-                backgroundColor: '#3e88ff',
-                ':hover': {
-                  backgroundColor: '#2c6ae6'
-                }
+                backgroundColor: '#3e88ff'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#2c6ae6'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#3e88ff'}
+              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2c6ae6'}
+              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3e88ff'}
             >
               + 새 페이지
             </button>
@@ -690,8 +762,8 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
               style={{
                 backgroundColor: '#3e88ff'
               }}
-              onMouseEnter={(e) => e.target.style.backgroundColor = '#2c6ae6'}
-              onMouseLeave={(e) => e.target.style.backgroundColor = '#3e88ff'}
+              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2c6ae6'}
+              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3e88ff'}
             >
               다음 단계로 →
             </button>

@@ -4,6 +4,7 @@ import { WorkflowState } from '../types/workflow.types';
 const PROJECTS_KEY = 'promptgen_projects';
 const CURRENT_PROJECT_KEY = 'promptgen_current_project';
 const WORKFLOWS_KEY = 'promptgen_workflows';
+const WORKFLOWS_V2_KEY = 'promptgen_workflows_v2';
 
 export class ProjectService {
   private static instance: ProjectService | null = null;
@@ -106,8 +107,9 @@ export class ProjectService {
       this.clearCurrentProject();
     }
 
-    // Delete workflow data
+    // Delete workflow data (both v1 and v2)
     this.deleteWorkflowData(id);
+    this.deleteWorkflowV2Data(id);
   }
 
   // Get current project ID
@@ -213,7 +215,7 @@ export class ProjectService {
       return { currentStep: 1, completedSteps: 0 };
     }
     
-    const completedSteps = Object.values(workflowData.stepCompletion).filter(Boolean).length;
+    const completedSteps = workflowData.stepCompletion ? Object.values(workflowData.stepCompletion).filter(Boolean).length : 0;
     return {
       currentStep: workflowData.currentStep,
       completedSteps
@@ -229,6 +231,81 @@ export class ProjectService {
       return JSON.parse(projectsData);
     } catch {
       return [];
+    }
+  }
+
+  // v2 Workflow data management
+  saveWorkflowV2Data(projectId: string, workflowState: any): void {
+    try {
+      const workflowsData = localStorage.getItem(WORKFLOWS_V2_KEY);
+      const workflows = workflowsData ? JSON.parse(workflowsData) : {};
+      
+      workflows[projectId] = {
+        ...workflowState,
+        lastSaved: new Date().toISOString()
+      };
+      
+      localStorage.setItem(WORKFLOWS_V2_KEY, JSON.stringify(workflows));
+      
+      // Update project's updatedAt
+      const project = this.getProject(projectId);
+      if (project) {
+        this.updateProject(project);
+      }
+      
+    } catch (error) {
+      console.error('Failed to save workflow v2 data:', error);
+    }
+  }
+
+  getWorkflowV2Data(projectId: string): any | null {
+    return this.loadWorkflowV2Data(projectId);
+  }
+
+  loadWorkflowV2Data(projectId: string): any | null {
+    try {
+      const workflowsData = localStorage.getItem(WORKFLOWS_V2_KEY);
+      if (!workflowsData) return null;
+      
+      const workflows = JSON.parse(workflowsData);
+      const workflowData = workflows[projectId];
+      
+      if (!workflowData) return null;
+      
+      // Remove lastSaved field and return workflow state
+      const { lastSaved, ...workflowState } = workflowData;
+      
+      return workflowState;
+    } catch (error) {
+      console.error('Failed to load workflow v2 data:', error);
+      return null;
+    }
+  }
+
+  deleteWorkflowV2Data(projectId: string): void {
+    try {
+      const workflowsData = localStorage.getItem(WORKFLOWS_V2_KEY);
+      if (!workflowsData) return;
+      
+      const workflows = JSON.parse(workflowsData);
+      delete workflows[projectId];
+      
+      localStorage.setItem(WORKFLOWS_V2_KEY, JSON.stringify(workflows));
+    } catch (error) {
+      console.error('Failed to delete workflow v2 data:', error);
+    }
+  }
+
+  // Check if workflow v2 data exists
+  hasWorkflowV2Data(projectId: string): boolean {
+    try {
+      const workflowsData = localStorage.getItem(WORKFLOWS_V2_KEY);
+      if (!workflowsData) return false;
+      
+      const workflows = JSON.parse(workflowsData);
+      return !!workflows[projectId];
+    } catch {
+      return false;
     }
   }
 

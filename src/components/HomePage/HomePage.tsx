@@ -1,5 +1,5 @@
 import React from 'react';
-import { AppleGrid, AppleGridItem, AppleCard } from '../apple';
+import { AppleGrid, AppleGridItem } from '../apple';
 import { GNB } from '../common';
 
 interface HomePageProps {

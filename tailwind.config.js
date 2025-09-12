@@ -85,6 +85,21 @@ export default {
       transitionDuration: {
         'apple': '300ms',
       },
+      // 커스텀 키프레임 애니메이션
+      keyframes: {
+        'generating': {
+          '0%, 100%': { color: 'rgb(59 130 246)' }, // blue-500
+          '50%': { color: 'rgb(156 163 175)' }, // gray-400
+        },
+        'generating-fill': {
+          '0%, 100%': { fill: 'rgb(59 130 246)' }, // blue-500
+          '50%': { fill: 'rgb(156 163 175)' }, // gray-400
+        }
+      },
+      animation: {
+        'generating': 'generating 2s ease-in-out infinite',
+        'generating-fill': 'generating-fill 2s ease-in-out infinite',
+      },
       // 컨테이너 최대 너비
       maxWidth: {
         'apple-container': '1400px',

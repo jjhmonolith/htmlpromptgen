@@ -2,11 +2,12 @@ import React, { useState, useEffect, useRef } from 'react';
 import { ApiKeyManager } from '../ApiKeyManager';
 import { ResultDisplay } from '../ResultDisplay';
 import { WorkflowContainer } from '../workflow';
-import { AppleGrid, AppleGridItem, AppleCard, AppleButton } from '../apple';
-import { GNB } from '../common';
+import { AppleGrid, AppleGridItem } from '../apple';
+import { GNB, ErrorBoundary } from '../common';
 import { Project } from '../../types';
-import { FinalPrompt } from '../../types/workflow.types';
 import { projectService } from '../../services/project.service';
+import { useAutoSave } from '../../hooks/useAutoSave';
+import { WorkflowState } from '../../types/workflow.types';
 
 interface WorkSpaceProps {
   project: Project;
@@ -17,28 +18,30 @@ export const WorkSpace: React.FC<WorkSpaceProps> = ({ project, onBack }) => {
   const [currentProject, setCurrentProject] = useState<Project>(project);
   const [apiKey, setApiKey] = useState<string | null>(project.apiKey || null);
   const [generatedPrompt, setGeneratedPrompt] = useState<string | null>(project.generatedPrompt || null);
-  const autoSaveIntervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Auto-save functionality
+  const [workflowData, setWorkflowData] = useState<WorkflowState | null>(null);
+  
+  // 워크플로우 데이터 로드
   useEffect(() => {
-    const saveProject = () => {
-      projectService.updateProject(currentProject);
-    };
+    const loadedWorkflowData = projectService.loadWorkflowData(currentProject.id);
+    setWorkflowData(loadedWorkflowData);
+  }, [currentProject.id]);
 
-    // Save immediately when project changes
-    saveProject();
-
-    // Set up auto-save every 30 seconds
-    autoSaveIntervalRef.current = setInterval(() => {
-      saveProject();
-    }, 30000);
-
-    return () => {
-      if (autoSaveIntervalRef.current) {
-        clearInterval(autoSaveIntervalRef.current);
+  // 개선된 자동 저장 시스템
+  const { forceSave } = useAutoSave(currentProject, workflowData, {
+    enabled: true,
+    interval: 10000, // 10초
+    immediate: true,
+    onSave: (project, workflow) => {
+      // 자동 저장 성공 시 로그 간소화 (중요한 변경사항만)
+      if (workflow?.currentStep && workflow.currentStep > 1) {
+        console.log('💾', project.name, '- Step', workflow.currentStep);
       }
-    };
-  }, [currentProject]);
+    },
+    onError: (error) => {
+      console.error('🚨 자동 저장 오류:', error);
+      // TODO: 사용자에게 알림 표시
+    }
+  });
 
   const handleKeyValidated = (key: string) => {
     setApiKey(key);
@@ -53,19 +56,36 @@ export const WorkSpace: React.FC<WorkSpaceProps> = ({ project, onBack }) => {
     setGeneratedPrompt(null);
     setCurrentProject(prev => ({
       ...prev,
-      generatedPrompt: null,
+      generatedPrompt: undefined,
       currentStep: 'course-input',
       hasModifications: false
     }));
   };
 
-  const handleWorkflowComplete = (finalPrompt: FinalPrompt) => {
-    setGeneratedPrompt(finalPrompt.htmlPrompt);
+  const handleWorkflowComplete = (finalPrompt: any) => {
+    setGeneratedPrompt(finalPrompt);
     setCurrentProject(prev => ({
       ...prev,
-      generatedPrompt: finalPrompt.htmlPrompt,
+      generatedPrompt: finalPrompt,
       currentStep: 'result'
     }));
+  };
+
+  // 워크플로우 데이터 변경 처리 (제목 동기화 포함)
+  const handleWorkflowDataChange = (newWorkflowData: WorkflowState) => {
+    setWorkflowData(newWorkflowData);
+    
+    // Step1에서 프로젝트 제목이 변경된 경우 프로젝트 제목 동기화
+    if (newWorkflowData.step1?.projectTitle) {
+      const newTitle = newWorkflowData.step1.projectTitle.trim();
+      if (newTitle && newTitle !== currentProject.name) {
+        // 프로젝트 제목 동기화 로그 제거
+        setCurrentProject(prev => ({
+          ...prev,
+          name: newTitle
+        }));
+      }
+    }
   };
 
   const getCurrentView = () => {
@@ -86,32 +106,26 @@ export const WorkSpace: React.FC<WorkSpaceProps> = ({ project, onBack }) => {
       );
     }
     
-    // 5단계 워크플로우 사용
+    // 단순화된 워크플로우
     return (
-      <WorkflowContainer
-        projectId={currentProject.id}
-        projectName={currentProject.name}
-        onComplete={handleWorkflowComplete}
-        onBack={onBack}
-      />
+      <ErrorBoundary 
+        enableRecovery={true}
+        onError={(error, errorInfo) => {
+          console.error('Workflow error:', error, errorInfo);
+        }}
+      >
+        <WorkflowContainer
+          projectId={currentProject.id}
+          projectName={currentProject.name}
+          apiKey={apiKey}
+          onComplete={handleWorkflowComplete}
+          onBack={onBack}
+          onWorkflowDataChange={handleWorkflowDataChange}
+        />
+      </ErrorBoundary>
     );
   };
 
-  const getProgressPercentage = () => {
-    const steps = ['api-key', 'course-input', 'workflow', 'result'];
-    const currentIndex = steps.indexOf(currentProject.currentStep);
-    return Math.max(0, (currentIndex / (steps.length - 1)) * 100);
-  };
-
-  const getStepName = () => {
-    switch (currentProject.currentStep) {
-      case 'api-key': return 'API 키 설정';
-      case 'course-input': return '워크플로우 진행';
-      case 'workflow': return '프롬프트 생성';
-      case 'result': return '결과 확인';
-      default: return '준비 중';
-    }
-  };
 
   // Get workflow steps for GNB
   const getWorkflowSteps = () => {
@@ -128,7 +142,7 @@ export const WorkSpace: React.FC<WorkSpaceProps> = ({ project, onBack }) => {
     return workflowSteps;
   };
 
-  const isWorkflowView = currentProject.currentStep === 'workflow' && !generatedPrompt;
+  const isWorkflowView = currentProject.currentStep === 'course-input' && !generatedPrompt;
 
   return (
     <>
