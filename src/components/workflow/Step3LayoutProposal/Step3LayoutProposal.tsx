@@ -245,8 +245,70 @@ export const Step3LayoutProposal: React.FC<Step3LayoutProposalProps> = ({
   // 개별 페이지 재생성
   const handleRegenerateePage = async (pageIndex: number) => {
     if (!proposals) return;
-    // TODO: 개별 페이지 재생성 구현
-    console.log('개별 페이지 재생성:', pageIndex);
+    
+    console.log(`🔄 페이지 ${pageIndex + 1} 개별 재생성 시작`);
+    
+    // 재생성 상태 설정
+    setIsGenerating(true);
+    setError(null);
+    setGenerationMessage(`페이지 ${pageIndex + 1} 재생성 중...`);
+    setGenerationProgress(0);
+    
+    // 콜백 알림
+    onGeneratingChange?.(true);
+    
+    try {
+      // 해당 페이지 정보 가져오기
+      const targetPage = projectData.pages[pageIndex];
+      if (!targetPage) {
+        throw new Error(`페이지 ${pageIndex + 1}을 찾을 수 없습니다.`);
+      }
+      
+      setGenerationProgress(20);
+      
+      // 개별 페이지 생성 - private 메서드 직접 호출
+      const newPageProposal = await layoutProposalService.generateSinglePageLayoutInternal(
+        projectData,
+        visualIdentity,
+        targetPage,
+        proposals.filter((_, i) => i !== pageIndex), // 다른 페이지들을 컨텍스트로 전달
+        2 // maxRetries
+      );
+      
+      setGenerationProgress(80);
+      
+      // 기존 proposals 배열에서 해당 인덱스만 교체
+      const updatedProposals = [...proposals];
+      updatedProposals[pageIndex] = newPageProposal;
+      
+      setGenerationProgress(100);
+      
+      // 상태 업데이트
+      setProposals(updatedProposals);
+      setGenerationMessage(`페이지 ${pageIndex + 1} 재생성 완료!`);
+      
+      // 콜백 호출
+      onProposalsGenerated?.(updatedProposals);
+      
+      console.log(`✅ 페이지 ${pageIndex + 1} 개별 재생성 완료`);
+      
+      // 잠시 후 메시지 초기화
+      setTimeout(() => {
+        setGenerationMessage('');
+        setGenerationProgress(0);
+      }, 2000);
+      
+    } catch (error) {
+      console.error(`❌ 페이지 ${pageIndex + 1} 재생성 실패:`, error);
+      
+      const errorMessage = error instanceof Error ? error.message : '알 수 없는 오류가 발생했습니다.';
+      setError(`페이지 ${pageIndex + 1} 재생성 실패: ${errorMessage}`);
+      setGenerationMessage('');
+      setGenerationProgress(0);
+    } finally {
+      setIsGenerating(false);
+      onGeneratingChange?.(false);
+    }
   };
 
   return (
@@ -553,135 +615,114 @@ const LayoutProposalDetail: React.FC<LayoutProposalDetailProps> = ({
   visualIdentity,
   onRegenerate
 }) => {
-  // 새로운 상세 구조 렌더링
-  if (proposal.detailedElements && proposal.designSpecs) {
-    return (
-      <div className="space-y-8">
-        {/* 페이지 헤더 */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                페이지 {proposal.metadata.pageNumber}: {proposal.pageTitle}
-              </h3>
-              <p className="text-gray-600">
-                상세 레이아웃 설계 • {proposal.detailedElements.length}개 요소
-                {proposal.metadata.tokensUsed && ` • ${proposal.metadata.tokensUsed} 토큰`}
-              </p>
-            </div>
-            <button
-              onClick={onRegenerate}
-              className="px-4 py-2 text-[#3e88ff] border border-[#3e88ff] rounded-full hover:bg-[#3e88ff] hover:text-white transition-all text-sm font-medium"
-            >
-              재생성
-            </button>
+  return (
+    <div className="space-y-8">
+      {/* 페이지 헤더 */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">
+              페이지 {proposal.metadata.pageNumber}: {proposal.pageTitle || `페이지 ${proposal.metadata.pageNumber}`}
+            </h3>
+            <p className="text-gray-600">
+              줄글 레이아웃 설계
+              {proposal.metadata.tokensUsed && ` • ${proposal.metadata.tokensUsed} 토큰`}
+              {proposal.metadata.fallback && ' • 폴백 응답'}
+            </p>
           </div>
+          <button
+            onClick={onRegenerate}
+            className="px-4 py-2 text-[#3e88ff] border border-[#3e88ff] rounded-full hover:bg-[#3e88ff] hover:text-white transition-all text-sm font-medium"
+          >
+            재생성
+          </button>
+        </div>
 
-          {/* 디자인 사양 개요 */}
-          <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            <div className="bg-blue-50 rounded-lg p-3">
-              <div className="text-sm text-blue-600 font-medium">레이아웃</div>
-              <div className="text-blue-800 font-semibold">{proposal.designSpecs.primaryLayout}</div>
-            </div>
-            <div className="bg-purple-50 rounded-lg p-3">
-              <div className="text-sm text-purple-600 font-medium">색상 조합</div>
-              <div className="text-purple-800 font-semibold">{proposal.designSpecs.colorScheme}</div>
-            </div>
-            <div className="bg-green-50 rounded-lg p-3">
-              <div className="text-sm text-green-600 font-medium">교육 전략</div>
-              <div className="text-green-800 font-semibold">{proposal.designSpecs.educationalStrategy}</div>
-            </div>
-          </div>
-
-          {/* 전체 레이아웃 설명 */}
-          <div className="mb-6">
-            <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-              <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-bold">📐</span>
-              전체 레이아웃 개요
-            </h4>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <pre className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap font-mono">
-                {proposal.layoutDescription}
-              </pre>
+        {/* 줄글 레이아웃 설명 */}
+        <div className="mb-6">
+          <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+            <span className="w-6 h-6 bg-blue-100 rounded-full flex items-center justify-center text-blue-600 text-sm font-bold">📝</span>
+            레이아웃 설계 내용
+          </h4>
+          <div className="bg-gray-50 rounded-lg p-6">
+            <div className="prose prose-sm max-w-none">
+              <div className="text-gray-700 leading-relaxed whitespace-pre-wrap">
+                {proposal.layoutDescription || '레이아웃 설명이 없습니다.'}
+              </div>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* 상세 요소별 분석 */}
+      {/* 이미지 및 미디어 */}
+      {proposal.images && proposal.images.length > 0 && (
         <div className="bg-white rounded-2xl p-6 shadow-sm">
           <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center text-green-600 text-sm font-bold">🔍</span>
-            페이지 요소 상세 분석
+            <span className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-sm font-bold">🖼️</span>
+            필요한 이미지 ({proposal.images.length}개)
           </h4>
-          
-          <div className="space-y-6">
-            {proposal.detailedElements.map((element, index) => (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+            {proposal.images.map((image, index) => (
               <div key={index} className="border border-gray-200 rounded-lg p-4 hover:border-blue-200 transition-colors">
-                <div className="flex items-start gap-4">
-                  {/* 요소 타입 아이콘 */}
-                  <div className={`w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0 ${
-                    element.elementType === 'header' ? 'bg-blue-100 text-blue-600' :
-                    element.elementType === 'content' ? 'bg-green-100 text-green-600' :
-                    element.elementType === 'sidebar' ? 'bg-purple-100 text-purple-600' :
-                    element.elementType === 'footer' ? 'bg-gray-100 text-gray-600' :
-                    element.elementType === 'media' ? 'bg-orange-100 text-orange-600' :
-                    'bg-pink-100 text-pink-600'
-                  }`}>
-                    {element.elementType === 'header' ? '🏠' :
-                     element.elementType === 'content' ? '📄' :
-                     element.elementType === 'sidebar' ? '📋' :
-                     element.elementType === 'footer' ? '👇' :
-                     element.elementType === 'media' ? '🖼️' : '⚡'}
+                <div className="flex items-start gap-3">
+                  <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
                   </div>
-                  
                   <div className="flex-1">
-                    {/* 요소명과 타입 */}
-                    <div className="flex items-center gap-2 mb-2">
-                      <h5 className="font-medium text-gray-900">{element.elementName}</h5>
-                      <span className="px-2 py-1 text-xs bg-gray-100 text-gray-600 rounded">{element.elementType}</span>
-                    </div>
+                    <h5 className="font-medium text-gray-900 mb-1">
+                      {image.filename || `이미지_${index + 1}.png`}
+                    </h5>
                     
-                    {/* 위치 정보 */}
-                    <div className="grid grid-cols-2 gap-4 mb-3">
-                      <div>
-                        <div className="text-sm text-gray-500">위치 & 크기</div>
-                        <div className="text-sm font-mono text-gray-700">
-                          {element.position.width} × {element.position.height}<br/>
-                          top: {element.position.top}, left: {element.position.left}
-                        </div>
+                    {/* 새로운 JSON 스키마 지원 */}
+                    {(image.width || image.height) && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        크기: {image.width || '?'}×{image.height || '?'}px
                       </div>
-                      <div>
-                        <div className="text-sm text-gray-500">주요 스타일</div>
-                        <div className="text-sm font-mono text-gray-700">
-                          {element.styling.backgroundColor && `bg: ${element.styling.backgroundColor}`}<br/>
-                          {element.styling.fontSize && `font: ${element.styling.fontSize}`}
-                        </div>
-                      </div>
-                    </div>
+                    )}
                     
-                    {/* 콘텐츠 */}
-                    <div className="mb-3">
-                      <div className="text-sm text-gray-500 mb-1">콘텐츠</div>
-                      <div className="text-sm text-gray-700 bg-gray-50 rounded p-2 max-h-20 overflow-y-auto">
-                        {element.content}
-                      </div>
-                    </div>
+                    {/* 기존 size 필드 지원 (하위 호환성) */}
+                    {image.size && !image.width && !image.height && (
+                      <div className="text-sm text-gray-600 mb-2">크기: {image.size}</div>
+                    )}
                     
-                    {/* 교육적 목적 */}
-                    <div className="mb-2">
-                      <div className="text-sm text-gray-500 mb-1">교육적 목적</div>
-                      <div className="text-sm text-blue-700 bg-blue-50 rounded p-2">
-                        {element.purpose}
+                    {/* purpose 배지 */}
+                    {image.purpose && (
+                      <div className="text-xs text-green-600 bg-green-50 rounded px-2 py-1 inline-block mb-2">
+                        목적: {image.purpose}
                       </div>
-                    </div>
+                    )}
                     
-                    {/* Step4 인터랙션 예정 */}
-                    {element.interactionPlaceholder && element.interactionPlaceholder !== '없음' && (
-                      <div>
-                        <div className="text-sm text-gray-500 mb-1">예정된 인터랙션 (Step4에서 구현)</div>
-                        <div className="text-sm text-purple-700 bg-purple-50 rounded p-2">
-                          {element.interactionPlaceholder}
-                        </div>
+                    {/* placement 정보 */}
+                    {image.placement && (
+                      <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1 inline-block mb-2">
+                        배치: {image.placement}
+                      </div>
+                    )}
+                    
+                    {/* 기존 position 필드 지원 (하위 호환성) */}
+                    {image.position && !image.placement && (
+                      <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1 inline-block mb-2">
+                        위치: {image.position}
+                      </div>
+                    )}
+                    
+                    {image.alt && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        <strong>설명:</strong> {image.alt}
+                      </div>
+                    )}
+                    
+                    {image.caption && (
+                      <div className="text-sm text-gray-600 mb-2">
+                        <strong>캡션:</strong> {image.caption}
+                      </div>
+                    )}
+                    
+                    {image.aiPrompt && (
+                      <div className="text-xs text-purple-600 bg-purple-50 rounded p-2 font-mono">
+                        AI 생성 프롬프트: {image.aiPrompt}
                       </div>
                     )}
                   </div>
@@ -690,127 +731,45 @@ const LayoutProposalDetail: React.FC<LayoutProposalDetailProps> = ({
             ))}
           </div>
         </div>
+      )}
 
-        {/* 디자인 시스템 상세 */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <span className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center text-purple-600 text-sm font-bold">🎨</span>
-            디자인 시스템 사양
-          </h4>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm font-medium text-gray-900 mb-2">타이포그래피</div>
-                <div className="text-sm text-gray-700 bg-gray-50 rounded p-3">
-                  {proposal.designSpecs.typography}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-gray-900 mb-2">간격 시스템</div>
-                <div className="text-sm text-gray-700 bg-gray-50 rounded p-3">
-                  {proposal.designSpecs.spacing}
-                </div>
-              </div>
+      {/* 생성 메타데이터 */}
+      <div className="bg-white rounded-2xl p-6 shadow-sm">
+        <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+          <span className="w-6 h-6 bg-gray-100 rounded-full flex items-center justify-center text-gray-600 text-sm font-bold">ℹ️</span>
+          생성 정보
+        </h4>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 text-sm">
+          <div>
+            <div className="text-gray-500 mb-1">페이지 번호</div>
+            <div className="font-medium text-gray-900">
+              {proposal.metadata.pageNumber} / {proposal.metadata.totalPages}
             </div>
-            <div className="space-y-4">
-              <div>
-                <div className="text-sm font-medium text-gray-900 mb-2">시선 흐름</div>
-                <div className="text-sm text-gray-700 bg-gray-50 rounded p-3">
-                  {proposal.designSpecs.visualFlow}
-                </div>
-              </div>
-              <div>
-                <div className="text-sm font-medium text-gray-900 mb-2">Step4 인터랙션 준비도</div>
-                <div className="text-sm text-purple-700 bg-purple-50 rounded p-3">
-                  {proposal.designSpecs.interactionReadiness || '인터랙션 요소 준비 완료'}
-                </div>
-              </div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">생성 시간</div>
+            <div className="font-medium text-gray-900">
+              {proposal.metadata.generatedAt ? new Date(proposal.metadata.generatedAt).toLocaleString('ko-KR', {
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+              }) : '-'}
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">토큰 사용량</div>
+            <div className="font-medium text-gray-900">
+              {proposal.metadata.tokensUsed ? proposal.metadata.tokensUsed.toLocaleString() : '-'}
+            </div>
+          </div>
+          <div>
+            <div className="text-gray-500 mb-1">생성 방식</div>
+            <div className="font-medium text-gray-900">
+              {proposal.metadata.fallback ? '폴백' : '정상'}
             </div>
           </div>
         </div>
-
-        {/* 이미지 및 미디어 */}
-        {proposal.images && proposal.images.length > 0 && (
-          <div className="bg-white rounded-2xl p-6 shadow-sm">
-            <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-              <span className="w-6 h-6 bg-orange-100 rounded-full flex items-center justify-center text-orange-600 text-sm font-bold">🖼️</span>
-              필요한 이미지 및 미디어
-            </h4>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {proposal.images.map((image, index) => (
-                <div key={index} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-start gap-3">
-                    <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <svg className="w-6 h-6 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h5 className="font-medium text-gray-900 mb-1">{image.filename}</h5>
-                      <div className="text-sm text-gray-600 mb-2">{image.description}</div>
-                      {image.position && (
-                        <div className="text-xs text-blue-600 bg-blue-50 rounded px-2 py-1 inline-block mb-2">
-                          위치: {image.position}
-                        </div>
-                      )}
-                      {image.aiPrompt && (
-                        <div className="text-xs text-purple-600 bg-purple-50 rounded p-2 font-mono">
-                          AI 프롬프트: {image.aiPrompt}
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  // 폴백: 기존 단순 구조
-  if (proposal.layoutDescription) {
-    return (
-      <div className="space-y-8">
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                페이지 {proposal.metadata.pageNumber}: {proposal.pageTitle}
-              </h3>
-              <p className="text-gray-600">기본 레이아웃 명세</p>
-            </div>
-            <button
-              onClick={onRegenerate}
-              className="px-4 py-2 text-[#3e88ff] border border-[#3e88ff] rounded-full hover:bg-[#3e88ff] hover:text-white transition-all text-sm font-medium"
-            >
-              재생성
-            </button>
-          </div>
-
-          <div className="bg-gray-50 rounded-lg p-4">
-            <pre className="text-gray-700 text-sm leading-relaxed whitespace-pre-wrap font-mono">
-              {proposal.layoutDescription}
-            </pre>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // 기본 fallback
-  return (
-    <div className="space-y-8">
-      <div className="bg-white rounded-2xl p-6 shadow-sm text-center py-12">
-        <p className="text-gray-500">레이아웃 정보를 불러올 수 없습니다.</p>
-        <button
-          onClick={onRegenerate}
-          className="mt-4 px-4 py-2 text-[#3e88ff] border border-[#3e88ff] rounded-full hover:bg-[#3e88ff] hover:text-white transition-all text-sm font-medium"
-        >
-          다시 생성하기
-        </button>
       </div>
     </div>
   );

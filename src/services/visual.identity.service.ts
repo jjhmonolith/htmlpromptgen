@@ -49,6 +49,16 @@ export class VisualIdentityService {
 
       const aiResponse = JSON.parse(jsonMatch[0]);
       
+      // moodAndTone 배열 처리
+      let moodAndToneString = '';
+      if (Array.isArray(aiResponse.moodAndTone)) {
+        moodAndToneString = aiResponse.moodAndTone.join(', ');
+      } else if (typeof aiResponse.moodAndTone === 'string') {
+        moodAndToneString = aiResponse.moodAndTone;
+      } else {
+        moodAndToneString = '친근한, 활기찬, 명료한, 현대적인';
+      }
+      
       // VisualIdentity 타입으로 변환
       const visualIdentity: VisualIdentity = {
         primaryColor: aiResponse.colorPalette?.primary || '#3e88ff',
@@ -56,8 +66,8 @@ export class VisualIdentityService {
         accentColor: aiResponse.colorPalette?.accent || '#FBBF24',
         fontFamily: aiResponse.typography?.headingFont || 'Pretendard, system-ui, sans-serif',
         fontSize: aiResponse.typography?.baseSize || '18px',
-        tone: this.mapToneFromMood(aiResponse.moodAndTone),
-        moodBoard: aiResponse.moodAndTone || '친근한, 활기찬, 명료한, 현대적인',
+        tone: this.mapToneFromMood(moodAndToneString),
+        moodBoard: moodAndToneString,
         colorPalette: {
           primary: aiResponse.colorPalette?.primary || '#3e88ff',
           secondary: aiResponse.colorPalette?.secondary || '#10B981',
@@ -70,7 +80,7 @@ export class VisualIdentityService {
           bodyFont: aiResponse.typography?.bodyFont || 'Pretendard, system-ui, sans-serif',
           baseSize: aiResponse.typography?.baseSize || '18px'
         },
-        moodAndTone: aiResponse.moodAndTone || '친근한, 활기찬, 명료한, 현대적인',
+        moodAndTone: moodAndToneString,
         componentStyle: aiResponse.componentStyle || '버튼은 둥근 모서리와 부드러운 그림자를 사용하며, 카드는 깔끔한 여백과 미니멀한 디자인을 적용합니다.'
       };
 
@@ -83,11 +93,49 @@ export class VisualIdentityService {
   }
 
   private buildPrompt(projectData: ProjectData): string {
-    if (projectData.layoutMode === 'scrollable') {
-      return this.buildScrollablePrompt(projectData);
-    } else {
-      return this.buildFixedPrompt(projectData);
-    }
+    return `너는 교육 브랜딩/UX 아트디렉터다. 아래 입력을 바탕으로 **학습 효과와 접근성(가독성, 대비 준수)**를 최우선으로 하는 비주얼 아이덴티티를 설계하라.
+
+입력
+• 프로젝트명: ${projectData.projectTitle}
+• 대상 학습자: ${projectData.targetAudience}
+• 레이아웃 모드: ${projectData.layoutMode === 'scrollable' ? '스크롤 가능(1600px 고정폭, 세로 스크롤)' : '고정형(1600x1000px)'}
+• 콘텐츠 모드: ${projectData.contentMode === 'enhanced' ? 'AI 보강' : '원본 유지'}
+
+설계 원칙
+• 가독성 최우선: 본문 최소 18pt 이상 권장. 스크롤형은 20pt 중심, 고정형은 18–20pt 권장.
+• 대비 준수: 본문 텍스트와 배경 명도 대비 7:1 이상, 핵심 포인트는 4.5:1 이상.
+• 레이아웃 모드 분기
+  • 스크롤 가능형: 장독성을 위한 밝은 배경–진한 본문색 조합, 명확한 섹션 컴러 토큰(Primary/Secondary/Accent) 권장.
+  • 고정형: 한 화면 내 위계가 즉시 읽히도록 강한 포인트 컴러 1개 + 보조 1개 중심, 과도한 색상 수 지양.
+• 콘텐츠 모드 분기
+  • AI 보강: Accent 채도를 중간 이상으로 허용(시각적 이정표 역할), 학습 보조 컴포넌트(칩/배지)와 어울리도록 톤 조절.
+  • 원본 유지: 중립/절제된 팔레트 권장, 장식성을 줄이고 정보 전달에 집중.
+
+출력 형식(유일하게 JSON만 출력, 코드펜스 금지)
+
+아래 스키마를 그대로 따르고, 값만 채워서 반환하라. 색상은 모두 HEX 표기(예: #1A2A33), 폰트는 실제 사용 가능한 이름 또는 합리적 대체 폰트 스택 제안.
+
+{
+"moodAndTone": ["형용사1", "형용사2", "형용사3", "형용사4"],
+"colorPalette": {
+"primary": "#000000",
+"secondary": "#000000",
+"accent": "#000000",
+"text": "#000000",
+"background": "#FFFFFF"
+},
+"typography": {
+"headingFont": "예: Pretendard, Inter, -apple-system, sans-serif",
+"bodyFont": "예: Pretendard, Noto Sans KR, system-ui, sans-serif",
+"baseSize": "예: 20pt"
+},
+"componentStyle": "주제와 대상에 맞는 스타일 가이드를 250자 이하 한국어로 간결히 기술(카드 라운드, 그림자 톤, 구분선 두께, 아이콘 톤 등 핵심만)."
+}
+
+주의
+• 설명 문장 추가 금지. 오직 JSON만 출력.
+• 팔레트/타이포는 입력된 레이아웃/콘텐츠 모드를 반영해 일관된 논리로 제안.
+`;
   }
 
   private buildScrollablePrompt(projectData: ProjectData): string {
