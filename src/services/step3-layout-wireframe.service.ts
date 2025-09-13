@@ -454,8 +454,8 @@ END_S3_SLOTS`;
     const TEMP = '__FULL_WIDTH_COMMA__';
     normalized = normalized.replace(/，/g, TEMP);
 
-    // 스마트 따옴표 → ASCII
-    normalized = normalized.replace(/[""]/g, '"').replace(/['']/g, "'");
+    // 스마트 따옴표 → ASCII (유니코드 이스케이프 사용)
+    normalized = normalized.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'");
 
     // HTML 태그 제거 (한 줄 내)
     normalized = normalized.replace(/<[^>\n]*>/g, '');

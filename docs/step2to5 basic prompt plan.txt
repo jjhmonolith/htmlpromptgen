@@ -194,11 +194,15 @@ Step 3 — 레이아웃 와이어프레임 (현재 구현 분석 및 계획)
   - designTokens: Step2에서 병합된 토큰
   - 페이지별 맥락 정보 (이전/다음 페이지 연결성)
 
-### 현재 프롬프트 구조:
+### 현재 프롬프트 구조 (강화된 제약):
 - 교육적 맥락과 페이지 흐름 정보 포함
 - contentMode별 생성 가이드라인 (restricted vs enhanced)
 - layoutMode별 레이아웃 제약사항 (scrollable vs fixed)
 - **두 블록 형식 사용**: BEGIN_S3_LAYOUT + BEGIN_S3_SLOTS
+- **강화된 제약사항**:
+  - 마커 밖 텍스트 금지 (2회 반복 강조)
+  - 코드 펜스, HTML 태그, 리스트/표 금지
+  - 한 줄에 하나의 레코드만 출력 강제
 
 ### 생성 데이터:
 - **두 블록 응답**: S3_LAYOUT (섹션 정의) + S3_SLOTS (슬롯 정의)
@@ -212,11 +216,13 @@ Step 3 — 레이아웃 와이어프레임 (현재 구현 분석 및 계획)
 - 스마트 따옴표, 전각 콜론 처리
 - 단위 대문자 정규화 (PX→px, PT→pt)
 
-### 두 블록 파싱:
+### 두 블록 파싱 (강화된 안정성):
 - **extractWireframeFromResponse()**: 정규식으로 두 블록 추출
 - **parseNewWireframeFormat()**: 라인 기반 KEY=VALUE 파싱
-- **parseRecordLine()**: 정규식 기반 CSV 레코드 파싱
+- **splitLinesSafely()**: 한 줄 = 한 레코드 강제 분리 가드
+- **parseRecordLine()**: 정규식 기반 CSV 레코드 파싱 (따옴표 처리 개선)
 - **normalizeGapBelow()**: 64/80/96 중 가장 가까운 값으로 스냅
+- **SECTION 정책 강제**: height=auto 고정, grid 허용값 검증 (1-12,8+4,2-11,3-10)
 
 ### 레거시 지원:
 - 기존 단일 블록 형식도 파싱 가능
@@ -241,10 +247,13 @@ Step 3 — 레이아웃 와이어프레임 (현재 구현 분석 및 계획)
   - 고아 슬롯 제거
   - 디폴트 값으로 보정
 
-### 에러 처리:
-- 페이지별 독립 에러 처리 (병렬 처리 중 일부 실패 대응)
-- 파싱 실패 시 AI 원본 응답 보존
-- 서비스 레벨에서 상세 로깅과 에러 전파
+### 에러 처리 및 폴백 시스템:
+- **페이지별 독립 에러 처리**: 병렬 처리 중 일부 실패 시 전체 실패
+- **파싱 실패 폴백**:
+  - extractWireframeFromResponse() 실패 시 → synthesizeMinimalWireframe() 자동 생성
+  - convertNewWireframeToDescription() 실패 시 → createPlainDescriptionFallback() 제공
+- **이중 안전망**: AI 응답 파싱 실패해도 최소 와이어프레임 보장
+- **computePageFlow()**: 페이지 위치별 자동 FLOW 계산 (A:intro, B:keyMessage, E:bridge)
 
 ## 4) 프론트엔드 표시 내용
 

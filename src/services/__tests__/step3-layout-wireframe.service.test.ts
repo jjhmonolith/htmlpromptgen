@@ -224,7 +224,7 @@ END_S3_SLOTS`
       });
     });
 
-    test('LAYOUT 블록만 있을 때 null을 반환한다', async () => {
+    test('LAYOUT 블록만 있을 때 최소 와이어프레임을 생성한다', async () => {
       const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
 
       const mockResponse = {
@@ -242,11 +242,13 @@ END_S3_LAYOUT`
       const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
       const page = result.pages[0];
 
-      expect(page.wireframe).toBeNull();
-      expect(page.layoutDescription).toBe(mockResponse.content); // 원본 응답 보존
+      // SLOTS 블록이 없으면 최소 와이어프레임 생성
+      expect(page.wireframe).not.toBeNull();
+      expect(page.wireframe?.sections).toHaveLength(5); // synthesizeMinimalWireframe
+      expect(page.layoutDescription).toContain('페이지 상단에');
     });
 
-    test('SLOTS 블록만 있을 때 null을 반환한다', async () => {
+    test('SLOTS 블록만 있을 때 최소 와이어프레임을 생성한다', async () => {
       const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
 
       const mockResponse = {
@@ -261,11 +263,13 @@ END_S3_SLOTS`
       const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
       const page = result.pages[0];
 
-      expect(page.wireframe).toBeNull();
-      expect(page.layoutDescription).toBe(mockResponse.content);
+      // LAYOUT 블록이 없으면 최소 와이어프레임 생성
+      expect(page.wireframe).not.toBeNull();
+      expect(page.wireframe?.sections).toHaveLength(5);
+      expect(page.layoutDescription).toContain('페이지 상단에');
     });
 
-    test('블록이 없을 때 null을 반환한다', async () => {
+    test('블록이 없을 때 최소 와이어프레임을 생성한다', async () => {
       const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
 
       const mockResponse = {
@@ -277,8 +281,72 @@ END_S3_SLOTS`
       const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
       const page = result.pages[0];
 
-      expect(page.wireframe).toBeNull();
-      expect(page.layoutDescription).toBe(mockResponse.content);
+      // 최소 와이어프레임이 생성되어야 함
+      expect(page.wireframe).not.toBeNull();
+      expect(page.wireframe?.version).toBe('wire.v1');
+      expect(page.wireframe?.sections).toHaveLength(5); // synthesizeMinimalWireframe의 기본 섹션 수
+      expect(page.wireframe?.flow).toBe('A:intro'); // 첫 번째 페이지
+      expect(page.layoutDescription).toContain('페이지 상단에'); // 폴백 설명
+    });
+  });
+
+  describe('폴백 시스템 테스트', () => {
+    test('computePageFlow가 올바르게 계산된다', async () => {
+      const result = await service.generateLayoutWireframe(mockProjectData, mockVisualIdentity, mockDesignTokens);
+
+      // 3페이지 프로젝트에서 FLOW 확인
+      expect(result.pages[0].wireframe?.flow).toBe('A:intro'); // 첫 페이지
+      expect(result.pages[1].wireframe?.flow).toBe('B:keyMessage'); // 두 번째 페이지
+      expect(result.pages[2].wireframe?.flow).toBe('E:bridge'); // 마지막 페이지
+    });
+
+    test('synthesizeMinimalWireframe이 올바른 구조를 생성한다', async () => {
+      const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
+
+      // 파싱 실패를 유도하는 응답
+      const mockResponse = { content: 'invalid response' };
+      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
+
+      const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
+      const page = result.pages[0];
+
+      expect(page.wireframe?.version).toBe('wire.v1');
+      expect(page.wireframe?.flow).toBe('A:intro');
+      expect(page.wireframe?.sections).toHaveLength(5);
+      expect(page.wireframe?.imgBudget).toBe(1);
+      expect(page.wireframe?.pageStyle).toEqual({
+        pattern: 'baseline',
+        motif: 'plain',
+        rhythm: 'balanced',
+        asymmetry: 'moderate'
+      });
+    });
+
+    test('createPlainDescriptionFallback이 적절한 설명을 생성한다', async () => {
+      const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
+
+      // 파싱 실패를 유도
+      const mockResponse = { content: 'invalid response' };
+      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
+
+      const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
+      const description = result.pages[0].layoutDescription;
+
+      expect(description).toContain('물의 순환이란 무엇일까?');
+      expect(description).toContain('페이지 상단에');
+      expect(description).toContain('스크롤 가능한 레이아웃');
+    });
+
+    test('fixed 모드에서 적절한 폴백 설명을 생성한다', async () => {
+      const fixedProject = { ...mockProjectData, layoutMode: 'fixed' as const, pages: [mockProjectData.pages[0]] };
+
+      const mockResponse = { content: 'invalid response' };
+      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
+
+      const result = await service.generateLayoutWireframe(fixedProject, mockVisualIdentity, mockDesignTokens);
+      const description = result.pages[0].layoutDescription;
+
+      expect(description).toContain('한 화면 내에 핵심 정보를 간결하게 배치합니다');
     });
   });
 
@@ -379,6 +447,64 @@ END_S3_SLOTS`
       const page = result.pages[0];
 
       expect(page.wireframe?.sections?.[0].hint).toBe('HTML태그포함'); // HTML 태그 제거됨
+    });
+
+    test('splitLinesSafely가 한 줄 = 한 레코드를 보장한다', async () => {
+      const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
+
+      // 한 줄에 여러 레코드가 섞인 응답
+      const mockResponse = {
+        content: `BEGIN_S3_LAYOUT
+VERSION=wire.v1 SECTION, id=secA, role=intro, grid=1-12, height=auto, gapBelow=64, hint="잘못된 형식"
+VIEWPORT_MODE=scrollable SECTION, id=secB, role=keyMessage, grid=2-11, height=auto, gapBelow=80, hint="또 다른 잘못된 형식"
+FLOW=A:intro
+IMG_BUDGET=0
+END_S3_LAYOUT
+
+BEGIN_S3_SLOTS
+SLOT, id=secA-title, section=secA, type=heading, variant=H1 SUMMARY, sections=2, slots=1, imageSlots=0
+END_S3_SLOTS`
+      };
+
+      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
+
+      const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
+      const page = result.pages[0];
+
+      // splitLinesSafely가 제대로 분리했는지 확인
+      expect(page.wireframe?.sections).toHaveLength(2);
+      expect(page.wireframe?.sections?.[0].id).toBe('secA');
+      expect(page.wireframe?.sections?.[1].id).toBe('secB');
+      expect(page.wireframe?.slots).toHaveLength(1);
+      expect(page.wireframe?.summary?.sections).toBe(2);
+    });
+
+    test('SECTION 정책 강제가 올바르게 작동한다', async () => {
+      const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
+
+      const mockResponse = {
+        content: `BEGIN_S3_LAYOUT
+VERSION=wire.v1
+VIEWPORT_MODE=scrollable
+FLOW=A:intro
+SECTION, id=secA, role=intro, grid=invalid-grid, height=200px, gapBelow=64, hint="잘못된 grid와 height"
+IMG_BUDGET=0
+END_S3_LAYOUT
+
+BEGIN_S3_SLOTS
+SLOT, id=secA-title, section=secA, type=heading, variant=H1
+SUMMARY, sections=1, slots=1, imageSlots=0
+END_S3_SLOTS`
+      };
+
+      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
+
+      const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
+      const page = result.pages[0];
+
+      // 정책 강제 확인
+      expect(page.wireframe?.sections?.[0].height).toBe('auto'); // 항상 auto로 강제
+      expect(page.wireframe?.sections?.[0].grid).toBe('1-12'); // 유효하지 않은 grid는 1-12로 보정
     });
   });
 
