@@ -24,7 +24,8 @@ describe('Step2VisualIdentityService', () => {
 
   beforeEach(() => {
     mockOpenAIService = {
-      createCompletion: jest.fn()
+      createCompletion: jest.fn(),
+      generateCompletion: jest.fn()
     } as any;
     MockedOpenAIService.mockImplementation(() => mockOpenAIService);
     service = new Step2VisualIdentityService(mockOpenAIService);
@@ -357,6 +358,153 @@ END_S2`
       expect(promptContent).toContain('웹 개발 입문자');
       expect(promptContent).toContain('scrollable');
       expect(promptContent).toContain('enhanced');
+    });
+
+    test('contentMode이 restricted인 경우 올바른 프롬프트를 생성한다', async () => {
+      const restrictedProjectData = { ...mockProjectData, contentMode: 'restricted' as const };
+
+      const mockResponse = {
+        choices: [{
+          message: {
+            content: `BEGIN_S2
+VERSION=vi.v1
+MOOD=모던,깔끔,전문,신뢰
+COLOR_PRIMARY=#004D99
+COLOR_SECONDARY=#E9F4FF
+COLOR_ACCENT=#FFCC00
+BASE_SIZE_PT=18
+COMPONENT_STYLE=제한적 스타일
+END_S2`
+          }
+        }]
+      };
+
+      mockOpenAIService.createCompletion.mockResolvedValue(mockResponse as any);
+
+      const result = await service.generateVisualIdentity(restrictedProjectData);
+
+      // 프롬프트에 restricted 모드 관련 내용이 포함되었는지 확인
+      const callArgs = mockOpenAIService.createCompletion.mock.calls[0][0];
+      const promptContent = callArgs.messages[0].content;
+      expect(promptContent).toContain('restricted');
+      expect(result.visualIdentity.typography.baseSize).toBe('18pt'); // restricted 모드는 기본적으로 18pt
+    });
+
+    test('온도 및 매개변수가 올바르게 설정된다', async () => {
+      const mockResponse = {
+        choices: [{
+          message: {
+            content: `BEGIN_S2
+VERSION=vi.v1
+MOOD=모던,깔끔,전문,신뢰
+COLOR_PRIMARY=#004D99
+COLOR_SECONDARY=#E9F4FF
+COLOR_ACCENT=#FFCC00
+BASE_SIZE_PT=20
+COMPONENT_STYLE=기본 스타일
+END_S2`
+          }
+        }]
+      };
+
+      mockOpenAIService.createCompletion.mockResolvedValue(mockResponse as any);
+
+      await service.generateVisualIdentity(mockProjectData);
+
+      // API 호출 매개변수 확인
+      expect(mockOpenAIService.createCompletion).toHaveBeenCalledWith({
+        model: 'gpt-4o',
+        messages: [{
+          role: 'user',
+          content: expect.any(String)
+        }],
+        temperature: 0.7,
+        top_p: 1,
+        max_tokens: 1000,
+        stop: ["END_S2"]
+      });
+    });
+  });
+
+  describe('라인 기반 형식 검증 테스트', () => {
+    test('마커 누락 시 폴백을 사용한다', async () => {
+      const mockResponse = {
+        choices: [{
+          message: {
+            content: `VERSION=vi.v1
+MOOD=모던,깔끔,전문,신뢰
+COLOR_PRIMARY=#004D99
+COLOR_SECONDARY=#E9F4FF
+COLOR_ACCENT=#FFCC00
+BASE_SIZE_PT=20
+COMPONENT_STYLE=마커가 없는 응답`
+          }
+        }]
+      };
+
+      mockOpenAIService.createCompletion.mockResolvedValue(mockResponse as any);
+
+      const result = await service.generateVisualIdentity(mockProjectData);
+
+      // 폴백 데이터 확인 (마커가 없어서 파싱 실패)
+      expect(result.visualIdentity.moodAndTone).toEqual(['명료', '친근', '탐구', '안정']);
+    });
+
+    test('라인 기반 형식 검증이 올바르게 작동한다', async () => {
+      const mockResponse = {
+        choices: [{
+          message: {
+            content: `BEGIN_S2
+VERSION=vi.v1
+MOOD=명료,친근,탐구,안정
+COLOR_PRIMARY=#004D99
+COLOR_SECONDARY=#E9F4FF
+COLOR_ACCENT=#FFCC00
+BASE_SIZE_PT=20
+COMPONENT_STYLE=라운드 모서리와 그림자 효과
+END_S2`
+          }
+        }]
+      };
+
+      mockOpenAIService.createCompletion.mockResolvedValue(mockResponse as any);
+
+      const result = await service.generateVisualIdentity(mockProjectData);
+
+      // 정확한 파싱 확인
+      expect(result.visualIdentity.moodAndTone).toHaveLength(4);
+      expect(result.visualIdentity.colorPalette.primary).toMatch(/^#[0-9A-F]{6}$/i);
+      expect(result.visualIdentity.typography.baseSize).toMatch(/^\d+(pt)$/);
+    });
+  });
+
+  describe('정규화 및 검증 테스트', () => {
+    test('여러 정규화 규칙이 동시에 적용된다', async () => {
+      const mockResponse = {
+        choices: [{
+          message: {
+            content: `BEGIN_S2
+VERSION=vi.v1
+MOOD=짧은，무드，만
+COLOR_PRIMARY=#abc
+COLOR_SECONDARY=e9f4ff
+COLOR_ACCENT=#10B981
+BASE_SIZE_PT=16
+COMPONENT_STYLE=전각 콤마가，포함된，스타일
+END_S2`
+          }
+        }]
+      };
+
+      mockOpenAIService.createCompletion.mockResolvedValue(mockResponse as any);
+
+      const result = await service.generateVisualIdentity(mockProjectData);
+
+      // 여러 정규화 확인
+      expect(result.visualIdentity.colorPalette.primary).toBe('#AABBCC');
+      expect(result.visualIdentity.colorPalette.secondary).toBe('#E9F4FF');
+      expect(result.visualIdentity.componentStyle).toBe('전각 콤마가,포함된,스타일');
+      expect(result.visualIdentity.typography.baseSize).toBe('20pt'); // 16은 유효하지 않으므로 기본값
     });
   });
 });

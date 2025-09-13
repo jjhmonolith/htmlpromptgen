@@ -120,172 +120,6 @@ export class Step3LayoutWireframeService {
     }
   }
 
-  // Step3 품질 게이트 (경량·확실)
-  validateStep3Result(result: LayoutWireframe): { isValid: boolean; corrections: any[]; diagnostics: any[] } {
-    const corrections: any[] = [];
-    const diagnostics: any[] = [];
-
-    // 각 페이지에 대해 검증
-    for (const page of result.pages) {
-      const pageData = (page as any).wireframe; // 새로운 형식의 wireframe 데이터
-
-      if (!pageData) continue;
-
-      // 4.1 Step 3 게이트
-      // LAYOUT 검증
-      if (pageData.version !== 'wire.v1') {
-        corrections.push({ type: 'version', pageId: page.pageId, fix: 'wire.v1' });
-        diagnostics.push({ type: 'warning', message: `페이지 ${page.pageNumber}: VERSION 보정` });
-      }
-
-      if (!['scrollable', 'fixed'].includes(pageData.viewportMode)) {
-        corrections.push({ type: 'viewportMode', pageId: page.pageId, fix: 'scrollable' });
-        diagnostics.push({ type: 'warning', message: `페이지 ${page.pageNumber}: VIEWPORT_MODE 보정` });
-      }
-
-      // FLOW 패턴 검증
-      const flowPattern = /^[A-E]:(intro|keyMessage|content|compare|bridge)$/;
-      if (!flowPattern.test(pageData.flow)) {
-        corrections.push({ type: 'flow', pageId: page.pageId, fix: 'C:content' });
-        diagnostics.push({ type: 'warning', message: `페이지 ${page.pageNumber}: FLOW 패턴 보정` });
-      }
-
-      // SECTION 최소 5개 검증
-      if (!pageData.sections || pageData.sections.length < 5) {
-        corrections.push({ type: 'minSections', pageId: page.pageId, needed: 5 - (pageData.sections?.length || 0) });
-        diagnostics.push({ type: 'warning', message: `페이지 ${page.pageNumber}: 섹션 부족, 자동 추가 예정` });
-      }
-
-      // IMG_BUDGET 검증
-      if (pageData.imgBudget > 2) {
-        corrections.push({ type: 'imgBudget', pageId: page.pageId, fix: 2 });
-        diagnostics.push({ type: 'warning', message: `페이지 ${page.pageNumber}: IMG_BUDGET 초과, 2로 제한` });
-      }
-
-      // SLOTS 검증
-      if (pageData.slots) {
-        const sectionsMap = new Set(pageData.sections?.map(s => s.id) || []);
-        for (const slot of pageData.slots) {
-          if (!sectionsMap.has(slot.section)) {
-            corrections.push({ type: 'orphanSlot', pageId: page.pageId, slotId: slot.id, section: slot.section });
-            diagnostics.push({ type: 'error', message: `페이지 ${page.pageNumber}: 슬롯 ${slot.id}의 섹션 ${slot.section} 부재` });
-          }
-        }
-
-        // 8+4 섹션에는 gridSpan 지정 필수
-        const grid8Plus4Sections = pageData.sections?.filter(s => s.grid === '8+4') || [];
-        for (const section of grid8Plus4Sections) {
-          const sectionSlots = pageData.slots.filter(slot => slot.section === section.id);
-          const hasGridSpan = sectionSlots.some(slot => slot.gridSpan);
-
-          if (!hasGridSpan && sectionSlots.length > 0) {
-            corrections.push({ type: 'missingGridSpan', pageId: page.pageId, sectionId: section.id });
-            diagnostics.push({ type: 'warning', message: `페이지 ${page.pageNumber}: 8+4 섹션 ${section.id}에 gridSpan 부재` });
-          }
-        }
-
-        // imageSlots 개수 검증
-        const imageSlots = pageData.slots.filter(slot => slot.type === 'image');
-        if (imageSlots.length > pageData.imgBudget) {
-          corrections.push({ type: 'excessImageSlots', pageId: page.pageId, excess: imageSlots.length - pageData.imgBudget });
-          diagnostics.push({ type: 'warning', message: `페이지 ${page.pageNumber}: 이미지 슬롯 초과, 뒤에서 제거` });
-        }
-
-        // SUMMARY 수치 일치 검증
-        if (pageData.summary) {
-          const actualSections = pageData.sections?.length || 0;
-          const actualSlots = pageData.slots?.length || 0;
-          const actualImageSlots = imageSlots.length;
-
-          if (pageData.summary.sections !== actualSections) {
-            diagnostics.push({ type: 'warning', message: `페이지 ${page.pageNumber}: SUMMARY sections 불일치 (${pageData.summary.sections} vs ${actualSections})` });
-          }
-          if (pageData.summary.slots !== actualSlots) {
-            diagnostics.push({ type: 'warning', message: `페이지 ${page.pageNumber}: SUMMARY slots 불일치 (${pageData.summary.slots} vs ${actualSlots})` });
-          }
-          if (pageData.summary.imageSlots !== actualImageSlots) {
-            diagnostics.push({ type: 'warning', message: `페이지 ${page.pageNumber}: SUMMARY imageSlots 불일치 (${pageData.summary.imageSlots} vs ${actualImageSlots})` });
-          }
-        }
-      }
-    }
-
-    const isValid = corrections.filter(c => c.type !== 'warning').length === 0;
-    return { isValid, corrections, diagnostics };
-  }
-
-  // 보정 사항 적용
-  applyCorrections(result: LayoutWireframe, corrections: any[]): LayoutWireframe {
-    const corrected = JSON.parse(JSON.stringify(result)); // Deep copy
-
-    for (const correction of corrections) {
-      const page = corrected.pages.find(p => p.pageId === correction.pageId);
-      if (!page || !(page as any).wireframe) continue;
-
-      const pageData = (page as any).wireframe;
-
-      switch (correction.type) {
-        case 'version':
-          pageData.version = correction.fix;
-          break;
-
-        case 'viewportMode':
-          pageData.viewportMode = correction.fix;
-          break;
-
-        case 'flow':
-          pageData.flow = correction.fix;
-          break;
-
-        case 'imgBudget':
-          pageData.imgBudget = correction.fix;
-          break;
-
-        case 'minSections':
-          // 기본 섹션 자동 추가 (스켈레톤)
-          if (!pageData.sections) pageData.sections = [];
-          for (let i = 0; i < correction.needed; i++) {
-            pageData.sections.push({
-              id: `secAuto${i + 1}`,
-              role: 'content',
-              grid: '1-12',
-              height: 'auto',
-              gapBelow: 64,
-              hint: '자동 추가된 스켈레톤 섹션'
-            });
-          }
-          break;
-
-        case 'excessImageSlots':
-          // 초과 이미지 슬롯 제거
-          if (pageData.slots) {
-            const imageSlots = pageData.slots.filter(slot => slot.type === 'image');
-            const slotsToRemove = imageSlots.slice(-correction.excess);
-            pageData.slots = pageData.slots.filter(slot => !slotsToRemove.includes(slot));
-          }
-          break;
-
-        case 'missingGridSpan':
-          // 8+4 섹션의 슬롯에 gridSpan 자동 배정
-          if (pageData.slots) {
-            const sectionSlots = pageData.slots.filter(slot => slot.section === correction.sectionId);
-            sectionSlots.forEach((slot, index) => {
-              slot.gridSpan = index % 2 === 0 ? 'left' : 'right';
-            });
-          }
-          break;
-
-        case 'orphanSlot':
-          // 고아 슬롯 제거
-          if (pageData.slots) {
-            pageData.slots = pageData.slots.filter(slot => slot.id !== correction.slotId);
-          }
-          break;
-      }
-    }
-
-    return corrected;
-  }
 
   private createPageLayoutPrompt(
     page: { id: string; pageNumber: number; topic: string; description?: string },
@@ -486,6 +320,30 @@ ${allPages}
 ${prevPage ? `이전: "${prevPage.topic}"에서 연결` : '첫 페이지 - 학습 시작점'}
 ${nextPage ? `다음: "${nextPage.topic}"로 전환 준비` : '마지막 페이지 - 학습 마무리'}
 
+**콘텐츠 생성 가이드라인:**
+${projectData.contentMode === 'restricted' ? `
+- 페이지 주제 "${page.topic}"와 입력된 설명 범위 내에서만 구성하세요
+- 내용 확장이나 추가 정보 생성을 금지합니다
+- 기존 내용의 표현 방식이나 구조는 교육적 효과를 위해 개선 가능합니다
+- SECTION hint는 입력된 내용을 재구성한 범위 내에서만 작성하세요
+- 추가적인 학습 예시나 심화 설명 생성을 제한합니다` : `
+- 페이지 주제 "${page.topic}"를 중심으로 교육적 가치를 확장하세요
+- 관련 예시, 비유, 실생활 연결 등 보조 내용을 적극 생성하세요
+- 학습 효과를 높이는 창의적 구조 개선을 권장합니다
+- SECTION hint에 교육적 부연설명이나 학습 방법을 포함할 수 있습니다
+- 주제 관련 심화 내용이나 흥미 유발 요소 추가를 허용합니다`}
+
+**레이아웃 가이드라인:**
+${projectData.layoutMode === 'scrollable' ? `
+- 세로 스크롤을 활용한 풍부한 콘텐츠 구성 (4-6섹션 권장)
+- 섹션 간격: gapBelow 80-120px로 충분한 여백 확보
+- 다양한 grid 패턴 활용 (1-12, 8+4, 2-11 혼용)
+- 상세한 설명과 예시를 위한 공간 확보` : `
+- 한 화면 내 핵심 내용 집약 (3-4섹션으로 제한)
+- 섹션 간격: gapBelow 32-64px로 간격 최소화
+- 간결한 grid 패턴 활용 (1-12, 8+4 중심)
+- 핵심만 담은 간결하고 명확한 구성`}
+
 **중요한 제약사항:**
 - 이 페이지들은 교육 플랫폼에서 별도 등록되어 플랫폼의 네비게이션 시스템을 사용합니다
 - 페이지 내에 "다음 페이지로", "이전 페이지로", "목차로" 등의 네비게이션 버튼을 포함하지 마세요
@@ -527,31 +385,29 @@ END_S3_SLOTS
 
   // 가이드라인에 따른 Normalizer 및 새로운 파서 로직
   private normalizeResponse(content: string): string {
-    // 3.1 Normalizer (S3/S4 공통, 파싱 전에 적용)
     let normalized = content;
 
-    // 전각쉽표 „ → 임시 토큰으로 치환 후 파싱 → 복원
-    const tempToken = '__FULL_WIDTH_COMMA__';
-    normalized = normalized.replace(/，/g, tempToken);
+    // 개행 보존: CRLF → LF
+    normalized = normalized.replace(/\r\n/g, '\n');
 
-    // 스마트 따옴표 → ASCII " ' 통일
-    normalized = normalized.replace(/[“”]/g, '"');
-    normalized = normalized.replace(/[‘’]/g, "'");
+    // 전각 쉼표 임시 치환
+    const TEMP = '__FULL_WIDTH_COMMA__';
+    normalized = normalized.replace(/，/g, TEMP);
 
-    // HTML 태그 제거(특히 hint, text)
-    normalized = normalized.replace(/<[^>]*>/g, '');
+    // 스마트 따옴표 정규화
+    normalized = normalized.replace(/[""]/g, '"').replace(/['']/g, "'");
 
-    // 공백/탭/전각 콜론·쉽표 정규화
-    normalized = normalized.replace(/\s+/g, ' ');
-    normalized = normalized.replace(/：/g, ':');
-    normalized = normalized.replace(/，/g, ',');
+    // HTML 태그 제거 (한 줄 내)
+    normalized = normalized.replace(/<[^>\n]*>/g, '');
 
-    // 단위 대소문자 정규화(px/pt)
-    normalized = normalized.replace(/PX/g, 'px');
-    normalized = normalized.replace(/PT/g, 'pt');
+    // 전각 콜론 → ASCII, 탭/폼피드만 공백화 (개행은 보존)
+    normalized = normalized.replace(/：/g, ':').replace(/[\t\f]+/g, ' ');
+
+    // 단위 대문자 정규화
+    normalized = normalized.replace(/PX/g, 'px').replace(/PT/g, 'pt');
 
     // 임시 토큰 복원
-    normalized = normalized.replace(new RegExp(tempToken, 'g'), ',');
+    normalized = normalized.replace(new RegExp(TEMP, 'g'), ',');
 
     return normalized;
   }
@@ -742,6 +598,27 @@ END_S3_SLOTS
     return Object.keys(section).length > 0 ? section : null;
   }
 
+  // 한국어 조사 자동 매칭 헬퍼 함수
+  private getJosa(word: string, josaType: 'eun_neun' | 'i_ga' | 'eul_reul'): string {
+    const lastChar = word.charAt(word.length - 1);
+    const lastCharCode = lastChar.charCodeAt(0);
+
+    // 한글이 아닌 경우 기본값
+    if (lastCharCode < 0xAC00 || lastCharCode > 0xD7A3) {
+      return josaType === 'eun_neun' ? '는' : josaType === 'i_ga' ? '가' : '을';
+    }
+
+    // 받침 유무 확인 (유니코드 계산)
+    const hasBatchim = (lastCharCode - 0xAC00) % 28 !== 0;
+
+    switch (josaType) {
+      case 'eun_neun': return hasBatchim ? '은' : '는';
+      case 'i_ga': return hasBatchim ? '이' : '가';
+      case 'eul_reul': return hasBatchim ? '을' : '를';
+      default: return '';
+    }
+  }
+
   // 새로운 두 블록 형식 와이어프레임을 설명으로 변환
   private convertNewWireframeToDescription(wireframe: any): string {
     if (!wireframe || !wireframe.sections || wireframe.sections.length === 0) {
@@ -769,14 +646,14 @@ END_S3_SLOTS
         sectionDesc = ` **중간 영역**에는 `;
       }
 
-      // grid 패턴에 따른 레이아웃 설명
+      // grid 패턴에 따른 레이아웃 설명 (조사 자동 매칭)
       if (grid.includes('+')) {
         const [left, right] = grid.split('+');
-        sectionDesc += `좌우 분할 레이아웃으로 ${hint}가 배치되며, `;
+        sectionDesc += `좌우 분할 레이아웃으로 ${hint}${this.getJosa(hint, 'i_ga')} 배치되며, `;
       } else if (grid === '1-12') {
-        sectionDesc += `전체 폭을 활용하여 ${hint}가 배치되며, `;
+        sectionDesc += `전체 폭을 활용하여 ${hint}${this.getJosa(hint, 'i_ga')} 배치되며, `;
       } else {
-        sectionDesc += `중앙 정렬로 ${hint}가 배치되며, `;
+        sectionDesc += `중앙 정렬로 ${hint}${this.getJosa(hint, 'i_ga')} 배치되며, `;
       }
 
       // 역할에 따른 추가 설명

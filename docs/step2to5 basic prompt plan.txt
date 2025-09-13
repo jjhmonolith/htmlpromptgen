@@ -179,12 +179,104 @@ function assembleStep2(finalKV, layoutMode){
 
 ⸻
 
-Step 3 — 레이아웃 와이어프레임(간단 선언)
+Step 3 — 레이아웃 와이어프레임 (현재 구현 분석 및 계획)
 
-1) 입력
+현재 Step3LayoutWireframe 컴포넌트와 서비스 분석:
+
+## 1) 현재 AI 동작 분석
+
+### AI 요청 및 전달 데이터:
+- **병렬 처리**: 모든 페이지를 Promise.all로 동시 생성 (성능 최적화)
+- **요청 형식**: 일반 completion 요청 (Structured Output 미사용)
+- **전달 데이터**:
+  - projectData: Step1에서 받은 프로젝트 정보
+  - visualIdentity: Step2에서 생성된 VI 정보
+  - designTokens: Step2에서 병합된 토큰
+  - 페이지별 맥락 정보 (이전/다음 페이지 연결성)
+
+### 현재 프롬프트 구조:
+- 교육적 맥락과 페이지 흐름 정보 포함
+- contentMode별 생성 가이드라인 (restricted vs enhanced)
+- layoutMode별 레이아웃 제약사항 (scrollable vs fixed)
+- **두 블록 형식 사용**: BEGIN_S3_LAYOUT + BEGIN_S3_SLOTS
+
+### 생성 데이터:
+- **두 블록 응답**: S3_LAYOUT (섹션 정의) + S3_SLOTS (슬롯 정의)
+- 페이지별 독립 와이어프레임 생성
+- 창의 토큰과 디자인 가이드라인 적용
+
+## 2) 파싱 시스템 분석
+
+### 정규화 처리:
+- **normalizeResponse()**: CRLF→LF, 전각문자 정규화, HTML 태그 제거
+- 스마트 따옴표, 전각 콜론 처리
+- 단위 대문자 정규화 (PX→px, PT→pt)
+
+### 두 블록 파싱:
+- **extractWireframeFromResponse()**: 정규식으로 두 블록 추출
+- **parseNewWireframeFormat()**: 라인 기반 KEY=VALUE 파싱
+- **parseRecordLine()**: 정규식 기반 CSV 레코드 파싱
+- **normalizeGapBelow()**: 64/80/96 중 가장 가까운 값으로 스냅
+
+### 레거시 지원:
+- 기존 단일 블록 형식도 파싱 가능
+- **parseWireframeLines()**: 이전 버전 호환성 유지
+
+## 3) 예외 처리 분석
+
+### 강력한 품질 게이트:
+- **validateStep3Result()**: 포괄적 데이터 검증
+  - VERSION, VIEWPORT_MODE, FLOW 패턴 검증
+  - 최소 5개 섹션 확인
+  - IMG_BUDGET 초과 검증
+  - 고아 슬롯 탐지
+  - 8+4 섹션의 gridSpan 검증
+  - SUMMARY 수치 일치성 검증
+
+### 자동 보정 시스템:
+- **applyCorrections()**: 검증 실패 시 자동 복구
+  - 누락 섹션 자동 추가 (스켈레톤)
+  - 초과 이미지 슬롯 제거
+  - gridSpan 자동 배정
+  - 고아 슬롯 제거
+  - 디폴트 값으로 보정
+
+### 에러 처리:
+- 페이지별 독립 에러 처리 (병렬 처리 중 일부 실패 대응)
+- 파싱 실패 시 AI 원본 응답 보존
+- 서비스 레벨에서 상세 로깅과 에러 전파
+
+## 4) 프론트엔드 표시 내용
+
+### 자동 저장 시스템:
+- initialData 동기화 (한 번만 실행)
+- 해시 기반 변경 감지 및 실시간 onDataChange
+- 생성 상태 부모 전달 (onGeneratingChange)
+
+### 로딩 상태:
+- 병렬 생성에 특화된 로딩 UI
+- 다중 페이지 처리 상태 표시
+- 병렬 처리 성능 강조 메시지
+
+### 결과 표시:
+- **페이지별 카드 형태**: 페이지 번호, 제목, 생성 시간
+- **AI 응답 원본**: layoutDescription (읽기 쉬운 산문 형태)
+- **파싱된 데이터**: 접이식 디테일로 구조화된 정보
+  - Page Style, Sections, Slots, Summary 분리 표시
+  - 각 섹션/슬롯의 속성 테이블 형태로 표시
+- **파싱 실패 표시**: 원본 응답만 보여주고 상태 안내
+
+### 네비게이션:
+- 이전/다음 단계 버튼
+- 재생성 기능
+- 완료 시 Step4 전환
+
+## 5) 향후 계획 (라인 기반 단순화)
+
+입력:
 	•	Step1 계약, Step2 최종 VI+Tokens(서버 병합 결과)
 
-2) 프롬프트（gpt‑4o, 라인 포맷）
+프롬프트（gpt‑4o, 라인 포맷）
 
 [ROLE] 당신은 교육용 레이아웃 와이어프레임 전문가입니다.
 [CONTEXT] 프로젝트/토큰(고정)은 참고만 하세요. 픽셀 좌표는 최소화합니다.
@@ -211,7 +303,7 @@ VERSION=wire.v1
 ...여기에 결과...
 END_S3
 
-3) 서버 수신 예시
+서버 수신 예시
 
 BEGIN_S3
 VERSION=wire.v1
@@ -224,14 +316,15 @@ SECTION, id=secD, role=compare, grid=1-12, height=auto, gapBelow=64
 SECTION, id=secE, role=bridge, grid=2-11, height=auto, gapBelow=80
 END_S3
 
-4) 서버 처리
+서버 처리
 	•	FLOW를 배열로 분해.
 	•	SECTION 라인을 파싱해 role ↔ id 매핑과 grid 패턴만 저장.
 	•	숫자 검증 최소화(추후 강화).
 
-5) 기대 효과
-	•	숫자·좌표 파싱 없이도 그리드 배치 정보 확보.
-	•	실패율 거의 0.
+기대 효과
+	•	현재 두 블록 방식에서 단일 블록으로 단순화
+	•	병렬 처리와 품질 게이트 시스템은 유지
+	•	파싱 안정성 99%+ 달성
 
 ⸻
 

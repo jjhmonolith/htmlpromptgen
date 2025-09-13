@@ -296,11 +296,115 @@ export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
                             </div>
                           </div>
                           
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h5 className="text-sm font-medium text-gray-700 mb-2">레이아웃 설명 (AI 응답)</h5>
-                            <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
-                              {page.layoutDescription}
+                          <div className="space-y-4">
+                            {/* 레이아웃 설명 */}
+                            <div className="bg-gray-50 rounded-lg p-4">
+                              <h5 className="text-sm font-medium text-gray-700 mb-2">레이아웃 설명 (AI 응답)</h5>
+                              <div
+                                className="text-sm text-gray-800 leading-relaxed max-h-96 overflow-y-auto prose prose-sm max-w-none"
+                                dangerouslySetInnerHTML={{
+                                  __html: page.layoutDescription
+                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                    .replace(/\n/g, '<br />')
+                                }}
+                              />
                             </div>
+
+                            {/* 파싱된 와이어프레임 데이터 */}
+                            {page.wireframe && (
+                              <details className="bg-blue-50 rounded-lg">
+                                <summary className="cursor-pointer p-4 hover:bg-blue-100 rounded-lg">
+                                  <span className="text-sm font-medium text-blue-700">파싱된 와이어프레임 데이터 (클릭하여 펼치기)</span>
+                                </summary>
+                                <div className="px-4 pb-4 space-y-3">
+
+                                  {/* 페이지 스타일 */}
+                                  {page.wireframe.pageStyle && Object.keys(page.wireframe.pageStyle).length > 0 && (
+                                    <div>
+                                      <div className="font-medium text-blue-600 text-xs mb-1">Page Style:</div>
+                                      <div className="text-xs text-blue-800 bg-blue-100 rounded p-2">
+                                        {Object.entries(page.wireframe.pageStyle).map(([key, value]) => (
+                                          <span key={key} className="mr-3">
+                                            {key}: {value as string}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* 섹션 정보 */}
+                                  {page.wireframe.sections && page.wireframe.sections.length > 0 && (
+                                    <div>
+                                      <div className="font-medium text-blue-600 text-xs mb-2">Sections ({page.wireframe.sections.length}):</div>
+                                      <div className="space-y-2">
+                                        {page.wireframe.sections.map((section: any, index: number) => (
+                                          <div key={index} className="text-xs bg-blue-100 rounded p-2">
+                                            <div className="grid grid-cols-2 gap-2">
+                                              <div><span className="font-medium">ID:</span> {section.id}</div>
+                                              <div><span className="font-medium">Role:</span> {section.role}</div>
+                                              <div><span className="font-medium">Grid:</span> {section.grid}</div>
+                                              <div><span className="font-medium">Gap:</span> {section.gapBelow}px</div>
+                                            </div>
+                                            {section.hint && (
+                                              <div className="mt-1 text-blue-700">
+                                                <span className="font-medium">Hint:</span> {section.hint}
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* 슬롯 정보 */}
+                                  {page.wireframe.slots && page.wireframe.slots.length > 0 && (
+                                    <div>
+                                      <div className="font-medium text-blue-600 text-xs mb-2">Slots ({page.wireframe.slots.length}):</div>
+                                      <div className="space-y-1">
+                                        {page.wireframe.slots.map((slot: any, index: number) => (
+                                          <div key={index} className="text-xs bg-blue-100 rounded p-2">
+                                            <div className="grid grid-cols-3 gap-2">
+                                              <div><span className="font-medium">ID:</span> {slot.id}</div>
+                                              <div><span className="font-medium">Section:</span> {slot.section}</div>
+                                              <div><span className="font-medium">Type:</span> {slot.type}</div>
+                                            </div>
+                                            <div className="grid grid-cols-2 gap-2 mt-1">
+                                              {slot.variant && <div><span className="font-medium">Variant:</span> {slot.variant}</div>}
+                                              {slot.gridSpan && <div><span className="font-medium">Grid Span:</span> {slot.gridSpan}</div>}
+                                              {slot.slotRef && <div><span className="font-medium">Slot Ref:</span> {slot.slotRef}</div>}
+                                              {slot.width && <div><span className="font-medium">Size:</span> {slot.width}×{slot.height}</div>}
+                                            </div>
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+
+                                  {/* 요약 정보 */}
+                                  {page.wireframe.summary && (
+                                    <div>
+                                      <div className="font-medium text-blue-600 text-xs mb-1">Summary:</div>
+                                      <div className="text-xs text-blue-800 bg-blue-100 rounded p-2">
+                                        Sections: {page.wireframe.summary.sections} |
+                                        Slots: {page.wireframe.summary.slots} |
+                                        Image Slots: {page.wireframe.summary.imageSlots}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+                              </details>
+                            )}
+
+                            {/* 파싱 실패 시 표시 */}
+                            {!page.wireframe && (
+                              <div className="bg-yellow-50 rounded-lg p-4">
+                                <h5 className="text-sm font-medium text-yellow-700 mb-2">파싱 상태</h5>
+                                <div className="text-xs text-yellow-800">
+                                  구조화된 와이어프레임 데이터 파싱에 실패했습니다. AI 원본 응답만 표시됩니다.
+                                </div>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
