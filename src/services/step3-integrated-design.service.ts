@@ -323,16 +323,22 @@ ${sectionsInfo}
 - 8+4 섹션 컴포넌트는 gridSpan=left|right 필수
 ${contentLimits.componentLimits}
 
+[이미지 생성 필수 규칙]
+- 이미지가 필요한 경우 반드시 COMP 라인과 IMG 라인을 모두 생성해야 합니다
+- COMP 라인: type=image로 이미지 컴포넌트 정의 (레이아웃 위치, 참조 정보)
+- IMG 라인: 이미지 메타데이터 정의 (생성용 프롬프트, 접근성 정보)
+- 이미지 크기는 반드시 픽셀 단위로 지정: width=520, height=320 (숫자만, px 생략)
+- 상대 단위(1, 2, 3, 4) 사용 금지 - 반드시 실제 픽셀값 사용
+
 [FORMAT 규칙 - 중요]
 **텍스트에 쉼표가 포함된 경우 반드시 따옴표로 감싸주세요**
-- 예: text="AI는 사회적 변혁을 촉진하며, 미래 기술 발전에 중요한 역할을 할 것입니다"
-- 예: caption="그림 1. 인공지능의 발전 과정과 미래 전망"
-- 예: description="머신러닝, 딥러닝, 신경망 등 주요 기술 요소들"
+- 쉼표 포함 텍스트는 따옴표 필수: text="내용1, 내용2, 내용3"
+- 단순 텍스트는 따옴표 선택: text=내용 또는 text="내용"
 
 BEGIN_CONTENT
 VERSION=content.v1
-COMP, id=컴포넌트ID, type=heading|paragraph|card|image, variant=H1|H2|Body|none, section=섹션ID, role=title|content, gridSpan=left|right(8+4섹션만), text="실제텍스트내용", src=이미지파일명
-IMG, filename=이미지파일명, purpose=diagram|illustration|comparison, section=섹션ID, place=left|right|center, width=숫자, height=숫자, alt="대체텍스트", caption="캡션", description="이미지상세설명", aiPrompt="한글이미지생성프롬프트", style="스타일설명"
+COMP, id=컴포넌트ID, type=heading|paragraph|card|image, variant=H1|H2|Body|none, section=섹션ID, role=title|content, gridSpan=left|right(8+4섹션만), text="텍스트내용", src="파일명"
+IMG, filename=파일명, purpose=diagram|illustration|comparison, section=섹션ID, place=left|right|center, width=픽셀값, height=픽셀값, alt="대체텍스트", caption="캡션", description="설명", aiPrompt="한글프롬프트", style="스타일"
 END_CONTENT
 
 "${page.topic}" 페이지의 교육 콘텐츠를 생성하세요:
@@ -353,11 +359,17 @@ ${contentLimits.detailedGuide}
 - 최종 경로: ~/image/page${page.pageNumber}/1.png 형태로 구성됨
 - 컴포넌트 src와 IMG filename은 동일하게 "숫자.png" 형식 사용
 
-[이미지 생성 프롬프트 작성 규칙]
-- aiPrompt는 반드시 한글로 작성
-- 구체적이고 상세한 설명 포함 (색상, 스타일, 구성요소)
-- 교육적 목적에 맞는 시각적 요소 명시
-- 예시: "${page.topic} 개념을 설명하는 깔끔한 다이어그램. 파란색과 흰색 배색 사용. 명확한 라벨과 화살표로 단계별 과정 표시. 현대적이고 간결한 교육용 스타일."`;
+[이미지 생성 프롬프트 작성 규칙 - 상세 작성 필수]
+- aiPrompt는 반드시 한글로 작성하되, 최소 100자 이상 상세하게 작성
+- 다음 요소들을 모두 포함해야 함:
+  * 주요 객체/인물: 무엇이 보이는지 구체적 묘사
+  * 배경/환경: 어떤 공간, 상황에서 일어나는지
+  * 색상 팔레트: 주요 색상과 전체적인 색감 (예: 파란색 계열, 따뜻한 톤, 현대적인 색상)
+  * 스타일: 일러스트레이션/다이어그램/사진 스타일 등
+  * 구성 방식: 레이아웃, 요소들의 배치, 시각적 흐름
+  * 디테일 요소: 아이콘, 텍스트, 화살표, 테두리 등 보조 요소
+- 교육적 효과를 높이는 시각적 요소 명시 (명확한 구분, 단계별 표현, 직관적 이해 등)
+- "${page.topic}" 주제의 핵심 개념을 시각적으로 전달하는 구체적 방법 제시`;
   }
 
   // 레이아웃별 콘텐츠 분량 제한 설정
@@ -496,13 +508,35 @@ ${contentLimits.detailedGuide}
             const currentImageIndex = images.length + 1;
             const normalizedFilename = this.normalizeImageFilename(img.filename, currentImageIndex);
 
+            // 이미지 크기 검증 및 정규화
+            const parsedWidth = parseInt(String(img.width));
+            const parsedHeight = parseInt(String(img.height));
+
+            // 너무 작은 값(1-10)은 상대 단위로 간주하고 픽셀값으로 변환
+            let finalWidth = parsedWidth;
+            let finalHeight = parsedHeight;
+
+            if (parsedWidth && parsedWidth <= 10) {
+              console.warn(`⚠️ 이미지 ${normalizedFilename}: width=${parsedWidth}은 상대 단위로 추정됨. 520px로 변환`);
+              finalWidth = 520;
+            } else if (!parsedWidth || parsedWidth < 100) {
+              finalWidth = 520; // 기본값
+            }
+
+            if (parsedHeight && parsedHeight <= 10) {
+              console.warn(`⚠️ 이미지 ${normalizedFilename}: height=${parsedHeight}은 상대 단위로 추정됨. 320px로 변환`);
+              finalHeight = 320;
+            } else if (!parsedHeight || parsedHeight < 100) {
+              finalHeight = 320; // 기본값
+            }
+
             images.push({
               filename: normalizedFilename,
               purpose: img.purpose || 'diagram',
               section: img.section,
               place: img.place || 'center',
-              width: parseInt(String(img.width)) || 520,
-              height: parseInt(String(img.height)) || 320,
+              width: finalWidth,
+              height: finalHeight,
               alt: String(img.alt || '').slice(0, 80),
               caption: String(img.caption || '').slice(0, 80),
               description: String(img.description || '이미지 설명'),
@@ -512,6 +546,9 @@ ${contentLimits.detailedGuide}
           }
         }
       }
+
+      // 이미지 컴포넌트와 IMG 라인 일치성 검증
+      this.validateImageConsistency(components, images);
 
       return { components, images };
     } catch (error) {
@@ -562,6 +599,51 @@ ${contentLimits.detailedGuide}
     }
 
     return Object.keys(record).length > 0 ? record : null;
+  }
+
+  // 이미지 컴포넌트와 IMG 라인 일치성 검증
+  private validateImageConsistency(components: ComponentLine[], images: ImageLine[]): void {
+    const imageComponents = components.filter(comp => comp.type === 'image');
+
+    console.log(`📊 이미지 일치성 검증: COMP(type=image) ${imageComponents.length}개, IMG 라인 ${images.length}개`);
+
+    // 1. 이미지 컴포넌트가 있는데 IMG 라인이 없는 경우 경고
+    if (imageComponents.length > 0 && images.length === 0) {
+      console.warn(`⚠️ 이미지 컴포넌트 ${imageComponents.length}개가 정의되었으나 IMG 라인이 없습니다.`);
+      return;
+    }
+
+    // 2. IMG 라인이 있는데 이미지 컴포넌트가 없는 경우 경고
+    if (images.length > 0 && imageComponents.length === 0) {
+      console.warn(`⚠️ IMG 라인 ${images.length}개가 정의되었으나 이미지 컴포넌트(COMP type=image)가 없습니다.`);
+      return;
+    }
+
+    // 3. 개수 불일치 검증
+    if (imageComponents.length !== images.length) {
+      console.warn(`⚠️ 이미지 개수 불일치: COMP(type=image) ${imageComponents.length}개 vs IMG 라인 ${images.length}개`);
+    }
+
+    // 4. src와 filename 매칭 검증
+    for (const comp of imageComponents) {
+      if (comp.src) {
+        const matchingImg = images.find(img => img.filename === comp.src);
+        if (!matchingImg) {
+          console.warn(`⚠️ 이미지 컴포넌트 ${comp.id}의 src="${comp.src}"에 대응하는 IMG 라인을 찾을 수 없습니다.`);
+        }
+      }
+    }
+
+    for (const img of images) {
+      const matchingComp = imageComponents.find(comp => comp.src === img.filename);
+      if (!matchingComp) {
+        console.warn(`⚠️ IMG 라인 "${img.filename}"에 대응하는 이미지 컴포넌트를 찾을 수 없습니다.`);
+      }
+    }
+
+    if (imageComponents.length === images.length && imageComponents.length > 0) {
+      console.log(`✅ 이미지 일치성 검증 완료: ${imageComponents.length}개 이미지가 올바르게 매칭됨`);
+    }
   }
 
   // 페이지별 재생성 - Phase 1, 2 순차 실행
