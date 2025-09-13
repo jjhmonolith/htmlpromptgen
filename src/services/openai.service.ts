@@ -4,6 +4,7 @@ import { loadApiKey } from './storage.service';
 export class OpenAIService {
   private static instance: OpenAIService | null = null;
   private openai: OpenAI | null = null;
+  private model: string = 'gpt-4o-2024-08-06';
 
   static getInstance(): OpenAIService {
     if (!OpenAIService.instance) {
@@ -93,6 +94,58 @@ export class OpenAIService {
       content: response.choices[0]?.message?.content || '',
       usage: response.usage
     };
+  }
+
+  // Structured Output을 사용한 구조화된 응답 생성
+  async generateStructuredCompletion(
+    prompt: string, 
+    schema: any, 
+    context?: string
+  ) {
+    const client = this.getClient();
+    
+    const response = await client.chat.completions.create({
+      model: this.model,
+      messages: [
+        {
+          role: 'user',
+          content: prompt
+        }
+      ],
+      temperature: 0.3, // 구조화된 출력은 낮은 temperature 사용
+      max_tokens: 4000,
+      response_format: {
+        type: "json_schema",
+        json_schema: {
+          name: "wireframe_response",
+          schema: schema,
+          strict: true
+        }
+      }
+    });
+
+    // 토큰 사용량 로그 (개발 환경에서만)
+    if (response.usage && context) {
+      console.group(`🔥 토큰 사용량 - ${context} (Structured)`);
+      console.log(`📥 입력 토큰: ${response.usage.prompt_tokens?.toLocaleString() || 0}`);
+      console.log(`📤 출력 토큰: ${response.usage.completion_tokens?.toLocaleString() || 0}`);
+      console.log(`🔢 총 토큰: ${response.usage.total_tokens?.toLocaleString() || 0}`);
+      console.groupEnd();
+    }
+
+    const content = response.choices[0]?.message?.content || '{}';
+    
+    try {
+      const parsed = JSON.parse(content);
+      return {
+        content: parsed,
+        rawContent: content,
+        usage: response.usage
+      };
+    } catch (error) {
+      console.error('Failed to parse structured response:', error);
+      throw new Error('Invalid structured response from OpenAI');
+    }
   }
 
   // Step2에서 사용하는 특화된 completion 메서드

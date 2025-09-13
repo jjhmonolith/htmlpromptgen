@@ -35,10 +35,11 @@ export class Step3LayoutWireframeService {
         console.log(`📄 페이지 ${page.pageNumber} 병렬 생성 시작: ${page.topic}`);
         
         try {
-          const prompt = this.createPageLayoutPrompt(page, projectData, visualIdentity, index);
-          const response = await this.openAIService.generateCompletion(prompt, `Step3-Page${page.pageNumber}`);
+          const prompt = this.createStructuredPageLayoutPrompt(page, projectData, visualIdentity, index);
+          const schema = this.createWireframeSchema();
+          const response = await this.openAIService.generateStructuredCompletion(prompt, schema, `Step3-Page${page.pageNumber}`);
           
-          const wireframeContent = this.extractWireframeFromResponse(response.content, page.pageNumber);
+          const wireframeContent = response.content;
           const layoutDescription = this.convertWireframeToDescription(wireframeContent);
           
           const pageProposal: PageLayoutProposal = {
@@ -53,27 +54,38 @@ export class Step3LayoutWireframeService {
           return pageProposal;
           
         } catch (error) {
-          console.error(`❌ 페이지 ${page.pageNumber} 생성 실패:`, error);
+          console.error(`❌ 페이지 ${page.pageNumber} Structured Output 실패:`, error);
           
-          // 개별 페이지 실패 시 와이어프레임 기반 폴백
-          const fallbackWireframe = {
-            version: 'wire.v1',
-            viewportMode: projectData.layoutMode,
-            flow: index === 0 ? 'A:intro' : index === projectData.pages.length - 1 ? 'E:bridge' : 'C:content',
-            sections: [
-              { id: 'header', role: 'title', grid: '1-12', height: '120', content: `"${page.topic}" 제목+설명`, gapBelow: '32' },
-              { id: 'main', role: 'content', grid: '8+4', height: 'auto', content: '핵심내용+시각자료', gapBelow: '48' },
-              { id: 'footer', role: 'navigation', grid: '3-10', height: '80', content: '페이지연결+버튼', gapBelow: '0' }
-            ]
-          };
-
-          return {
-            pageId: page.id,
-            pageTitle: page.topic,
-            pageNumber: page.pageNumber,
-            layoutDescription: this.convertWireframeToDescription(fallbackWireframe),
-            generatedAt: new Date()
-          };
+          // Structured Output 실패 시 기존 방식으로 폴백
+          try {
+            console.log(`🔄 페이지 ${page.pageNumber} 기존 방식으로 폴백 시도`);
+            const prompt = this.createPageLayoutPrompt(page, projectData, visualIdentity, index);
+            const response = await this.openAIService.generateCompletion(prompt, `Step3-Page${page.pageNumber}-Fallback`);
+            
+            const wireframeContent = this.extractWireframeFromResponse(response.content, page.pageNumber);
+            const layoutDescription = wireframeContent 
+              ? this.convertWireframeToDescription(wireframeContent)
+              : this.createFallbackDescription(page.topic);
+            
+            return {
+              pageId: page.id,
+              pageTitle: page.topic,
+              pageNumber: page.pageNumber,
+              layoutDescription: layoutDescription,
+              generatedAt: new Date()
+            };
+          } catch (fallbackError) {
+            console.error(`❌ 페이지 ${page.pageNumber} 폴백도 실패:`, fallbackError);
+            
+            // 최종 폴백: 하드코딩된 기본 레이아웃
+            return {
+              pageId: page.id,
+              pageTitle: page.topic,
+              pageNumber: page.pageNumber,
+              layoutDescription: this.createFallbackDescription(page.topic),
+              generatedAt: new Date()
+            };
+          }
         }
       });
       
@@ -171,6 +183,129 @@ ${nextPage ? `다음: "${nextPage.topic}"로 전환 준비` : '마지막 페이�
 - gapBelow: 다음 섹션과의 간격(px)
 
 위 형식에 맞춰 와이어프레임을 생성해주세요. 코드 블록으로 감싸서 답변해주세요.`;
+  }
+
+  // Structured Output용 JSON Schema 정의
+  private createWireframeSchema() {
+    return {
+      type: "object",
+      properties: {
+        version: {
+          type: "string",
+          enum: ["wire.v1"]
+        },
+        viewportMode: {
+          type: "string",
+          enum: ["scrollable", "fixed"]
+        },
+        flow: {
+          type: "string",
+          pattern: "^[A-E]:(intro|keyMessage|content|compare|bridge)$"
+        },
+        sections: {
+          type: "array",
+          minItems: 3,
+          maxItems: 6,
+          items: {
+            type: "object",
+            properties: {
+              id: {
+                type: "string",
+                minLength: 1
+              },
+              role: {
+                type: "string",
+                enum: ["title", "subtitle", "content", "visual", "interactive", "navigation", "summary"]
+              },
+              grid: {
+                type: "string",
+                pattern: "^(([1-9]|1[0-2])-([1-9]|1[0-2]))|([1-9]|1[0-2])\\+([1-9]|1[0-2])$"
+              },
+              height: {
+                type: "string",
+                description: "Height in pixels (e.g., '200') or 'auto'"
+              },
+              content: {
+                type: "string",
+                minLength: 1
+              },
+              gapBelow: {
+                type: "string",
+                pattern: "^[0-9]+$"
+              }
+            },
+            required: ["id", "role", "grid", "height", "content", "gapBelow"],
+            additionalProperties: false
+          }
+        }
+      },
+      required: ["version", "viewportMode", "flow", "sections"],
+      additionalProperties: false
+    };
+  }
+
+  // Structured Output용 프롬프트 생성
+  private createStructuredPageLayoutPrompt(
+    page: { id: string; pageNumber: number; topic: string; description?: string },
+    projectData: ProjectData,
+    visualIdentity: VisualIdentity,
+    pageIndex: number
+  ): string {
+    // 전체 페이지 흐름 정보 생성
+    const allPages = projectData.pages.map((p, idx) => 
+      `${p.pageNumber}. ${p.topic}${p.description ? ` - ${p.description}` : ''}`
+    ).join('\n');
+
+    // 이전/다음 페이지 정보
+    const prevPage = pageIndex > 0 ? projectData.pages[pageIndex - 1] : null;
+    const nextPage = pageIndex < projectData.pages.length - 1 ? projectData.pages[pageIndex + 1] : null;
+
+    // 페이지 위치에 따른 역할과 FLOW 정의
+    const getPageFlow = (index: number, total: number) => {
+      if (index === 0) return 'A:intro';
+      if (index === total - 1) return 'E:bridge';
+      if (index === 1) return 'B:keyMessage';
+      if (index === 2) return 'C:content';
+      return 'D:compare';
+    };
+
+    const pageFlow = getPageFlow(pageIndex, projectData.pages.length);
+    const pageRole = pageFlow.split(':')[1];
+
+    return `당신은 웹 페이지 레이아웃 설계 전문가입니다. 교육용 와이어프레임을 JSON 형식으로 생성해주세요.
+
+**프로젝트 정보:**
+- 제목: ${projectData.projectTitle}
+- 대상: ${projectData.targetAudience}
+- 페이지: ${page.pageNumber}/${projectData.pages.length} - ${page.topic}
+- 역할: ${pageRole}
+- 레이아웃 모드: ${projectData.layoutMode}
+
+**디자인 토큰:**
+- 주색상: ${visualIdentity.colorPalette.primary}
+- 보조색상: ${visualIdentity.colorPalette.secondary || '#50E3C2'}
+- 강조색상: ${visualIdentity.colorPalette.accent || '#F5A623'}
+
+**연결 맥락:**
+${prevPage ? `이전: "${prevPage.topic}"에서 연결` : '첫 페이지 - 학습 동기 유발'}
+${nextPage ? `다음: "${nextPage.topic}"로 전환 준비` : '마지막 페이지 - 학습 마무리'}
+
+다음 구조로 와이어프레임을 생성해주세요:
+
+- version: "wire.v1" (고정값)
+- viewportMode: "${projectData.layoutMode}"
+- flow: "${pageFlow}"
+- sections: 배열 (3-6개 섹션)
+
+각 섹션은 다음 속성을 가져야 합니다:
+- id: 섹션 식별자 (예: "header", "main", "footer")
+- role: title/subtitle/content/visual/interactive/navigation/summary 중 하나
+- grid: "1-12"(전체폭) 또는 "8+4"(좌우분할) 또는 "2-11"(여백포함) 형식
+- height: "auto" 또는 픽셀값 (예: "120")
+- content: 해당 섹션의 구체적 내용 설명
+- gapBelow: 다음 섹션과의 간격 픽셀값 (예: "32")
+
+${page.topic} 주제에 맞는 교육적이고 실용적인 와이어프레임을 설계해주세요.`;
   }
 
   // 와이어프레임 응답에서 구조화된 데이터 추출
@@ -338,6 +473,11 @@ ${nextPage ? `다음: "${nextPage.topic}"로 전환 준비` : '마지막 페이�
     }
 
     return description;
+  }
+
+  // 간단한 폴백 설명 생성
+  private createFallbackDescription(topic: string): string {
+    return `페이지 상단에 "${topic}" 제목을 큰 폰트로 배치하고, 중앙 영역에 주요 콘텐츠를 설명하는 텍스트와 함께 관련 이미지나 다이어그램을 좌우 분할 레이아웃으로 배치합니다. 하단에는 학습자의 이해를 돕는 요약 정보나 다음 단계로의 연결고리를 제공하는 네비게이션 영역이 포함됩니다.`;
   }
 
   private createFallbackResult(projectData: ProjectData): LayoutWireframe {
