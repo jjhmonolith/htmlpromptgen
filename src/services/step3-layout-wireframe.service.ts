@@ -74,11 +74,18 @@ export class Step3LayoutWireframeService {
           const prompt = this.createStructuredPageLayoutPrompt(page, projectData, visualIdentity, index);
           const response = await this.openAIService.generateCompletion(prompt, `Step3-Page${page.pageNumber}`);
 
-          // 새로운 파서로 두 블록 추출
-          const wireframeData = this.extractWireframeFromResponse(response.content, page.pageNumber);
-          const layoutDescription = wireframeData
-            ? (this.convertNewWireframeToDescription(wireframeData) || response.content)
-            : response.content; // 파싱 실패 시 AI 응답 그대로 사용
+          // pageFlow 계산
+          const pageFlow = this.computePageFlow(index, projectData.pages.length);
+
+          // 새로운 파서로 두 블록 추출, 실패 시 최소 합성 와이어프레임 사용
+          const wireframeData =
+            this.extractWireframeFromResponse(response.content, page.pageNumber) ??
+            this.synthesizeMinimalWireframe(page.topic, projectData.layoutMode, pageFlow);
+
+          // 안전한 산문 생성, 실패 시 폴백 사용
+          const layoutDescription =
+            this.convertNewWireframeToDescription(wireframeData) ??
+            this.createPlainDescriptionFallback(page.topic, projectData.layoutMode);
 
           const pageProposal: PageLayoutProposal = {
             pageId: page.id,
@@ -192,64 +199,64 @@ ${nextPage ? `다음: "${nextPage.topic}"로 전환 준비` : '마지막 페이�
 위 형식에 맞춰 와이어프레임을 생성해주세요. 코드 블록으로 감싸서 답변해주세요.`;
   }
 
-  // Structured Output용 JSON Schema 정의
-  private createWireframeSchema() {
-    return {
-      type: "object",
-      properties: {
-        version: {
-          type: "string",
-          enum: ["wire.v1"]
-        },
-        viewportMode: {
-          type: "string",
-          enum: ["scrollable", "fixed"]
-        },
-        flow: {
-          type: "string",
-          pattern: "^[A-E]:(intro|keyMessage|content|compare|bridge)$"
-        },
-        sections: {
-          type: "array",
-          minItems: 3,
-          maxItems: 6,
-          items: {
-            type: "object",
-            properties: {
-              id: {
-                type: "string",
-                minLength: 1
-              },
-              role: {
-                type: "string",
-                enum: ["title", "subtitle", "content", "visual", "interactive", "navigation", "summary"]
-              },
-              grid: {
-                type: "string",
-                pattern: "^(([1-9]|1[0-2])-([1-9]|1[0-2]))|([1-9]|1[0-2])\\+([1-9]|1[0-2])$"
-              },
-              height: {
-                type: "string",
-                description: "Height in pixels (e.g., '200') or 'auto'"
-              },
-              content: {
-                type: "string",
-                minLength: 1
-              },
-              gapBelow: {
-                type: "string",
-                pattern: "^[0-9]+$"
-              }
-            },
-            required: ["id", "role", "grid", "height", "content", "gapBelow"],
-            additionalProperties: false
-          }
-        }
-      },
-      required: ["version", "viewportMode", "flow", "sections"],
-      additionalProperties: false
-    };
-  }
+  // Structured Output용 JSON Schema 정의 (미사용 - S4 유효성 참고용)
+  // private createWireframeSchema() {
+  //   return {
+  //     type: "object",
+  //     properties: {
+  //       version: {
+  //         type: "string",
+  //         enum: ["wire.v1"]
+  //       },
+  //       viewportMode: {
+  //         type: "string",
+  //         enum: ["scrollable", "fixed"]
+  //       },
+  //       flow: {
+  //         type: "string",
+  //         pattern: "^[A-E]:(intro|keyMessage|content|compare|bridge)$"
+  //       },
+  //       sections: {
+  //         type: "array",
+  //         minItems: 3,
+  //         maxItems: 6,
+  //         items: {
+  //           type: "object",
+  //           properties: {
+  //             id: {
+  //               type: "string",
+  //               minLength: 1
+  //             },
+  //             role: {
+  //               type: "string",
+  //               enum: ["title", "subtitle", "content", "visual", "interactive", "navigation", "summary"]
+  //             },
+  //             grid: {
+  //               type: "string",
+  //               pattern: "^(([1-9]|1[0-2])-([1-9]|1[0-2]))|([1-9]|1[0-2])\\+([1-9]|1[0-2])$"
+  //             },
+  //             height: {
+  //               type: "string",
+  //               description: "Height in pixels (e.g., '200') or 'auto'"
+  //             },
+  //             content: {
+  //               type: "string",
+  //               minLength: 1
+  //             },
+  //             gapBelow: {
+  //               type: "string",
+  //               pattern: "^[0-9]+$"
+  //             }
+  //           },
+  //           required: ["id", "role", "grid", "height", "content", "gapBelow"],
+  //           additionalProperties: false
+  //         }
+  //       }
+  //     },
+  //     required: ["version", "viewportMode", "flow", "sections"],
+  //     additionalProperties: false
+  //   };
+  // }
 
   // 가이드라인에 따른 새로운 Step3 프롬프트 생성 - 두 블록 출력
   private createStructuredPageLayoutPrompt(
@@ -350,6 +357,12 @@ ${projectData.layoutMode === 'scrollable' ? `
 - 사용자 입력 폼이나 다른 페이지와 데이터를 공유하는 상호작용 요소는 생성하지 마세요
 - 플랫폼에서 제공하는 네비게이션을 활용하므로 페이지 내 이동 기능은 불필요합니다
 
+**중요 고지:**
+- 아래 두 블록(BEGIN/END) **밖에는 아무 텍스트도 출력하지 마세요.**
+- **코드 펜스( \`\`\` ) 금지**, 리스트/표/불릿 금지, 설명 문장 금지.
+- **HTML 태그 금지**. 값에는 따옴표를 사용할 수 있습니다.
+- **한 줄에 하나의 레코드만** 출력하세요 (예: \`SECTION, ...\` 한 줄).
+
 **출력 형식:**
 다음 두 블록 형식으로 ${page.topic} 주제에 맞는 와이어프레임을 생성해주세요:
 
@@ -383,6 +396,53 @@ END_S3_SLOTS
 "${page.topic}" 주제에 특화된 와이어프레임을 생성해주세요.`;
   }
 
+  // 페이지 위치에 따른 FLOW 계산
+  private computePageFlow(index: number, total: number): string {
+    if (index === 0) return 'A:intro';
+    if (index === total - 1) return 'E:bridge';
+    if (index === 1) return 'B:keyMessage';
+    if (index === 2) return 'C:content';
+    return 'D:compare';
+  }
+
+  // 최소 합성 와이어프레임 생성
+  private synthesizeMinimalWireframe(
+    topic: string,
+    layoutMode: 'scrollable' | 'fixed',
+    flow: string
+  ) {
+    const layout = `BEGIN_S3_LAYOUT
+VERSION=wire.v1
+VIEWPORT_MODE=${layoutMode}
+FLOW=${flow}
+PAGE_STYLE=pattern=baseline,motif=plain,rhythm=balanced,asymmetry=moderate
+SECTION, id=secA, role=intro, grid=1-12, height=auto, gapBelow=64, hint="제목 및 한줄 소개"
+SECTION, id=secB, role=keyMessage, grid=2-11, height=auto, gapBelow=64, hint="핵심 메시지 카드"
+SECTION, id=secC, role=content, grid=8+4, height=auto, gapBelow=96, hint="좌: 설명 / 우: 다이어그램"
+SECTION, id=secD, role=compare, grid=1-12, height=auto, gapBelow=64, hint="간단 비교"
+SECTION, id=secE, role=bridge, grid=3-10, height=auto, gapBelow=80, hint="요약 및 다음 학습 포인트"
+IMG_BUDGET=1
+END_S3_LAYOUT`;
+
+    const slots = `BEGIN_S3_SLOTS
+SLOT, id=secA-h1, section=secA, type=heading, variant=H1
+SLOT, id=secC-right, section=secC, type=image, variant=diagram, gridSpan=right, slotRef=IMG1, width=520, height=320
+SUMMARY, sections=5, slots=2, imageSlots=1
+END_S3_SLOTS`;
+
+    const layoutContent = layout.match(/BEGIN_S3_LAYOUT([\s\S]*?)END_S3_LAYOUT/)![1].trim();
+    const slotsContent = slots.match(/BEGIN_S3_SLOTS([\s\S]*?)END_S3_SLOTS/)![1].trim();
+    return this.parseNewWireframeFormat(layoutContent, slotsContent);
+  }
+
+  // 안전한 산문 폴백
+  private createPlainDescriptionFallback(topic: string, mode: 'scrollable' | 'fixed'): string {
+    const modeDescription = mode === 'scrollable'
+      ? '스크롤 가능한 레이아웃으로 핵심 섹션을 순차적으로 제공합니다.'
+      : '한 화면 내에 핵심 정보를 간결하게 배치합니다.';
+    return `페이지 상단에 "${topic}" 주제를 인지시키는 소개 영역을 두고, 핵심 메시지와 본문, 간단 비교, 요약 순으로 전개합니다. ${modeDescription}`;
+  }
+
   // 가이드라인에 따른 Normalizer 및 새로운 파서 로직
   private normalizeResponse(content: string): string {
     let normalized = content;
@@ -394,7 +454,7 @@ END_S3_SLOTS
     const TEMP = '__FULL_WIDTH_COMMA__';
     normalized = normalized.replace(/，/g, TEMP);
 
-    // 스마트 따옴표 정규화
+    // 스마트 따옴표 → ASCII
     normalized = normalized.replace(/[""]/g, '"').replace(/['']/g, "'");
 
     // HTML 태그 제거 (한 줄 내)
@@ -444,6 +504,18 @@ END_S3_SLOTS
     }
   }
 
+  // 한 줄 = 한 레코드 강제 분리 가드
+  private splitLinesSafely(block: string): string[] {
+    return block
+      .replace(/\s*SECTION,/g, '\nSECTION,')
+      .replace(/\s*SLOT,/g, '\nSLOT,')
+      .replace(/\s*SUMMARY,/g, '\nSUMMARY,')
+      .replace(/\s*IMG_BUDGET=/g, '\nIMG_BUDGET=')
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean);
+  }
+
   // 새로운 두 블록 형식 파싱
   private parseNewWireframeFormat(layoutContent: string, slotsContent: string): any {
     const wireframe = {
@@ -458,7 +530,7 @@ END_S3_SLOTS
     };
 
     // LAYOUT 블록 파싱
-    const layoutLines = layoutContent.split('\n').filter(line => line.trim());
+    const layoutLines = this.splitLinesSafely(layoutContent);
     for (const line of layoutLines) {
       const trimmedLine = line.trim();
 
@@ -473,8 +545,11 @@ END_S3_SLOTS
       } else if (trimmedLine.startsWith('SECTION,')) {
         const section = this.parseRecordLine(trimmedLine);
         if (section) {
-          // gapBelow → 숫자 변환, 범위 밖이면 64/80/96 중 가까운 값으로 스냅
+          // SECTION 정책 강제
+          section.height = 'auto'; // 규격 고정
           section.gapBelow = this.normalizeGapBelow(section.gapBelow);
+          const allowedGrids = new Set(['1-12','8+4','2-11','3-10']);
+          if (!allowedGrids.has(section.grid)) section.grid = '1-12';
           wireframe.sections.push(section);
         }
       } else if (trimmedLine.startsWith('IMG_BUDGET=')) {
@@ -483,17 +558,25 @@ END_S3_SLOTS
     }
 
     // SLOTS 블록 파싱
-    const slotsLines = slotsContent.split('\n').filter(line => line.trim());
+    const slotsLines = this.splitLinesSafely(slotsContent);
     for (const line of slotsLines) {
       const trimmedLine = line.trim();
 
       if (trimmedLine.startsWith('SLOT,')) {
         const slot = this.parseRecordLine(trimmedLine);
         if (slot) {
+          // 숫자 필드 타입 강제
+          if (slot.width !== undefined) slot.width = parseInt(String(slot.width), 10);
+          if (slot.height !== undefined) slot.height = parseInt(String(slot.height), 10);
           wireframe.slots.push(slot);
         }
       } else if (trimmedLine.startsWith('SUMMARY,')) {
-        wireframe.summary = this.parseRecordLine(trimmedLine) || wireframe.summary;
+        const s = this.parseRecordLine(trimmedLine) || {};
+        // 숫자 필드 타입 강제
+        s.sections = parseInt(String(s.sections ?? '0'), 10);
+        s.slots = parseInt(String(s.slots ?? '0'), 10);
+        s.imageSlots = parseInt(String(s.imageSlots ?? '0'), 10);
+        wireframe.summary = s;
       }
     }
 
@@ -517,10 +600,10 @@ END_S3_SLOTS
     return Object.keys(record).length > 0 ? record : null;
   }
 
-  // 값 추출 헬퍼
+  // 값 추출 헬퍼 (안전화)
   private extractValue(line: string): string {
-    const parts = line.split('=');
-    return parts.length > 1 ? parts[1].trim() : '';
+    const idx = line.indexOf('=');
+    return idx >= 0 ? line.slice(idx + 1).trim() : '';
   }
 
   // PAGE_STYLE 파싱
@@ -620,7 +703,7 @@ END_S3_SLOTS
   }
 
   // 새로운 두 블록 형식 와이어프레임을 설명으로 변환
-  private convertNewWireframeToDescription(wireframe: any): string {
+  private convertNewWireframeToDescription(wireframe: any): string | null {
     if (!wireframe || !wireframe.sections || wireframe.sections.length === 0) {
       return null; // 기본 템플릿 대신 null 반환
     }
@@ -697,7 +780,7 @@ END_S3_SLOTS
   }
 
   // 레거시 와이어프레임을 읽기 쉬운 설명으로 변환
-  private convertWireframeToDescription(wireframe: any): string {
+  private convertWireframeToDescription(wireframe: any): string | null {
     if (!wireframe || !wireframe.sections || wireframe.sections.length === 0) {
       return null; // 기본 템플릿 대신 null 반환
     }
