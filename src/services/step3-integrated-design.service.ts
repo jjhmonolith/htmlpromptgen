@@ -319,11 +319,16 @@ ${sectionsInfo}
 - 8+4 섹션 컴포넌트는 gridSpan=left|right 필수
 ${contentLimits.componentLimits}
 
-[FORMAT 규칙]
+[FORMAT 규칙 - 중요]
+**텍스트에 쉼표가 포함된 경우 반드시 따옴표로 감싸주세요**
+- 예: text="AI는 사회적 변혁을 촉진하며, 미래 기술 발전에 중요한 역할을 할 것입니다"
+- 예: caption="그림 1. 인공지능의 발전 과정과 미래 전망"
+- 예: description="머신러닝, 딥러닝, 신경망 등 주요 기술 요소들"
+
 BEGIN_CONTENT
 VERSION=content.v1
-COMP, id=컴포넌트ID, type=heading|paragraph|card|image, variant=H1|H2|Body|none, section=섹션ID, role=title|content, gridSpan=left|right(8+4섹션만), text=실제텍스트내용, src=이미지파일명
-IMG, filename=이미지파일명, purpose=diagram|illustration|comparison, section=섹션ID, place=left|right|center, width=숫자, height=숫자, alt=대체텍스트, caption=캡션, description=이미지상세설명, aiPrompt=한글이미지생성프롬프트, style=스타일설명
+COMP, id=컴포넌트ID, type=heading|paragraph|card|image, variant=H1|H2|Body|none, section=섹션ID, role=title|content, gridSpan=left|right(8+4섹션만), text="실제텍스트내용", src=이미지파일명
+IMG, filename=이미지파일명, purpose=diagram|illustration|comparison, section=섹션ID, place=left|right|center, width=숫자, height=숫자, alt="대체텍스트", caption="캡션", description="이미지상세설명", aiPrompt="한글이미지생성프롬프트", style="스타일설명"
 END_CONTENT
 
 "${page.topic}" 페이지의 교육 콘텐츠를 생성하세요:
@@ -408,22 +413,17 @@ ${contentLimits.detailedGuide}
   }
 
   private parseSectionLine(line: string): Step3Section | null {
-    const parts: any = {};
-    const regex = /(\w+)\s*=\s*([^,]+)/g;
-    let match;
+    // parseRecordLine을 재사용하여 일관성 유지
+    const parsed = this.parseRecordLine(line);
 
-    while ((match = regex.exec(line)) !== null) {
-      parts[match[1]] = match[2].trim();
-    }
-
-    if (parts.id && parts.role) {
+    if (parsed && parsed.id && parsed.role) {
       return {
-        id: parts.id,
-        role: parts.role as any,
-        grid: parts.grid || '1-12',
-        height: parts.height || 'auto',
-        hint: parts.hint || '',
-        gapBelow: parseInt(parts.gapBelow) || 48
+        id: parsed.id,
+        role: parsed.role as any,
+        grid: parsed.grid || '1-12',
+        height: parsed.height || 'auto',
+        hint: parsed.hint || '',
+        gapBelow: parseInt(parsed.gapBelow) || 48
       };
     }
 
@@ -519,50 +519,42 @@ ${contentLimits.detailedGuide}
   private parseRecordLine(line: string): any {
     const record: any = {};
 
-    // 쉼표로 분할하되, 따옴표 안의 쉼표는 무시
-    const parts = [];
-    let current = '';
-    let inQuotes = false;
-    let quoteChar = '';
+    // key=value를 찾기 위한 더 정교한 파싱
+    // 다음 key= 패턴을 찾아서 value의 끝을 결정
+    const keyPattern = /\s*(\w+)\s*=/g;
+    const keys = [];
+    let match;
 
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-
-      if ((char === '"' || char === "'") && !inQuotes) {
-        inQuotes = true;
-        quoteChar = char;
-        current += char;
-      } else if (char === quoteChar && inQuotes) {
-        inQuotes = false;
-        quoteChar = '';
-        current += char;
-      } else if (char === ',' && !inQuotes) {
-        parts.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
+    // 모든 키 위치 찾기
+    while ((match = keyPattern.exec(line)) !== null) {
+      keys.push({
+        key: match[1],
+        start: match.index,
+        valueStart: keyPattern.lastIndex
+      });
     }
 
-    if (current.trim()) {
-      parts.push(current.trim());
-    }
+    // 각 키-값 쌍 추출
+    for (let i = 0; i < keys.length; i++) {
+      const currentKey = keys[i];
+      const nextKey = keys[i + 1];
 
-    // 각 파트에서 key=value 추출
-    for (const part of parts) {
-      const equalIndex = part.indexOf('=');
-      if (equalIndex > 0) {
-        const key = part.substring(0, equalIndex).trim();
-        let value = part.substring(equalIndex + 1).trim();
+      // 값의 끝 위치 결정 (다음 키 직전까지 또는 줄 끝까지)
+      const valueEnd = nextKey ? nextKey.start : line.length;
+      let value = line.substring(currentKey.valueStart, valueEnd).trim();
 
-        // 따옴표 제거
-        if ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
-          value = value.slice(1, -1);
-        }
-
-        record[key] = value;
+      // 끝에 쉼표가 있으면 제거
+      if (value.endsWith(',')) {
+        value = value.slice(0, -1).trim();
       }
+
+      // 따옴표 제거
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+
+      record[currentKey.key] = value;
     }
 
     return Object.keys(record).length > 0 ? record : null;

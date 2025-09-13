@@ -714,50 +714,42 @@ END_S3_SLOTS`;
   private parseRecordLine(line: string): any {
     const record: any = {};
 
-    // 쉼표로 분할하되, 따옴표 안의 쉼표는 무시
-    const parts = [];
-    let current = '';
-    let inQuotes = false;
-    let quoteChar = '';
+    // key=value를 찾기 위한 더 정교한 파싱
+    // 다음 key= 패턴을 찾아서 value의 끝을 결정
+    const keyPattern = /\s*(\w+)\s*=/g;
+    const keys = [];
+    let match;
 
-    for (let i = 0; i < line.length; i++) {
-      const char = line[i];
-
-      if ((char === '"' || char === "'") && !inQuotes) {
-        inQuotes = true;
-        quoteChar = char;
-        current += char;
-      } else if (char === quoteChar && inQuotes) {
-        inQuotes = false;
-        quoteChar = '';
-        current += char;
-      } else if (char === ',' && !inQuotes) {
-        parts.push(current.trim());
-        current = '';
-      } else {
-        current += char;
-      }
+    // 모든 키 위치 찾기
+    while ((match = keyPattern.exec(line)) !== null) {
+      keys.push({
+        key: match[1],
+        start: match.index,
+        valueStart: keyPattern.lastIndex
+      });
     }
 
-    if (current.trim()) {
-      parts.push(current.trim());
-    }
+    // 각 키-값 쌍 추출
+    for (let i = 0; i < keys.length; i++) {
+      const currentKey = keys[i];
+      const nextKey = keys[i + 1];
 
-    // 각 파트에서 key=value 추출
-    for (const part of parts) {
-      const equalIndex = part.indexOf('=');
-      if (equalIndex > 0) {
-        const key = part.substring(0, equalIndex).trim();
-        let value = part.substring(equalIndex + 1).trim();
+      // 값의 끝 위치 결정 (다음 키 직전까지 또는 줄 끝까지)
+      const valueEnd = nextKey ? nextKey.start : line.length;
+      let value = line.substring(currentKey.valueStart, valueEnd).trim();
 
-        // 따옴표 제거
-        if ((value.startsWith('"') && value.endsWith('"')) ||
-            (value.startsWith("'") && value.endsWith("'"))) {
-          value = value.slice(1, -1);
-        }
-
-        record[key] = value;
+      // 끝에 쉼표가 있으면 제거
+      if (value.endsWith(',')) {
+        value = value.slice(0, -1).trim();
       }
+
+      // 따옴표 제거
+      if ((value.startsWith('"') && value.endsWith('"')) ||
+          (value.startsWith("'") && value.endsWith("'"))) {
+        value = value.slice(1, -1);
+      }
+
+      record[currentKey.key] = value;
     }
 
     return Object.keys(record).length > 0 ? record : null;
