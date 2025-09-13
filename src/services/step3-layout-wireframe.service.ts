@@ -457,6 +457,9 @@ END_S3_SLOTS`;
     // 스마트 따옴표 → ASCII (유니코드 이스케이프 사용)
     normalized = normalized.replace(/[\u201C\u201D]/g, '"').replace(/[\u2018\u2019]/g, "'");
 
+    // 코드펜스 제거 (안전 가드)
+    normalized = normalized.replace(/```+/g, '');
+
     // HTML 태그 제거 (한 줄 내)
     normalized = normalized.replace(/<[^>\n]*>/g, '');
 
