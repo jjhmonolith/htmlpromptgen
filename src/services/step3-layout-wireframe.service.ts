@@ -714,14 +714,50 @@ END_S3_SLOTS`;
   private parseRecordLine(line: string): any {
     const record: any = {};
 
-    // 정규식 (\w+)\s*=\s*("([^"]*)"|[^,]+) 반복 캐처
-    const regex = /(\w+)\s*=\s*("([^"]*)"|[^,]+)/g;
-    let match;
+    // 쉼표로 분할하되, 따옴표 안의 쉼표는 무시
+    const parts = [];
+    let current = '';
+    let inQuotes = false;
+    let quoteChar = '';
 
-    while ((match = regex.exec(line)) !== null) {
-      const key = match[1];
-      const value = match[3] || match[2]; // 따옴표 내부 또는 전체 값
-      record[key] = value.trim();
+    for (let i = 0; i < line.length; i++) {
+      const char = line[i];
+
+      if ((char === '"' || char === "'") && !inQuotes) {
+        inQuotes = true;
+        quoteChar = char;
+        current += char;
+      } else if (char === quoteChar && inQuotes) {
+        inQuotes = false;
+        quoteChar = '';
+        current += char;
+      } else if (char === ',' && !inQuotes) {
+        parts.push(current.trim());
+        current = '';
+      } else {
+        current += char;
+      }
+    }
+
+    if (current.trim()) {
+      parts.push(current.trim());
+    }
+
+    // 각 파트에서 key=value 추출
+    for (const part of parts) {
+      const equalIndex = part.indexOf('=');
+      if (equalIndex > 0) {
+        const key = part.substring(0, equalIndex).trim();
+        let value = part.substring(equalIndex + 1).trim();
+
+        // 따옴표 제거
+        if ((value.startsWith('"') && value.endsWith('"')) ||
+            (value.startsWith("'") && value.endsWith("'"))) {
+          value = value.slice(1, -1);
+        }
+
+        record[key] = value;
+      }
     }
 
     return Object.keys(record).length > 0 ? record : null;
