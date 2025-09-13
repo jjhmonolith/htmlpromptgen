@@ -297,10 +297,10 @@ export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
                           </div>
                           
                           <div className="bg-gray-50 rounded-lg p-4">
-                            <h5 className="text-sm font-medium text-gray-700 mb-2">레이아웃 설명</h5>
-                            <p className="text-sm text-gray-800 leading-relaxed">
+                            <h5 className="text-sm font-medium text-gray-700 mb-2">레이아웃 설명 (AI 응답)</h5>
+                            <div className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto">
                               {page.layoutDescription}
-                            </p>
+                            </div>
                           </div>
                         </div>
                       </div>

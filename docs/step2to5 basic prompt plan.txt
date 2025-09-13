@@ -27,32 +27,81 @@
 
 ⸻
 
-Step 1 (기존 유지, 단 보강)
+Step 1 — 기본 정보 및 프로젝트 설정 (현재 구현 분석)
+
+현재 Step1BasicInfo 컴포넌트는 다음을 수행:
+
+1) 자동 저장 시스템 완전 구현
+   - initialData → 컴포넌트 상태 동기화 (한 번만 실행)
+   - onDataChange로 실시간 데이터 변경 알림 (0.5초 디바운스)
+   - 중복 변경 방지를 위한 해시 기반 변경 감지
+   - 새로고침 시 데이터 보존 기능
+
+2) UI/UX 특징
+   - 3섹션 레이아웃: 기본정보(1/3) + 레이아웃(1/3) + 생성모드(1/3)
+   - 가로 스크롤 페이지 구성 카드 (마우스 휠 가로 스크롤 지원)
+   - 애니메이션과 스크롤 최적화 (framer-motion)
+   - 스크롤형/고정형 레이아웃 선택 (이미지 기반 라디오)
+   - AI향상/제한 모드 선택 (contentMode)
+
+3) 데이터 구조 (출력 계약)
+   - projectTitle: string (필수)
+   - targetAudience: string (필수)
+   - pages: PageInfo[] (최소 1개, 동적 추가/제거)
+   - layoutMode: 'scrollable' | 'fixed'
+   - contentMode: 'enhanced' | 'restricted' (원래 'original' 대신)
+   - suggestions: string[] | undefined
+
+4) 검증 및 테스트
+   - 필수 필드 검증 (제목, 대상학습자, 최소 1페이지)
+   - 테스트 모드 지원 (목업 데이터 자동 입력)
+   - 에러 상태 UI 표시
 
 입력 계약 JSON(서버)
 
 {
   "projectData": {
+    "id": "project_timestamp",
     "projectTitle": "프로젝트명",
     "targetAudience": "대상 학습자",
     "layoutMode": "scrollable",  // or "fixed"
-    "contentMode": "enhanced",   // or "original"
+    "contentMode": "enhanced",   // or "restricted" (현재 구현)
     "pages": [
-      {"id":"uuid","pageNumber":1,"topic":"주제","description":""}
-    ]
+      {"id":"1","pageNumber":1,"topic":"주제","description":"설명"}
+    ],
+    "suggestions": ["추가 제안사항"] | undefined,
+    "createdAt": "2025-01-01T00:00:00.000Z"
   }
 }
 
-보강: layoutMode, contentMode는 enum 고정. id는 UUID. (서버 검증)
+개선사항: contentMode 값이 실제 구현과 다름 ('original' → 'restricted')
 
 ⸻
 
-Step 2 — 비주얼 아이덴티티(파싱 최소/VI만 생성)
+Step 2 — 비주얼 아이덴티티 (현재 구현 분석 및 계획)
 
-1) 입력
+현재 Step2VisualIdentity 컴포넌트는 다음을 수행:
+
+1) 현재 구현 특징
+   - OpenAI GPT-4 기반 비주얼 아이덴티티 생성
+   - JSON 구조화된 출력 사용 (Structured Output)
+   - 자동 저장 시스템 구현 (onDataChange, 해시 기반 변경 감지)
+   - 자동 생성 (Step1에서 진입 시) + 수동 재생성 지원
+   - 생성 상태를 부모에게 전달 (onGeneratingChange)
+
+2) 현재 출력 구조 (JSON 기반)
+   - visualIdentity.moodAndTone: string[] (4개 형용사)
+   - visualIdentity.colorPalette: {primary, secondary, accent, text, background}
+   - visualIdentity.typography: {headingFont, bodyFont, baseSize}
+   - visualIdentity.componentStyle: string
+   - designTokens: 고정 토큰 셋
+
+3) 향후 개선 계획 (라인 기반 포맷으로 전환)
+
+입력:
 	•	Step1 JSON(서버가 프롬프트에 그대로 삽입)
 
-2) 프롬프트（gpt‑4o용, 라인 포맷）
+프롬프트（gpt‑4o용, 라인 포맷）
 
 [ROLE] 당신은 교육용 VI 전문가입니다.
 [CONTEXT] 다음 프로젝트 계약을 참고하세요.
@@ -79,7 +128,7 @@ VERSION=vi.v1
 ...여기에 결과...
 END_S2
 
-3) 서버 수신 포맷(예시)
+서버 수신 포맷(예시)
 
 BEGIN_S2
 VERSION=vi.v1
@@ -91,7 +140,7 @@ BASE_SIZE_PT=20
 COMPONENT_STYLE=라운드 20–28px와 낮은 그림자，정보를 칩으로 층위화하고 본문 가독성을 우선
 END_S2
 
-4) 서버 병합(잠금값 주입)
+서버 병합(잠금값 주입)
 
 const BRAND_LOCKS = {
   text: "#0F172A",
@@ -123,9 +172,10 @@ function assembleStep2(finalKV, layoutMode){
   };
 }
 
-5) 기대 효과
+기대 효과
 	•	JSON 파싱 불필요(라인 정규식만).
 	•	고정 토큰/폰트/텍스트색은 서버 잠금 → 검증 실패 근본 해소.
+	•	현재 Structured Output에서 라인 기반으로 전환 시 파싱 안정성 99%+ 달성
 
 ⸻
 
@@ -214,7 +264,7 @@ Step 4 — 컴포넌트/이미지 선언(간단 ND‑Lines)
 
 [RULES]
 - gridSpan은 8+4 섹션일 때 left/right를 사용. 1-12 섹션이면 생략 가능.
-- mode=original일 때 text는 "원문 ○○문단 배치" 같은 배치 지시문으로만.
+- mode=restricted일 때 text는 "원문 ○○문단 배치" 같은 배치 지시문으로만.
 - 파일명은 1.png → 2.png 순서. 2장을 넘기지 마세요.
 
 BEGIN_S4
@@ -227,8 +277,8 @@ END_S4
 BEGIN_S4
 VERSION=cmp.v1
 COMP, id=secA-title, type=heading, variant=H1, section=secA, role=intro, mode=enhanced, text="물의 순환이란 무엇일까?"
-COMP, id=secB-key, type=card, variant=none, section=secB, role=keyMessage, mode=original, text="원문 핵심 한 줄 배치"
-COMP, id=secC-left, type=paragraph, variant=Body, section=secC, role=content, gridSpan=left, mode=original, text="원문 개념 전개 문단"
+COMP, id=secB-key, type=card, variant=none, section=secB, role=keyMessage, mode=restricted, text="원문 핵심 한 줄 배치"
+COMP, id=secC-left, type=paragraph, variant=Body, section=secC, role=content, gridSpan=left, mode=restricted, text="원문 개념 전개 문단"
 COMP, id=secC-right, type=image, variant=none, section=secC, role=content, gridSpan=right, src=1.png
 IMG, filename=1.png, purpose=diagram, section=secC, place=right, width=520, height=320, alt="증발·응결·강수·유출 개념도", caption="물의 순환 개념도"
 END_S4
@@ -268,7 +318,7 @@ No explanations outside code blocks. No navigation or external assets.
   "projectTitle": "...",
   "targetAudience": "...",
   "layoutMode": "scrollable",
-  "contentMode": "original",
+  "contentMode": "restricted",
   "visualIdentity": { ...서버 병합 결과... },
   "designTokens": { ...서버 프리셋... },
   "wireframe": { "flow":["A:intro","B:keyMessage","C:content","D:compare","E:bridge"], "sections":[{"id":"secA","role":"intro","grid":"1-12","gapBelow":64}, ...] },
@@ -282,7 +332,7 @@ No explanations outside code blocks. No navigation or external assets.
 - Apply safeArea paddings (top 80px, right 100px, bottom 120px, left 100px).
 - Use CSS variables from visualIdentity/designTokens for colors/typography/radius/elevation.
 - Images use src="assets/images/{filename}" with alt and caption below (18pt).
-- contentMode=original: keep provided text as placement instructions (do not invent). contentMode=enhanced: you may add up to 2 sentences for clarity.
+- contentMode=restricted: keep provided text as placement instructions (do not invent). contentMode=enhanced: you may add up to 2 sentences for clarity.
 - Respect contrast (body ≥ 7:1, emphasis ≥ 4.5:1) and focus outline 2px with accent color.
 - No navigation/links/buttons. Semantic HTML5 only.
 
