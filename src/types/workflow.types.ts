@@ -229,6 +229,7 @@ export interface Step3IntegratedResult {
     isGenerating: boolean;
     phase1Complete: boolean;
     phase2Complete: boolean;
+    retryCount?: number;  // 자동 재시도 횟수
 
     // 디버깅 정보
     debugInfo?: {

@@ -166,15 +166,37 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
     }
   };
 
-  if (isGenerating && !step3Data) {
+  // 로딩 상태: 초기 생성 중이거나 재시도 중인 페이지가 있을 때
+  const hasGeneratingPages = step3Data?.pages?.some(page => page.isGenerating) || false;
+  const isInitialLoading = isGenerating && !step3Data;
+
+  if (isInitialLoading || (step3Data && hasGeneratingPages)) {
+    const generatingCount = step3Data?.pages?.filter(page => page.isGenerating).length || 0;
+    const retryingPages = step3Data?.pages?.filter(page => page.isGenerating && (page.retryCount || 0) > 0) || [];
+
     return (
       <div className="flex flex-col items-center justify-center p-12 space-y-4 bg-white rounded-lg shadow-sm border">
         <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-        <h3 className="text-lg font-semibold text-gray-900">페이지별 콘텐츠 설계 중...</h3>
+        <h3 className="text-lg font-semibold text-gray-900">
+          {isInitialLoading ? '페이지별 콘텐츠 설계 중...' : '페이지 재생성 중...'}
+        </h3>
         <p className="text-sm text-gray-600 text-center">
-          각 페이지의 구조와 콘텐츠를 단계별로 생성하고 있습니다.
-          <br />
-          잠시만 기다려주세요.
+          {isInitialLoading ? (
+            <>
+              각 페이지의 구조와 콘텐츠를 단계별로 생성하고 있습니다.
+              <br />
+              파싱 실패 시 자동으로 재시도됩니다.
+            </>
+          ) : (
+            <>
+              {generatingCount}개 페이지를 처리하고 있습니다.
+              {retryingPages.length > 0 && (
+                <span className="block mt-1 text-orange-600">
+                  재시도 중: {retryingPages.map(p => `페이지 ${p.pageNumber}`).join(', ')}
+                </span>
+              )}
+            </>
+          )}
         </p>
       </div>
     );
@@ -265,11 +287,19 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
               {page.isGenerating && (
                 <div className="ml-2 animate-spin w-3 h-3 border-2 border-blue-500 border-t-transparent rounded-full"></div>
               )}
-              {page.parseError && (
-                <span className="ml-2 w-2 h-2 bg-red-500 rounded-full"></span>
+              {(page.retryCount || 0) > 0 && (
+                <span className="ml-2 text-xs bg-orange-100 text-orange-600 px-1 rounded">
+                  재시도 {page.retryCount}
+                </span>
               )}
-              {!page.phase2Complete && !page.isGenerating && (
-                <span className="ml-2 w-2 h-2 bg-yellow-500 rounded-full"></span>
+              {page.parseError && !page.isGenerating && (
+                <span className="ml-2 w-2 h-2 bg-red-500 rounded-full" title="파싱 실패"></span>
+              )}
+              {page.phase2Complete && !page.parseError && (
+                <span className="ml-2 w-2 h-2 bg-green-500 rounded-full" title="완료"></span>
+              )}
+              {!page.phase2Complete && !page.isGenerating && !page.parseError && (
+                <span className="ml-2 w-2 h-2 bg-yellow-500 rounded-full" title="처리 중"></span>
               )}
             </button>
           ))}
@@ -288,6 +318,14 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
                 </h3>
                 <div className="text-sm text-gray-500 mt-1">
                   생성 시간: {selectedPage.generatedAt.toLocaleString()}
+                  {(selectedPage.retryCount || 0) > 0 && (
+                    <span className="ml-3 inline-flex items-center px-2 py-1 rounded-full text-xs bg-orange-100 text-orange-800">
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                      </svg>
+                      재시도 {selectedPage.retryCount}회
+                    </span>
+                  )}
                 </div>
                 {/* Phase별 완료 상태 표시 */}
                 <div className="flex items-center space-x-4 mt-2">

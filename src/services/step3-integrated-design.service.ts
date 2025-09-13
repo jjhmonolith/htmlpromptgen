@@ -37,7 +37,7 @@ export class Step3IntegratedDesignService {
     projectData: ProjectData,
     visualIdentity: VisualIdentity
   ): Promise<Step3IntegratedResult> {
-    console.log('🎯 Step3: 2단계 병렬 통합 디자인 생성 시작');
+    console.log('🎯 Step3: 2단계 병렬 통합 디자인 생성 시작 (자동 재시도 포함)');
     console.log('🚀 Phase1: 모든 페이지 구조 설계 병렬 생성...');
 
     const result: Step3IntegratedResult = {
@@ -54,6 +54,7 @@ export class Step3IntegratedDesignService {
       isGenerating: true,
       phase1Complete: false,
       phase2Complete: false,
+      retryCount: 0,  // 재시도 횟수 추가
       generatedAt: new Date()
     }));
     result.pages = initialPages;
@@ -152,6 +153,9 @@ export class Step3IntegratedDesignService {
       }
       pageData.isGenerating = false;
     });
+
+    // 자동 재시도 로직: 파싱 실패한 페이지들을 재생성
+    await this.handleParsingFailures(result, projectData, visualIdentity);
 
     console.log('🎯 Step3 2단계 병렬 통합 디자인 생성 완료');
     console.log(`⚡ 성능 개선: ${projectData.pages.length}개 페이지를 Phase1(구조) + Phase2(콘텐츠) 병렬 처리로 완료`);
@@ -603,6 +607,122 @@ ${contentLimits.detailedGuide}
       page.parseError = errorMessage;
     } finally {
       page.isGenerating = false;
+    }
+  }
+
+  // 파싱 실패 페이지 자동 재시도 처리
+  private async handleParsingFailures(
+    result: Step3IntegratedResult,
+    projectData: ProjectData,
+    visualIdentity: VisualIdentity
+  ): Promise<void> {
+    const MAX_RETRIES = 3;
+    const RETRY_DELAY = 2000; // 2초 대기
+
+    let hasFailures = true;
+    let retryRound = 1;
+
+    while (hasFailures && retryRound <= MAX_RETRIES) {
+      // 파싱 실패한 페이지 찾기
+      const failedPages = result.pages.filter(page =>
+        page.parseError &&
+        page.retryCount < MAX_RETRIES &&
+        (!page.phase1Complete || !page.phase2Complete)
+      );
+
+      if (failedPages.length === 0) {
+        hasFailures = false;
+        break;
+      }
+
+      console.log(`🔄 재시도 라운드 ${retryRound}: ${failedPages.length}개 페이지 파싱 실패 재생성 시작`);
+
+      // 재시도할 페이지들을 다시 generating 상태로 설정
+      failedPages.forEach(page => {
+        page.isGenerating = true;
+        page.retryCount = (page.retryCount || 0) + 1;
+        page.parseError = undefined;
+        console.log(`🔁 페이지 ${page.pageNumber} 재시도 (${page.retryCount}/${MAX_RETRIES})`);
+      });
+
+      // 지연 추가 (서버 부하 방지)
+      if (retryRound > 1) {
+        console.log(`⏰ ${RETRY_DELAY}ms 대기 중...`);
+        await new Promise(resolve => setTimeout(resolve, RETRY_DELAY));
+      }
+
+      // 실패한 페이지들을 병렬로 재생성
+      const retryPromises = failedPages.map(async (page) => {
+        const pageIndex = result.pages.findIndex(p => p.pageId === page.pageId);
+
+        try {
+          console.log(`🔄 페이지 ${page.pageNumber} 전체 재생성 시작`);
+
+          // Phase 1 재생성
+          if (!page.phase1Complete) {
+            const phase1Result = await this.generatePhase1(projectData, visualIdentity, pageIndex);
+            page.structure = phase1Result;
+            page.phase1Complete = true;
+
+            // 디버그 정보 저장
+            if (!page.debugInfo) {
+              page.debugInfo = {};
+            }
+            page.debugInfo.phase1 = phase1Result.debugInfo;
+
+            console.log(`✅ 페이지 ${page.pageNumber} Phase1 재생성 완료`);
+          }
+
+          // Phase 2 재생성
+          if (page.phase1Complete && !page.phase2Complete && page.structure) {
+            const phase2Result = await this.generatePhase2(projectData, visualIdentity, page.structure, pageIndex);
+            page.content = phase2Result;
+            page.phase2Complete = true;
+
+            // 디버그 정보 저장
+            if (!page.debugInfo) {
+              page.debugInfo = {};
+            }
+            page.debugInfo.phase2 = phase2Result.debugInfo;
+
+            console.log(`✅ 페이지 ${page.pageNumber} Phase2 재생성 완료`);
+          }
+
+          console.log(`🎉 페이지 ${page.pageNumber} 재생성 성공!`);
+          return { success: true, pageNumber: page.pageNumber };
+
+        } catch (error) {
+          const errorMessage = error instanceof Error ? error.message : String(error);
+          console.error(`❌ 페이지 ${page.pageNumber} 재생성 실패:`, errorMessage);
+          page.parseError = `재시도 ${page.retryCount}: ${errorMessage}`;
+          return { success: false, pageNumber: page.pageNumber, error: errorMessage };
+        } finally {
+          page.isGenerating = false;
+        }
+      });
+
+      const retryResults = await Promise.all(retryPromises);
+
+      const successCount = retryResults.filter(r => r.success).length;
+      const failureCount = retryResults.filter(r => !r.success).length;
+
+      console.log(`📊 재시도 라운드 ${retryRound} 결과: 성공 ${successCount}개, 실패 ${failureCount}개`);
+
+      retryRound++;
+    }
+
+    // 최종 상태 확인
+    const finalFailedPages = result.pages.filter(page =>
+      page.parseError && (!page.phase1Complete || !page.phase2Complete)
+    );
+
+    if (finalFailedPages.length > 0) {
+      console.warn(`⚠️ 최대 재시도 후에도 ${finalFailedPages.length}개 페이지 파싱 실패`);
+      finalFailedPages.forEach(page => {
+        console.warn(`  - 페이지 ${page.pageNumber}: ${page.parseError}`);
+      });
+    } else {
+      console.log(`✅ 모든 페이지 파싱 성공! 총 ${result.pages.length}개 페이지 완료`);
     }
   }
 }
