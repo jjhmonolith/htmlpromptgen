@@ -188,62 +188,11 @@ export interface FinalPrompt {
   task?: string;
 }
 
-// Step4 컴포넌트 계획 타입 정의
-export interface ComponentLine {
-  id: string;
-  type: 'heading' | 'paragraph' | 'card' | 'image' | 'caption';
-  variant?: string;           // H1|H2|Body|none ...
-  section: string;            // must exist in Step3.sections[].id
-  role: 'title' | 'content';  // summary 제거 - 페이지별 마무리 콘텐츠 방지
-  gridSpan?: 'left' | 'right';  // only if section.grid === '8+4'
-  text?: string;              // non-image (실제 교육 콘텐츠)
-  src?: string;               // image only (e.g., "image_1.png")
-  width?: number;             // image only
-  height?: number;            // image only
-  slotRef?: 'IMG1' | 'IMG2' | 'IMG3'; // (선택) Step3 슬롯 참조시
-}
-
-export interface ImageLine {
-  filename: string;           // 이미지 파일명 (Step3에서 결정된 개수에 따라)
-  purpose: 'diagram' | 'comparison' | 'illustration';
-  section: string;            // place section id
-  place: 'left' | 'right' | 'center';
-  width: number;
-  height: number;
-  alt: string;                // ≤ 80 chars
-  caption: string;            // ≤ 80 chars
-  description: string;        // 상세 설명 (이미지 내용)
-  aiPrompt: string;          // AI 이미지 생성을 위한 상세 프롬프트
-  style: string;             // 시각적 스타일 (flat design, minimal, technical 등)
-}
-
-export interface Step4ComponentPlan {
-  version: 'cmp.v1';
-  comps: ComponentLine[];
-  images: ImageLine[];        // Step3에서 결정된 개수에 따라
-  generatedAt: Date;
-}
-
-// Step4 결과 - 페이지별 컴포넌트 계획
-export interface Step4Result {
-  layoutMode: 'scrollable' | 'fixed';
-  pages: Array<{
-    pageId: string;
-    pageTitle: string;
-    pageNumber: number;
-    componentPlan?: Step4ComponentPlan;
-    rawResponse?: string;      // 디버깅용 AI 원본 응답
-    parseError?: string;       // 디버깅용 파싱 에러
-    generatedAt: Date;
-  }>;
-  generatedAt: Date;
-}
 
 export interface WorkflowState {
   step1?: ProjectData;
   step2?: { visualIdentity: VisualIdentity; designTokens: DesignTokens };
-  step3?: Step3IntegratedResult;  // 새로운 통합 Step3 결과
-  step4?: Step4Result;            // 비활성화 예정
+  step3?: Step3IntegratedResult;
   step5?: FinalPrompt;
   currentStep: number;
   lastSaved?: Date;
@@ -251,7 +200,6 @@ export interface WorkflowState {
     step1: boolean;
     step2: boolean;
     step3: boolean;
-    step4: boolean;
     step5: boolean;
   };
 }

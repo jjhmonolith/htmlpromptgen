@@ -1,7 +1,34 @@
 import { OpenAIService } from './openai.service';
-import { ProjectData, VisualIdentity, ComponentLine, ImageLine, Step3IntegratedResult, Step3Section } from '../types/workflow.types';
+import { ProjectData, VisualIdentity, Step3IntegratedResult, Step3Section } from '../types/workflow.types';
 
-// Step3IntegratedResult와 Step3Section은 workflow.types.ts에서 임포트
+// Local types for Step3 integrated design service
+export interface ComponentLine {
+  id: string;
+  type: 'heading' | 'paragraph' | 'card' | 'image' | 'caption';
+  variant?: string;
+  section: string;
+  role: 'title' | 'content';
+  gridSpan?: 'left' | 'right';
+  text?: string;
+  src?: string;
+  width?: number;
+  height?: number;
+  slotRef?: 'IMG1' | 'IMG2' | 'IMG3';
+}
+
+export interface ImageLine {
+  filename: string;
+  purpose: 'diagram' | 'comparison' | 'illustration';
+  section: string;
+  place: 'left' | 'right' | 'center';
+  width: number;
+  height: number;
+  alt: string;
+  caption: string;
+  description: string;
+  aiPrompt: string;
+  style: string;
+}
 
 export class Step3IntegratedDesignService {
   constructor(private openAIService: OpenAIService) {}
