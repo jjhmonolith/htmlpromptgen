@@ -90,6 +90,12 @@ export class Step3IntegratedDesignService {
       if (phaseResult.success) {
         pageData.structure = phaseResult.structure;
         pageData.phase1Complete = true;
+
+        // 디버그 정보 저장
+        if (!pageData.debugInfo) {
+          pageData.debugInfo = {};
+        }
+        pageData.debugInfo.phase1 = phaseResult.structure!.debugInfo;
       } else {
         pageData.parseError = phaseResult.error;
         pageData.isGenerating = false;
@@ -135,6 +141,12 @@ export class Step3IntegratedDesignService {
       if (phaseResult.success) {
         pageData.content = phaseResult.content;
         pageData.phase2Complete = true;
+
+        // 디버그 정보 저장
+        if (!pageData.debugInfo) {
+          pageData.debugInfo = {};
+        }
+        pageData.debugInfo.phase2 = phaseResult.content!.debugInfo;
       } else {
         pageData.parseError = (pageData.parseError || '') + ' Phase2: ' + phaseResult.error;
       }
@@ -155,6 +167,10 @@ export class Step3IntegratedDesignService {
     sections: Step3Section[];
     flow: string;
     imgBudget: number;
+    debugInfo: {
+      prompt: string;
+      response: string;
+    };
   }> {
     const page = projectData.pages[pageIndex];
     const prompt = this.buildPhase1Prompt(page, projectData, visualIdentity, pageIndex);
@@ -171,7 +187,11 @@ export class Step3IntegratedDesignService {
     return {
       sections: parsed.sections,
       flow: parsed.flow || 'C:content',
-      imgBudget: Math.min(parsed.sections.filter(s => s.grid === '8+4').length, 3)
+      imgBudget: Math.min(parsed.sections.filter(s => s.grid === '8+4').length, 3),
+      debugInfo: {
+        prompt: prompt,
+        response: response.content
+      }
     };
   }
 
@@ -185,6 +205,10 @@ export class Step3IntegratedDesignService {
     components: ComponentLine[];
     images: ImageLine[];
     generatedAt: Date;
+    debugInfo: {
+      prompt: string;
+      response: string;
+    };
   }> {
     const page = projectData.pages[pageIndex];
     const prompt = this.buildPhase2Prompt(page, projectData, visualIdentity, phase1Result);
@@ -200,7 +224,11 @@ export class Step3IntegratedDesignService {
     return {
       components: parsed.components,
       images: parsed.images,
-      generatedAt: new Date()
+      generatedAt: new Date(),
+      debugInfo: {
+        prompt: prompt,
+        response: response.content
+      }
     };
   }
 

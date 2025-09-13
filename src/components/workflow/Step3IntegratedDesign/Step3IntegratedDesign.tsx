@@ -507,13 +507,61 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
             </div>
           )}
 
-          {/* 디버그 모드 - 원본 응답 */}
-          {debugMode && selectedPage.rawResponse && (
-            <div className="bg-gray-50 p-4 rounded-lg border">
-              <h4 className="text-md font-semibold text-gray-900 mb-3">🐛 원본 응답</h4>
-              <pre className="text-xs text-gray-700 bg-white p-4 rounded border overflow-x-auto">
-                {selectedPage.rawResponse}
-              </pre>
+          {/* 디버그 모드 - Phase별 프롬프트와 응답 */}
+          {debugMode && (
+            <div className="space-y-4">
+              {/* Phase 1 디버그 정보 */}
+              {selectedPage.debugInfo?.phase1 && (
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 className="text-md font-semibold text-blue-900 mb-3">🔧 Phase 1: 구조 설계</h4>
+
+                  <div className="space-y-3">
+                    <div>
+                      <h5 className="text-sm font-medium text-blue-800 mb-2">📝 전달된 프롬프트:</h5>
+                      <pre className="text-xs text-blue-700 bg-white p-3 rounded border overflow-x-auto max-h-40 whitespace-pre-wrap">
+                        {selectedPage.debugInfo.phase1.prompt}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h5 className="text-sm font-medium text-blue-800 mb-2">🤖 AI 원본 응답:</h5>
+                      <pre className="text-xs text-blue-700 bg-white p-3 rounded border overflow-x-auto max-h-40 whitespace-pre-wrap">
+                        {selectedPage.debugInfo.phase1.response}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Phase 2 디버그 정보 */}
+              {selectedPage.debugInfo?.phase2 && (
+                <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                  <h4 className="text-md font-semibold text-green-900 mb-3">🎨 Phase 2: 콘텐츠 생성</h4>
+
+                  <div className="space-y-3">
+                    <div>
+                      <h5 className="text-sm font-medium text-green-800 mb-2">📝 전달된 프롬프트:</h5>
+                      <pre className="text-xs text-green-700 bg-white p-3 rounded border overflow-x-auto max-h-40 whitespace-pre-wrap">
+                        {selectedPage.debugInfo.phase2.prompt}
+                      </pre>
+                    </div>
+
+                    <div>
+                      <h5 className="text-sm font-medium text-green-800 mb-2">🤖 AI 원본 응답:</h5>
+                      <pre className="text-xs text-green-700 bg-white p-3 rounded border overflow-x-auto max-h-40 whitespace-pre-wrap">
+                        {selectedPage.debugInfo.phase2.response}
+                      </pre>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* 디버그 정보가 없는 경우 */}
+              {(!selectedPage.debugInfo || (!selectedPage.debugInfo?.phase1 && !selectedPage.debugInfo?.phase2)) && (
+                <div className="bg-gray-50 p-4 rounded-lg border">
+                  <p className="text-sm text-gray-600">🔍 이 페이지는 아직 생성되지 않았거나 디버그 정보가 없습니다.</p>
+                </div>
+              )}
             </div>
           )}
         </div>

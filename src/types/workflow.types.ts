@@ -229,7 +229,18 @@ export interface Step3IntegratedResult {
     isGenerating: boolean;
     phase1Complete: boolean;
     phase2Complete: boolean;
-    rawResponse?: string;      // 디버깅용
+
+    // 디버깅 정보
+    debugInfo?: {
+      phase1?: {
+        prompt: string;
+        response: string;
+      };
+      phase2?: {
+        prompt: string;
+        response: string;
+      };
+    };
     parseError?: string;
     generatedAt: Date;
   }>;
