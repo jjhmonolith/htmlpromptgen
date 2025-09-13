@@ -194,18 +194,17 @@ export interface ComponentLine {
   type: 'heading' | 'paragraph' | 'card' | 'image' | 'caption';
   variant?: string;           // H1|H2|Body|none ...
   section: string;            // must exist in Step3.sections[].id
-  role: 'intro' | 'keyMessage' | 'content' | 'compare' | 'bridge';
+  role: 'title' | 'content';  // summary 제거 - 페이지별 마무리 콘텐츠 방지
   gridSpan?: 'left' | 'right';  // only if section.grid === '8+4'
-  mode: 'enhanced' | 'restricted';
-  text?: string;              // non-image
-  src?: string;               // image only (e.g., "1.png")
+  text?: string;              // non-image (실제 교육 콘텐츠)
+  src?: string;               // image only (e.g., "image_1.png")
   width?: number;             // image only
   height?: number;            // image only
   slotRef?: 'IMG1' | 'IMG2' | 'IMG3'; // (선택) Step3 슬롯 참조시
 }
 
 export interface ImageLine {
-  filename: '1.png' | '2.png';
+  filename: string;           // 이미지 파일명 (Step3에서 결정된 개수에 따라)
   purpose: 'diagram' | 'comparison' | 'illustration';
   section: string;            // place section id
   place: 'left' | 'right' | 'center';
@@ -213,12 +212,15 @@ export interface ImageLine {
   height: number;
   alt: string;                // ≤ 80 chars
   caption: string;            // ≤ 80 chars
+  description: string;        // 상세 설명 (이미지 내용)
+  aiPrompt: string;          // AI 이미지 생성을 위한 상세 프롬프트
+  style: string;             // 시각적 스타일 (flat design, minimal, technical 등)
 }
 
 export interface Step4ComponentPlan {
   version: 'cmp.v1';
   comps: ComponentLine[];
-  images: ImageLine[];        // 0..2
+  images: ImageLine[];        // Step3에서 결정된 개수에 따라
   generatedAt: Date;
 }
 
@@ -240,8 +242,8 @@ export interface Step4Result {
 export interface WorkflowState {
   step1?: ProjectData;
   step2?: { visualIdentity: VisualIdentity; designTokens: DesignTokens };
-  step3?: LayoutWireframe;
-  step4?: Step4Result;
+  step3?: Step3IntegratedResult;  // 새로운 통합 Step3 결과
+  step4?: Step4Result;            // 비활성화 예정
   step5?: FinalPrompt;
   currentStep: number;
   lastSaved?: Date;
@@ -252,4 +254,45 @@ export interface WorkflowState {
     step4: boolean;
     step5: boolean;
   };
+}
+
+// Step3 통합 결과 타입 추가
+export interface Step3IntegratedResult {
+  layoutMode: 'scrollable' | 'fixed';
+  pages: Array<{
+    pageId: string;
+    pageTitle: string;
+    pageNumber: number;
+
+    // Phase1: 구조 설계 (내부 사용)
+    structure?: {
+      sections: Step3Section[];
+      flow: string;
+      imgBudget: number;
+    };
+
+    // Phase2: 콘텐츠 상세 (사용자 표시)
+    content?: {
+      components: ComponentLine[];
+      images: ImageLine[];
+      generatedAt: Date;
+    };
+
+    isGenerating: boolean;
+    phase1Complete: boolean;
+    phase2Complete: boolean;
+    rawResponse?: string;      // 디버깅용
+    parseError?: string;
+    generatedAt: Date;
+  }>;
+  generatedAt: Date;
+}
+
+export interface Step3Section {
+  id: string;
+  role: "title" | "content";  // summary 제거 - 페이지별 마무리 콘텐츠 방지
+  grid: "1-12" | "8+4" | "2-11" | "3-10";
+  height: string;
+  hint: string;
+  gapBelow: number;
 }

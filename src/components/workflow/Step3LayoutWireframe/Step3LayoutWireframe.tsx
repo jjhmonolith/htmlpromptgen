@@ -3,6 +3,51 @@ import { ProjectData, VisualIdentity, DesignTokens } from '../../../types/workfl
 import { Step3LayoutWireframeService, LayoutWireframe } from '../../../services/step3-layout-wireframe.service';
 import { OpenAIService } from '../../../services/openai.service';
 
+// 기존 Step3IntegratedDesign 데이터를 Step3LayoutWireframe 형식으로 변환하는 함수
+const convertLegacyDataIfNeeded = (data: any): LayoutWireframe => {
+  // 이미 LayoutWireframe 형식인 경우
+  if (data.pages && Array.isArray(data.pages) && data.pages[0]?.layoutDescription !== undefined) {
+    return data as LayoutWireframe;
+  }
+
+  // Step3IntegratedDesign 형식을 변환
+  if (data.pages && Array.isArray(data.pages)) {
+    const convertedPages = data.pages.map((page: any, index: number) => {
+      // layoutDescription을 안전하게 문자열로 변환
+      let layoutDescription = '기존 레이아웃 데이터를 변환했습니다.';
+      if (typeof page.content === 'string') {
+        layoutDescription = page.content;
+      } else if (typeof page.description === 'string') {
+        layoutDescription = page.description;
+      } else if (typeof page.layoutDescription === 'string') {
+        layoutDescription = page.layoutDescription;
+      }
+
+      return {
+        pageId: page.pageId || page.id || `page-${index + 1}`,
+        pageTitle: page.pageTitle || page.topic || `페이지 ${page.pageNumber || index + 1}`,
+        pageNumber: page.pageNumber || index + 1,
+        layoutDescription,
+        wireframe: null, // 기존 데이터에는 wireframe 구조가 없을 수 있음
+        generatedAt: page.generatedAt ? new Date(page.generatedAt) : new Date()
+      };
+    });
+
+    return {
+      layoutMode: data.layoutMode || 'scrollable',
+      pages: convertedPages,
+      generatedAt: data.generatedAt ? new Date(data.generatedAt) : new Date()
+    };
+  }
+
+  // 모두 실패한 경우 빈 데이터 반환
+  return {
+    layoutMode: 'scrollable',
+    pages: [],
+    generatedAt: new Date()
+  };
+};
+
 interface Step3LayoutWireframeProps {
   initialData?: LayoutWireframe;
   projectData: ProjectData;
@@ -15,13 +60,13 @@ interface Step3LayoutWireframeProps {
   onGeneratingChange?: (isGenerating: boolean) => void;
 }
 
-export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({ 
+export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
   initialData,
   projectData,
   visualIdentity,
   designTokens,
   apiKey,
-  onComplete, 
+  onComplete,
   onDataChange,
   onBack,
   onGeneratingChange
@@ -31,6 +76,7 @@ export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false);
+  const [selectedPageIndex, setSelectedPageIndex] = useState(0);
 
   // 생성 상태 변경을 부모로 전달
   useEffect(() => {
@@ -40,11 +86,13 @@ export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
   // initialData가 변경되면 컴포넌트 상태 동기화
   useEffect(() => {
     if (initialData) {
-      setStep3Data(initialData);
+      // 기존 Step3IntegratedDesign 데이터를 Step3LayoutWireframe 형식으로 변환
+      const convertedData = convertLegacyDataIfNeeded(initialData);
+      setStep3Data(convertedData);
       setIsDataLoaded(true);
-      
+
       // 초기 데이터의 해시를 저장하여 불필요한 변경 알림 방지
-      const initialHash = JSON.stringify(initialData);
+      const initialHash = JSON.stringify(convertedData);
       lastStep3HashRef.current = initialHash;
     }
   }, [initialData]);
@@ -111,6 +159,73 @@ export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
     await handleGenerate();
   };
 
+  // 선택된 페이지 가져오기
+  const selectedPage = step3Data?.pages[selectedPageIndex];
+
+  // 개별 페이지 재생성
+  const regeneratePage = async (pageIndex: number) => {
+    if (!apiKey || !step3Data || !projectData || !visualIdentity) return;
+
+    try {
+      setIsGenerating(true);
+      setError(null);
+
+      const page = projectData.pages[pageIndex];
+      console.log(`🔄 페이지 ${page.pageNumber} 개별 재생성 시작: ${page.topic}`);
+
+      const openAIService = OpenAIService.getInstance();
+      openAIService.initialize(apiKey);
+      const step3Service = new Step3LayoutWireframeService(openAIService);
+
+      // 해당 페이지만 재생성
+      const layoutPrompt = step3Service['createLayoutOnlyPrompt'](page, projectData, visualIdentity, pageIndex);
+      const layoutResponse = await openAIService.generateCompletion(layoutPrompt, `Step3-Regenerate-Phase1-Page${page.pageNumber}`);
+
+      const pageFlow = step3Service['computePageFlow'](pageIndex, projectData.pages.length);
+      const layoutData = step3Service['extractLayoutFromResponse'](layoutResponse.content, page.pageNumber, pageFlow);
+
+      console.log(`✅ 페이지 ${page.pageNumber} Phase1 재생성 완료`);
+
+      const slotsPrompt = step3Service['createSlotsOnlyPrompt'](page, layoutData, projectData, visualIdentity);
+      const slotsResponse = await openAIService.generateCompletion(slotsPrompt, `Step3-Regenerate-Phase2-Page${page.pageNumber}`);
+
+      const slotsData = step3Service['extractSlotsFromResponse'](slotsResponse.content, page.pageNumber);
+      const completeWireframe = step3Service['combineLayoutAndSlots'](layoutData, slotsData);
+
+      const layoutDescription = step3Service['convertNewWireframeToDescription'](completeWireframe) ??
+                               step3Service['createPlainDescriptionFallback'](page.topic, projectData.layoutMode);
+
+      const newPageProposal = {
+        pageId: page.id,
+        pageTitle: page.topic,
+        pageNumber: page.pageNumber,
+        layoutDescription: layoutDescription,
+        wireframe: completeWireframe,
+        generatedAt: new Date()
+      };
+
+      // 해당 페이지만 업데이트
+      setStep3Data(prevData => {
+        if (!prevData) return null;
+        const newPages = [...prevData.pages];
+        newPages[pageIndex] = newPageProposal;
+        return {
+          ...prevData,
+          pages: newPages,
+          generatedAt: new Date()
+        };
+      });
+
+      console.log(`✅ 페이지 ${page.pageNumber} 개별 재생성 완료`);
+
+    } catch (error) {
+      console.error(`❌ 페이지 ${pageIndex + 1} 재생성 실패:`, error);
+      setError(error instanceof Error ? error.message : '페이지 재생성에 실패했습니다.');
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
   const handleComplete = () => {
     if (step3Data && onComplete) {
       console.log('✅ Step3 완료 - 데이터 전달:', step3Data);
@@ -158,25 +273,39 @@ export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
             </div>
             <h2 className="text-2xl font-bold text-gray-900 mb-2">레이아웃 와이어프레임 생성 중</h2>
             <p className="text-gray-600 mb-6">
-              {totalPages > 1 
-                ? `${totalPages}개 페이지를 병렬로 처리하여 빠르게 생성하고 있습니다...`
+              {totalPages > 1
+                ? `${totalPages}개 페이지를 2단계 병렬 처리로 최적화하여 생성하고 있습니다...`
                 : '페이지 구조와 섹션을 설계하고 있습니다...'
               }
             </p>
-            
+
             {totalPages > 1 && (
-              <div className="max-w-md mx-auto">
+              <div className="max-w-lg mx-auto">
                 <div className="bg-white rounded-xl p-6 shadow-sm">
                   <div className="flex items-center gap-3 mb-4">
                     <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                     </svg>
-                    <span className="text-sm font-medium text-gray-700">병렬 처리로 속도 향상</span>
+                    <span className="text-sm font-medium text-gray-700">2단계 병렬 처리로 속도 극대화</span>
                   </div>
-                  <div className="text-xs text-gray-500 text-left space-y-1">
-                    <p>• 모든 페이지가 동시에 생성됩니다</p>
-                    <p>• 전체 학습 흐름을 고려한 설계</p>
-                    <p>• 페이지 간 연결성 최적화</p>
+                  <div className="text-xs text-gray-500 text-left space-y-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-blue-100 rounded flex items-center justify-center">
+                        <span className="text-blue-600 font-bold text-xs">1</span>
+                      </div>
+                      <span><strong>Phase 1:</strong> 모든 페이지 Layout 구조 병렬 생성</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <div className="w-4 h-4 bg-green-100 rounded flex items-center justify-center">
+                        <span className="text-green-600 font-bold text-xs">2</span>
+                      </div>
+                      <span><strong>Phase 2:</strong> 각 페이지별 Slots 배치 병렬 완료</span>
+                    </div>
+                    <div className="mt-3 pl-6 border-l-2 border-gray-200">
+                      <p>• 전체 학습 흐름을 고려한 설계</p>
+                      <p>• 페이지 간 연결성 최적화</p>
+                      <p>• 병렬 처리로 대기 시간 최소화</p>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -262,7 +391,7 @@ export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
                         <svg className="w-5 h-5 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                         </svg>
-                        <span className="text-sm font-medium text-green-700">병렬 생성</span>
+                        <span className="text-sm font-medium text-green-700">2단계 병렬 생성</span>
                       </div>
                     )}
                     <div className="flex items-center gap-2">
@@ -277,7 +406,7 @@ export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
 
               <div className="space-y-6">
                 {step3Data.pages && step3Data.pages.length > 0 ? (
-                  step3Data.pages.map((page, index) => (
+                  step3Data.pages.map((page) => (
                     <div key={page.pageId} className="border border-gray-200 rounded-xl p-6">
                       <div className="flex items-start gap-4">
                         <div className="flex-shrink-0">
@@ -303,10 +432,15 @@ export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
                               <div
                                 className="text-sm text-gray-800 leading-relaxed max-h-96 overflow-y-auto prose prose-sm max-w-none"
                                 dangerouslySetInnerHTML={{
-                                  __html: page.layoutDescription
-                                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                                    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-                                    .replace(/\n/g, '<br />')
+                                  __html: (() => {
+                                    const description = typeof page.layoutDescription === 'string'
+                                      ? page.layoutDescription
+                                      : '레이아웃 설명을 불러올 수 없습니다.';
+                                    return description
+                                      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                                      .replace(/\*(.*?)\*/g, '<em>$1</em>')
+                                      .replace(/\n/g, '<br />');
+                                  })()
                                 }}
                               />
                             </div>

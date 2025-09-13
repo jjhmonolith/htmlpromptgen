@@ -46,7 +46,7 @@ export class Step4ComponentPlanService {
       }
 
       // 검증 및 강제 보정
-      const { plan, diagnostics } = this.coerceAndValidate(parsed, wireframe, projectData.contentMode);
+      const { plan, diagnostics } = this.coerceAndValidate(parsed, wireframe);
 
       if (diagnostics.length > 0) {
         console.warn(`⚠️ 페이지 ${page.pageNumber} 보정 사항:`, diagnostics);
@@ -100,23 +100,35 @@ export class Step4ComponentPlanService {
 - Wire(요약):
 ${sectionsInfo}
 ${slotsInfo ? `- slots 힌트: ${slotsInfo}` : ''}
+- 이미지: Step3에서 계획된 이미지들 사용
 
 [HARD RULES]
 - 마커 밖 텍스트 금지. 코드펜스 금지. 한 줄=한 레코드.
-- 이미지는 0~2장, filename은 1.png → 2.png 순서.
+- 이미지는 Step3 계획에 따라 동적으로 생성.
 - 8+4 섹션 컴포넌트는 gridSpan=left|right 필수.
-- contentMode=${projectData.contentMode}면 text는 ${projectData.contentMode === 'restricted' ? '"배치 지시문"으로만' : '1~2문장 확장 허용'}.
+- 모든 text는 실제 교육 콘텐츠로 생성: H1(10-15자), H2(15-25자), paragraph(50-150자), card(30-80자)
+- 대상="${projectData.targetAudience}"에 맞는 교육적 언어와 난이도 사용
+- 강의/수업 자료 스타일로 명확하고 간결하게 작성
 
 [FORMAT]
 BEGIN_S4
 VERSION=cmp.v1
-COMP, id=c1, type=heading, variant=H1, section=${wireframe.sections[0]?.id || 'secA'}, role=intro, mode=${projectData.contentMode}, text="${projectData.contentMode === 'restricted' ? '제목 배치 영역' : page.pageTitle + ' 학습 목표 제시'}"
-${wireframe.sections.find((s: any) => s.grid === '8+4') ? `COMP, id=c2, type=paragraph, variant=Body, section=${wireframe.sections.find((s: any) => s.grid === '8+4')?.id || 'secC'}, role=content, gridSpan=left, mode=${projectData.contentMode}, text="${projectData.contentMode === 'restricted' ? '좌측 본문 영역' : '핵심 개념 설명과 상세 내용'}"` : ''}
-${wireframe.sections.find((s: any) => s.grid === '8+4') ? `COMP, id=c3, type=image, variant=none, section=${wireframe.sections.find((s: any) => s.grid === '8+4')?.id || 'secC'}, role=content, gridSpan=right, src=1.png` : ''}
-${wireframe.imgBudget >= 1 ? `IMG, filename=1.png, purpose=diagram, section=${wireframe.sections.find((s: any) => s.grid === '8+4')?.id || wireframe.sections[0]?.id || 'secA'}, place=right, width=520, height=320, alt="핵심 개념 다이어그램", caption="학습 내용 시각화"` : ''}
+COMP, id=c1, type=heading, variant=H1, section=${wireframe.sections[0]?.id || 'secA'}, role=intro, text="${page.pageTitle}"
+${wireframe.sections.find((s: any) => s.grid === '8+4') ? `COMP, id=c2, type=paragraph, variant=Body, section=${wireframe.sections.find((s: any) => s.grid === '8+4')?.id || 'secC'}, role=content, gridSpan=left, text="이 단원에서는 ${page.pageTitle}의 핵심 개념과 실용적인 활용 방법을 학습합니다. ${projectData.targetAudience}을 대상으로 한 체계적인 학습을 통해 실무 능력을 향상시킬 수 있습니다."` : ''}
+${wireframe.sections.find((s: any) => s.grid === '8+4') ? `COMP, id=c3, type=image, variant=none, section=${wireframe.sections.find((s: any) => s.grid === '8+4')?.id || 'secC'}, role=content, gridSpan=right, src=image_1.png` : ''}
+IMG, filename=image_1.png, purpose=diagram, section=${wireframe.sections.find((s: any) => s.grid === '8+4')?.id || wireframe.sections[0]?.id || 'secA'}, place=right, width=520, height=320, alt="핵심 개념 다이어그램", caption="학습 내용 시각화", description="페이지 핵심 개념을 설명하는 구조화된 다이어그램", aiPrompt="Create an educational diagram showing the key concepts of ${page.pageTitle} with clear labels, arrows, and visual hierarchy. Use clean, modern design with blue and white color scheme. Include step-by-step visual flow.", style="clean educational diagram"
 END_S4
 
-페이지 "${page.pageTitle}" 주제에 특화된 컴포넌트 계획을 생성해주세요.`;
+페이지 "${page.pageTitle}"에 대한 교육 콘텐츠를 생성하세요:
+
+[TEXT 생성 가이드]
+- H1 제목: "${page.pageTitle}" 또는 이를 바탕으로 한 간결한 학습 제목 (10-15자)
+- H2 소제목: 섹션별 핵심 주제 (15-25자)
+- paragraph: 교육적 설명문, 대상 청중이 이해하기 쉬운 언어 사용 (50-150자)
+- card: 핵심 포인트나 요약 정보 (30-80자)
+- caption: 이미지나 섹션 설명 (15-30자)
+
+프로젝트 주제와 대상에 맞는 실제 강의 자료로 작성하세요.`;
   }
 
   // S4 블록 추출 및 파싱
@@ -154,7 +166,6 @@ END_S4
               section: comp.section,
               role: comp.role || 'content',
               gridSpan: comp.gridSpan,
-              mode: comp.mode || 'enhanced',
               text: comp.text,
               src: comp.src,
               width: comp.width ? parseInt(String(comp.width)) : undefined,
@@ -166,14 +177,17 @@ END_S4
           const img = this.parseRecordLine(trimmed);
           if (img && img.filename && img.section) {
             images.push({
-              filename: img.filename as '1.png' | '2.png',
+              filename: String(img.filename),
               purpose: img.purpose || 'diagram',
               section: img.section,
               place: img.place || 'center',
               width: parseInt(String(img.width)) || 520,
               height: parseInt(String(img.height)) || 320,
               alt: String(img.alt || '').slice(0, 80),
-              caption: String(img.caption || '').slice(0, 80)
+              caption: String(img.caption || '').slice(0, 80),
+              description: String(img.description || '이미지 설명'),
+              aiPrompt: String(img.aiPrompt || 'Create a relevant educational image'),
+              style: String(img.style || 'modern educational')
             });
           }
         }
@@ -246,8 +260,7 @@ END_S4
   // 검증 및 강제 보정
   private coerceAndValidate(
     parsed: { comps: ComponentLine[], images: ImageLine[] },
-    wireframe: any,
-    contentMode: string
+    wireframe: any
   ): { plan: { comps: ComponentLine[], images: ImageLine[] }, diagnostics: string[] } {
 
     const diagnostics: string[] = [];
@@ -270,26 +283,15 @@ END_S4
       return true;
     });
 
-    // 이미지 검증 (최대 2개)
-    let validImages = parsed.images.filter(img => {
+    // 이미지 검증
+    const validImages = parsed.images.filter(img => {
       if (!validSections.has(img.section)) {
         diagnostics.push(`이미지 ${img.filename}: 존재하지 않는 섹션 ${img.section} 제거됨`);
         return false;
       }
 
-      // 파일명 강제
-      if (!['1.png', '2.png'].includes(img.filename)) {
-        diagnostics.push(`이미지 파일명 ${img.filename}이 잘못됨`);
-        return false;
-      }
-
       return true;
     });
-
-    if (validImages.length > 2) {
-      validImages = validImages.slice(0, 2);
-      diagnostics.push('이미지가 2개를 초과하여 앞의 2개만 사용됨');
-    }
 
     return {
       plan: { comps: validComps, images: validImages },
@@ -318,9 +320,8 @@ END_S4
             type: 'heading',
             variant: 'H1',
             section: section.id,
-            role: 'intro',
-            mode: projectData.contentMode as 'enhanced' | 'restricted',
-            text: projectData.contentMode === 'restricted' ? '제목 영역' : '학습 목표 제시'
+            role: 'title',
+            text: `${section.hint || projectData.projectTitle} 학습 목표`
           });
           break;
 
@@ -330,14 +331,17 @@ END_S4
             type: 'card',
             variant: 'none',
             section: section.id,
-            role: 'keyMessage',
-            mode: projectData.contentMode as 'enhanced' | 'restricted',
-            text: projectData.contentMode === 'restricted' ? '핵심 메시지 카드' : '핵심 개념 요약'
+            role: 'content',
+            text: `핵심 내용: ${section.hint || '주요 개념을 이해하고 실무에 적용하는 방법을 습득합니다.'}`
           });
           break;
 
         case 'content':
           if (section.grid === '8+4') {
+            // 8+4 레이아웃에서는 우측에 이미지 하나 추가
+            const imageNumber = images.length + 1;
+            const filename = `image_${imageNumber}.png`;
+
             // 좌우 분할
             comps.push({
               id: `fallback-p-${index}`,
@@ -346,8 +350,7 @@ END_S4
               section: section.id,
               role: 'content',
               gridSpan: 'left',
-              mode: projectData.contentMode as 'enhanced' | 'restricted',
-              text: projectData.contentMode === 'restricted' ? '본문 영역' : '상세 설명 내용'
+              text: `이 단원에서는 ${section.hint || '학습 내용'}에 대한 상세한 설명과 실습 방법을 다룹니다. ${projectData.targetAudience}가 쉽게 이해할 수 있도록 단계별로 설명하겠습니다.`
             });
 
             comps.push({
@@ -357,23 +360,22 @@ END_S4
               section: section.id,
               role: 'content',
               gridSpan: 'right',
-              mode: projectData.contentMode as 'enhanced' | 'restricted',
-              src: '1.png'
+              src: filename
             });
 
-            // 이미지 정보 추가
-            if (images.length === 0 && wireframe.imgBudget >= 1) {
-              images.push({
-                filename: '1.png',
-                purpose: 'diagram',
-                section: section.id,
-                place: 'right',
-                width: 520,
-                height: 320,
-                alt: '핵심 개념 다이어그램',
-                caption: '학습 내용 시각화'
-              });
-            }
+            images.push({
+              filename,
+              purpose: 'diagram',
+              section: section.id,
+              place: 'right',
+              width: 520,
+              height: 320,
+              alt: `학습 다이어그램 ${imageNumber}`,
+              caption: `학습 내용 시각화 ${imageNumber}`,
+              description: `${section.hint || '학습 내용'}을 시각적으로 설명하는 교육용 다이어그램`,
+              aiPrompt: `Create an educational diagram that explains "${section.hint || 'learning content'}" with clear visual elements, arrows, and labels. Use a clean, modern educational style with blue and white colors.`,
+              style: 'educational diagram'
+            });
           } else {
             // 전체 폭
             comps.push({
@@ -382,8 +384,7 @@ END_S4
               variant: 'Body',
               section: section.id,
               role: 'content',
-              mode: projectData.contentMode as 'enhanced' | 'restricted',
-              text: projectData.contentMode === 'restricted' ? '본문 내용' : '학습 내용 설명'
+              text: `${section.hint || '학습 내용'}에 대한 체계적인 설명과 예시를 통해 실무 능력을 향상시킬 수 있습니다.`
             });
           }
           break;
@@ -395,11 +396,11 @@ END_S4
             variant: 'Body',
             section: section.id,
             role: section.role || 'content',
-            mode: projectData.contentMode as 'enhanced' | 'restricted',
-            text: projectData.contentMode === 'restricted' ? `${section.role} 영역` : `${section.role} 관련 내용`
+            text: `${section.hint || section.role}에 대한 주요 내용을 습득하고 실제 활용 방법을 알아보겠습니다.`
           });
       }
     });
+
 
     return {
       version: 'cmp.v1',

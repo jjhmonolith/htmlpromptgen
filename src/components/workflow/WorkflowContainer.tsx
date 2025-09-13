@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Step1BasicInfo } from './Step1BasicInfo';
 import { Step2VisualIdentity } from './Step2VisualIdentity/Step2VisualIdentity';
-import { Step3LayoutWireframe } from './Step3LayoutWireframe';
+import { Step3IntegratedDesign } from './Step3IntegratedDesign';
+import { Step4ComponentPlan } from './Step4ComponentPlan';
 import { GNB } from '../common';
 
 interface WorkflowContainerProps {
@@ -22,12 +23,20 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [workflowData, setWorkflowData] = useState({
+  const [workflowData, setWorkflowData] = useState<any>({
     step1: null,
     step2: null,
     step3: null,
     step4: null,
-    step5: null
+    step5: null,
+    currentStep: 1,
+    stepCompletion: {
+      step1: false,
+      step2: false,
+      step3: false,
+      step4: false,
+      step5: false
+    }
   });
 
   // 앞선 단계 수정 시 뒷 단계 초기화하는 함수
@@ -222,11 +231,58 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     onWorkflowDataChange?.(updatedWorkflowData);
   };
 
+  const handleStep4Complete = (data: any) => {
+    const newWorkflowData = {
+      ...workflowData,
+      step4: data,
+      currentStep: 5,
+      stepCompletion: {
+        ...workflowData.stepCompletion,
+        step4: true
+      }
+    };
+    setWorkflowData(newWorkflowData);
+    setCurrentStep(5);
+
+    // 부모에게 워크플로우 데이터 변경 알림
+    onWorkflowDataChange?.(newWorkflowData);
+  };
+
+  // Step4 실시간 데이터 변경 처리
+  const handleStep4DataChange = (partialData: any) => {
+    // 기존 Step4 데이터와 비교하여 실제로 변경되었는지 확인
+    const currentStep4Hash = JSON.stringify(workflowData.step4);
+    const newStep4Hash = JSON.stringify(partialData);
+
+    let updatedWorkflowData;
+
+    // 실제로 Step4 데이터가 변경된 경우에만 뒷 단계 초기화
+    if (currentStep4Hash !== newStep4Hash && workflowData.step4) {
+      console.log('🔄 Step4 데이터 변경 감지 - 뒷 단계 초기화');
+      const resetData = resetLaterSteps(4);
+      updatedWorkflowData = {
+        ...resetData,
+        step4: partialData,
+        currentStep: currentStep
+      };
+    } else {
+      // 데이터 변경이 없거나 최초 로드인 경우 뒷 단계 유지
+      updatedWorkflowData = {
+        ...workflowData,
+        step4: partialData,
+        currentStep: currentStep
+      };
+    }
+
+    setWorkflowData(updatedWorkflowData);
+    onWorkflowDataChange?.(updatedWorkflowData);
+  };
+
   const getWorkflowSteps = () => [
     { num: 1, title: '기본 정보', isCompleted: !!workflowData.step1 },
     { num: 2, title: '비주얼 아이덴티티', isCompleted: !!workflowData.step2 },
     { num: 3, title: '레이아웃 와이어프레임', isCompleted: !!workflowData.step3 },
-    { num: 4, title: '애니메이션/상호작용', isCompleted: !!workflowData.step4 },
+    { num: 4, title: '컴포넌트 계획', isCompleted: !!workflowData.step4 },
     { num: 5, title: '최종 프롬프트', isCompleted: !!workflowData.step5 }
   ];
 
@@ -276,17 +332,45 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         }
         
         return (
-          <Step3LayoutWireframe
+          <Step3IntegratedDesign
             initialData={workflowData.step3}
             projectData={workflowData.step1}
             visualIdentity={workflowData.step2.visualIdentity}
-            designTokens={workflowData.step2.designTokens}
             apiKey={apiKey || ''}
             onComplete={handleStep3Complete}
             onDataChange={handleStep3DataChange}
             onBack={() => setCurrentStep(2)}
             onGeneratingChange={setIsGenerating}
           />
+        );
+
+      case 4:
+        // Step4 임시 비활성화 - Step3에서 모든 기능 제공
+        return (
+          <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
+            <div className="max-w-4xl mx-auto px-4 xl:px-8 2xl:px-12 py-12">
+              <div className="text-center py-16">
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">Step 4는 현재 개발 중입니다</h2>
+                <p className="text-gray-600 mb-8">
+                  모든 콘텐츠 설계 기능이 Step 3에 통합되었습니다.
+                  <br />
+                  Step 3에서 완전한 페이지 콘텐츠를 확인하실 수 있습니다.
+                </p>
+                <button
+                  onClick={() => setCurrentStep(3)}
+                  className="px-8 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors mr-4"
+                >
+                  Step 3로 돌아가기
+                </button>
+                <button
+                  onClick={() => setCurrentStep(5)}
+                  className="px-8 py-3 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+                >
+                  Step 5로 건너뛰기
+                </button>
+              </div>
+            </div>
+          </div>
         );
 
       default:

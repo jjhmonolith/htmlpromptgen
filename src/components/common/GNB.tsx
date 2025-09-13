@@ -132,7 +132,7 @@ export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, c
                             )}
                             {step.num === 4 && (
                               <svg className={`w-7 h-7 ${fillColor} ${isActive && isGenerating ? 'animate-generating-fill' : ''}`} viewBox="0 0 20 20">
-                                <path fillRule="evenodd" d="M11.3 1.046A1 1 0 0112 2v5h4a1 1 0 01.82 1.573l-7 10A1 1 0 018 18v-5H4a1 1 0 01-.82-1.573l7-10a1 1 0 011.12-.38z" clipRule="evenodd"/>
+                                <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm0 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1V8zm0 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-1 1H4a1 1 0 01-1-1v-2z" clipRule="evenodd"/>
                               </svg>
                             )}
                             {step.num === 5 && (
