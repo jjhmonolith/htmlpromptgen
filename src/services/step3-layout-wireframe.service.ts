@@ -38,11 +38,14 @@ export class Step3LayoutWireframeService {
           const prompt = this.createPageLayoutPrompt(page, projectData, visualIdentity, index);
           const response = await this.openAIService.generateCompletion(prompt, `Step3-Page${page.pageNumber}`);
           
+          const wireframeContent = this.extractWireframeFromResponse(response.content, page.pageNumber);
+          const layoutDescription = this.convertWireframeToDescription(wireframeContent);
+          
           const pageProposal: PageLayoutProposal = {
             pageId: page.id,
             pageTitle: page.topic,
             pageNumber: page.pageNumber,
-            layoutDescription: response.content.trim(),
+            layoutDescription: layoutDescription,
             generatedAt: new Date()
           };
           
@@ -52,12 +55,23 @@ export class Step3LayoutWireframeService {
         } catch (error) {
           console.error(`❌ 페이지 ${page.pageNumber} 생성 실패:`, error);
           
-          // 개별 페이지 실패 시 폴백
+          // 개별 페이지 실패 시 와이어프레임 기반 폴백
+          const fallbackWireframe = {
+            version: 'wire.v1',
+            viewportMode: projectData.layoutMode,
+            flow: index === 0 ? 'A:intro' : index === projectData.pages.length - 1 ? 'E:bridge' : 'C:content',
+            sections: [
+              { id: 'header', role: 'title', grid: '1-12', height: '120', content: `"${page.topic}" 제목+설명`, gapBelow: '32' },
+              { id: 'main', role: 'content', grid: '8+4', height: 'auto', content: '핵심내용+시각자료', gapBelow: '48' },
+              { id: 'footer', role: 'navigation', grid: '3-10', height: '80', content: '페이지연결+버튼', gapBelow: '0' }
+            ]
+          };
+
           return {
             pageId: page.id,
             pageTitle: page.topic,
             pageNumber: page.pageNumber,
-            layoutDescription: `페이지 상단에 제목 "${page.topic}"을 큰 폰트로 배치하고, 중앙 영역에 주요 콘텐츠를 설명하는 텍스트와 함께 관련 이미지나 다이어그램을 좌우 또는 상하로 배치합니다. 하단에는 학습자의 이해를 돕는 요약 정보나 다음 단계로의 연결고리를 제공합니다.`,
+            layoutDescription: this.convertWireframeToDescription(fallbackWireframe),
             generatedAt: new Date()
           };
         }
@@ -103,61 +117,250 @@ export class Step3LayoutWireframeService {
     const prevPage = pageIndex > 0 ? projectData.pages[pageIndex - 1] : null;
     const nextPage = pageIndex < projectData.pages.length - 1 ? projectData.pages[pageIndex + 1] : null;
 
-    // 페이지 위치에 따른 역할 정의
-    const getPageRole = (index: number, total: number) => {
-      if (index === 0) return '도입페이지 (학습 동기 부여 및 전체 개요)';
-      if (index === total - 1) return '마무리페이지 (요약 및 후속 학습 연결)';
-      if (index === 1) return '핵심 개념 페이지 (주요 내용 설명)';
-      return '전개페이지 (구체적 내용 및 예시)';
+    // 페이지 위치에 따른 역할과 FLOW 정의
+    const getPageFlow = (index: number, total: number) => {
+      if (index === 0) return 'A:intro';
+      if (index === total - 1) return 'E:bridge';
+      if (index === 1) return 'B:keyMessage';
+      if (index === 2) return 'C:content';
+      return 'D:compare';
     };
 
-    const pageRole = getPageRole(pageIndex, projectData.pages.length);
+    const pageFlow = getPageFlow(pageIndex, projectData.pages.length);
+    const pageRole = pageFlow.split(':')[1];
 
-    return `교육용 페이지의 레이아웃을 전체 학습 흐름을 고려하여 설계해주세요.
+    return `당신은 웹 페이지 레이아웃 설계 전문가입니다. 주어진 교육 콘텐츠에 대한 와이어프레임 구조를 생성해주세요.
 
 **프로젝트 정보:**
 - 제목: ${projectData.projectTitle}
 - 대상: ${projectData.targetAudience}
+- 페이지 ${page.pageNumber}/${projectData.pages.length}: ${page.topic}
+- 역할: ${pageRole}
 - 레이아웃 모드: ${projectData.layoutMode}
-- 콘텐츠 모드: ${projectData.contentMode}
 
-**전체 페이지 흐름 (총 ${projectData.pages.length}개):**
+**전체 학습 흐름:**
 ${allPages}
 
-**현재 설계할 페이지:**
-- 페이지 번호: ${page.pageNumber}/${projectData.pages.length}
-- 주제: ${page.topic}
-- 설명: ${page.description || ''}
-- 페이지 역할: ${pageRole}
-
-**페이지 연결 맥락:**
-${prevPage ? `- 이전 페이지: "${prevPage.topic}" - 이 내용을 받아서 시작` : '- 첫 번째 페이지 - 학습자의 관심을 끌고 동기를 부여'}
-${nextPage ? `- 다음 페이지: "${nextPage.topic}" - 이 내용으로 자연스럽게 연결` : '- 마지막 페이지 - 학습 내용을 정리하고 마무리'}
-
-**디자인 스타일:**
-- 분위기: ${visualIdentity.moodAndTone.join(', ')}
+**디자인 토큰:**
 - 주색상: ${visualIdentity.colorPalette.primary}
-- 컴포넌트 스타일: ${visualIdentity.componentStyle}
+- 보조색상: ${visualIdentity.colorPalette.secondary || '#50E3C2'}
+- 강조색상: ${visualIdentity.colorPalette.accent || '#F5A623'}
+- 컴포넌트: ${visualIdentity.componentStyle}
 
-이 페이지의 레이아웃을 전체 학습 흐름과 맥락을 고려하여 자연스러운 문장으로 설명해주세요:
+**연결 맥락:**
+${prevPage ? `이전: "${prevPage.topic}"에서 연결` : '첫 페이지 - 학습 동기 유발'}
+${nextPage ? `다음: "${nextPage.topic}"로 전환 준비` : '마지막 페이지 - 학습 마무리'}
 
-1. **페이지 구조**: 상단, 중간, 하단 영역의 역할
-2. **콘텐츠 배치**: 텍스트, 이미지, 다이어그램의 효과적 배치
-3. **학습 연결**: 이전 페이지와의 연결점, 다음 페이지로의 전환 방법
-4. **교육적 고려사항**: 대상 연령에 맞는 시각적 요소와 상호작용
-5. **페이지 역할 반영**: ${pageRole}에 맞는 특별한 레이아웃 특징
+**요청사항:**
+다음 형식으로 페이지 와이어프레임을 생성해주세요:
 
-설명은 구체적이고 실행 가능하게 작성해주세요 (250-350자 내외).`;
+**출력 형식:**
+- 첫 줄: VERSION=wire.v1
+- 다음 줄: VIEWPORT_MODE=${projectData.layoutMode}
+- 다음 줄: FLOW=${pageFlow}
+- 다음 줄들: SECTION 정의 (최소 3개, 최대 6개)
+  * SECTION, id=header, role=title, grid=1-12, height=120, content=제목+부제목, gapBelow=32
+  * SECTION, id=main, role=content, grid=8+4, height=auto, content=텍스트+이미지, gapBelow=48
+  * SECTION, id=footer, role=navigation, grid=3-10, height=80, content=연결+버튼, gapBelow=0
+
+**규칙:**
+- grid 형식: "1-12"(전체폭) 또는 "8+4"(좌우분할) 또는 "2-11"(여백포함)
+- height: 숫자(px) 또는 auto
+- content: 해당 섹션에 들어갈 구체적 내용 명시
+- role: title/subtitle/content/visual/interactive/navigation/summary
+- gapBelow: 다음 섹션과의 간격(px)
+
+위 형식에 맞춰 와이어프레임을 생성해주세요. 코드 블록으로 감싸서 답변해주세요.`;
+  }
+
+  // 와이어프레임 응답에서 구조화된 데이터 추출
+  private extractWireframeFromResponse(responseContent: string, pageNumber: number): any {
+    try {
+      const startMarker = `BEGIN_S3_PAGE${pageNumber}`;
+      const endMarker = `END_S3_PAGE${pageNumber}`;
+      
+      let startIndex = responseContent.indexOf(startMarker);
+      let endIndex = responseContent.indexOf(endMarker);
+      
+      // 마커가 없으면 코드 블록을 찾아봄
+      if (startIndex === -1 || endIndex === -1) {
+        console.log(`🔍 페이지 ${pageNumber}: 마커 없음, 코드 블록 또는 VERSION 패턴 검색`);
+        
+        // ```로 감싸진 코드 블록 찾기
+        const codeBlockStart = responseContent.indexOf('```');
+        const codeBlockEnd = responseContent.lastIndexOf('```');
+        
+        if (codeBlockStart !== -1 && codeBlockEnd !== -1 && codeBlockStart !== codeBlockEnd) {
+          let codeContent = responseContent.substring(codeBlockStart + 3, codeBlockEnd).trim();
+          // 언어 식별자 제거 (```plaintext, ```javascript 등)
+          const firstLineEnd = codeContent.indexOf('\n');
+          if (firstLineEnd !== -1 && !codeContent.startsWith('VERSION=')) {
+            codeContent = codeContent.substring(firstLineEnd + 1);
+          }
+          console.log(`✅ 페이지 ${pageNumber}: 코드 블록에서 추출`);
+          return this.parseWireframeLines(codeContent.split('\n'));
+        }
+        
+        // VERSION= 패턴 찾기 (코드 블록이 없는 경우)
+        const versionIndex = responseContent.indexOf('VERSION=');
+        if (versionIndex !== -1) {
+          const wireframeContent = responseContent.substring(versionIndex);
+          console.log(`✅ 페이지 ${pageNumber}: VERSION 패턴에서 추출`);
+          return this.parseWireframeLines(wireframeContent.split('\n'));
+        }
+        
+        console.warn(`⚠️ 페이지 ${pageNumber}: 와이어프레임 패턴을 찾을 수 없음, 폴백 사용`);
+        return null;
+      }
+      
+      const wireframeContent = responseContent.substring(startIndex + startMarker.length, endIndex).trim();
+      const lines = wireframeContent.split('\n').filter(line => line.trim());
+      
+      console.log(`✅ 페이지 ${pageNumber}: 마커에서 추출`);
+      return this.parseWireframeLines(lines);
+      
+    } catch (error) {
+      console.error(`❌ 페이지 ${pageNumber} 와이어프레임 추출 실패:`, error);
+      return null;
+    }
+  }
+
+  // 와이어프레임 라인들을 구조화된 데이터로 파싱
+  private parseWireframeLines(lines: string[]): any {
+    const wireframe = {
+      version: 'wire.v1',
+      viewportMode: 'scrollable',
+      flow: '',
+      sections: [] as any[]
+    };
+
+    for (const line of lines) {
+      const trimmedLine = line.trim();
+      
+      if (trimmedLine.startsWith('VERSION=')) {
+        wireframe.version = trimmedLine.split('=')[1];
+      } else if (trimmedLine.startsWith('VIEWPORT_MODE=')) {
+        wireframe.viewportMode = trimmedLine.split('=')[1];
+      } else if (trimmedLine.startsWith('FLOW=')) {
+        wireframe.flow = trimmedLine.split('=')[1];
+      } else if (trimmedLine.startsWith('SECTION,')) {
+        const section = this.parseSectionLine(trimmedLine);
+        if (section) {
+          wireframe.sections.push(section);
+        }
+      }
+    }
+
+    return wireframe;
+  }
+
+  // SECTION 라인을 파싱
+  private parseSectionLine(line: string): any {
+    const section: any = {};
+    
+    // "SECTION, id=header, role=title, grid=1-12, height=120, content=제목+부제목, gapBelow=32" 형식 파싱
+    const parts = line.split(',').map(part => part.trim());
+    
+    for (const part of parts) {
+      if (part === 'SECTION') continue;
+      
+      const [key, value] = part.split('=');
+      if (key && value) {
+        section[key.trim()] = value.trim();
+      }
+    }
+    
+    return Object.keys(section).length > 0 ? section : null;
+  }
+
+  // 와이어프레임을 읽기 쉬운 설명으로 변환
+  private convertWireframeToDescription(wireframe: any): string {
+    if (!wireframe || !wireframe.sections || wireframe.sections.length === 0) {
+      return '페이지 상단에 제목을 배치하고, 중앙에 주요 콘텐츠, 하단에 네비게이션을 포함하는 기본적인 3단 구조로 구성됩니다.';
+    }
+
+    const sections = wireframe.sections;
+    let description = '';
+
+    // 섹션별로 설명 생성
+    sections.forEach((section: any, index: number) => {
+      const role = section.role || 'content';
+      const grid = section.grid || '1-12';
+      const content = section.content || '콘텐츠';
+      const height = section.height || 'auto';
+
+      let sectionDesc = '';
+      
+      if (index === 0) {
+        sectionDesc = `페이지 **상단**에는 `;
+      } else if (index === sections.length - 1) {
+        sectionDesc = ` **하단**에는 `;
+      } else {
+        sectionDesc = ` **중간 영역**에는 `;
+      }
+
+      // grid 패턴에 따른 레이아웃 설명
+      if (grid.includes('+')) {
+        const [left, right] = grid.split('+');
+        sectionDesc += `좌우 분할 레이아웃으로 ${content}가 배치되며, `;
+      } else if (grid === '1-12') {
+        sectionDesc += `전체 폭을 활용하여 ${content}가 배치되며, `;
+      } else {
+        sectionDesc += `중앙 정렬로 ${content}가 배치되며, `;
+      }
+
+      // 역할에 따른 추가 설명
+      switch (role) {
+        case 'title':
+          sectionDesc += `제목과 부제목이 강조되어 표시됩니다.`;
+          break;
+        case 'visual':
+          sectionDesc += `시각적 요소와 이미지가 중심을 이룹니다.`;
+          break;
+        case 'interactive':
+          sectionDesc += `사용자가 상호작용할 수 있는 요소들이 포함됩니다.`;
+          break;
+        case 'navigation':
+          sectionDesc += `페이지 간 이동을 위한 네비게이션이 제공됩니다.`;
+          break;
+        default:
+          sectionDesc += `핵심 내용이 효과적으로 전달됩니다.`;
+      }
+
+      description += sectionDesc;
+    });
+
+    // 레이아웃 모드에 따른 추가 설명
+    if (wireframe.viewportMode === 'scrollable') {
+      description += ' 스크롤 가능한 레이아웃으로 구성되어 충분한 콘텐츠 공간을 제공합니다.';
+    } else {
+      description += ' 고정 뷰포트 내에서 모든 내용을 효율적으로 배치합니다.';
+    }
+
+    return description;
   }
 
   private createFallbackResult(projectData: ProjectData): LayoutWireframe {
-    const fallbackPages: PageLayoutProposal[] = projectData.pages.map(page => ({
-      pageId: page.id,
-      pageTitle: page.topic,
-      pageNumber: page.pageNumber,
-      layoutDescription: `페이지 상단에 제목 "${page.topic}"을 큰 폰트로 배치하고, 중앙 영역에 주요 콘텐츠를 설명하는 텍스트와 함께 관련 이미지나 다이어그램을 좌우 또는 상하로 배치합니다. 하단에는 학습자의 이해를 돕는 요약 정보나 다음 단계로의 연결고리를 제공합니다.`,
-      generatedAt: new Date()
-    }));
+    const fallbackPages: PageLayoutProposal[] = projectData.pages.map((page, index) => {
+      const wireframe = {
+        version: 'wire.v1',
+        viewportMode: projectData.layoutMode,
+        flow: index === 0 ? 'A:intro' : index === projectData.pages.length - 1 ? 'E:bridge' : 'C:content',
+        sections: [
+          { id: 'header', role: 'title', grid: '1-12', height: '120', content: '제목+부제목', gapBelow: '32' },
+          { id: 'main', role: 'content', grid: '8+4', height: 'auto', content: '텍스트+이미지', gapBelow: '48' },
+          { id: 'footer', role: 'navigation', grid: '3-10', height: '80', content: '연결+버튼', gapBelow: '0' }
+        ]
+      };
+      
+      return {
+        pageId: page.id,
+        pageTitle: page.topic,
+        pageNumber: page.pageNumber,
+        layoutDescription: this.convertWireframeToDescription(wireframe),
+        generatedAt: new Date()
+      };
+    });
 
     return {
       layoutMode: projectData.layoutMode,

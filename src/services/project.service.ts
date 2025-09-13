@@ -16,6 +16,26 @@ export class ProjectService {
     return ProjectService.instance;
   }
 
+  // 안전한 날짜 파싱 헬퍼 함수
+  private parseDate(dateValue: any): Date {
+    if (!dateValue) return new Date();
+    
+    try {
+      const dateObj = typeof dateValue === 'string' ? new Date(dateValue) : dateValue;
+      
+      // Date 객체가 유효한지 확인
+      if (isNaN(dateObj.getTime())) {
+        console.warn('Invalid date value, using current date:', dateValue);
+        return new Date();
+      }
+      
+      return dateObj;
+    } catch (error) {
+      console.warn('Date parsing error, using current date:', error, dateValue);
+      return new Date();
+    }
+  }
+
   // Get all projects metadata
   getAllProjects(): ProjectMetadata[] {
     const projectsData = localStorage.getItem(PROJECTS_KEY);
@@ -26,8 +46,8 @@ export class ProjectService {
       return projects.map(p => ({
         id: p.id,
         name: p.name,
-        createdAt: new Date(p.createdAt),
-        updatedAt: new Date(p.updatedAt)
+        createdAt: this.parseDate(p.createdAt),
+        updatedAt: this.parseDate(p.updatedAt)
       }));
     } catch {
       return [];
@@ -45,8 +65,8 @@ export class ProjectService {
       if (project) {
         return {
           ...project,
-          createdAt: new Date(project.createdAt),
-          updatedAt: new Date(project.updatedAt)
+          createdAt: this.parseDate(project.createdAt),
+          updatedAt: this.parseDate(project.updatedAt)
         };
       }
       return null;
@@ -166,11 +186,11 @@ export class ProjectService {
       
       // Convert date strings back to Date objects if needed
       if (workflowState.projectData) {
-        if (typeof workflowState.projectData.createdAt === 'string') {
-          workflowState.projectData.createdAt = new Date(workflowState.projectData.createdAt);
+        if (workflowState.projectData.createdAt) {
+          workflowState.projectData.createdAt = this.parseDate(workflowState.projectData.createdAt);
         }
-        if (typeof workflowState.projectData.updatedAt === 'string') {
-          workflowState.projectData.updatedAt = new Date(workflowState.projectData.updatedAt);
+        if (workflowState.projectData.updatedAt) {
+          workflowState.projectData.updatedAt = this.parseDate(workflowState.projectData.updatedAt);
         }
       }
       

@@ -32,27 +32,57 @@ export const ProjectList: React.FC<ProjectListProps> = ({ onSelectProject, onBac
     }
   };
 
-  const formatDate = (date: Date) => {
-    return new Date(date).toLocaleDateString('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return '';
+    
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Date 객체가 유효한지 확인
+      if (isNaN(dateObj.getTime())) {
+        console.warn('Invalid date:', date);
+        return '';
+      }
+      
+      return dateObj.toLocaleDateString('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.warn('Date formatting error:', error, date);
+      return '';
+    }
   };
 
-  const formatTimeAgo = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - new Date(date).getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const minutes = Math.floor(diff / (1000 * 60));
+  const formatTimeAgo = (date: Date | string | undefined) => {
+    if (!date) return '';
+    
+    try {
+      const now = new Date();
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Date 객체가 유효한지 확인
+      if (isNaN(dateObj.getTime())) {
+        console.warn('Invalid date for time ago:', date);
+        return '';
+      }
+      
+      const diff = now.getTime() - dateObj.getTime();
+      const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+      const hours = Math.floor(diff / (1000 * 60 * 60));
+      const minutes = Math.floor(diff / (1000 * 60));
 
-    if (days > 0) return `${days}일 전`;
-    if (hours > 0) return `${hours}시간 전`;
-    if (minutes > 0) return `${minutes}분 전`;
-    return '방금 전';
+      if (days > 0) return `${days}일 전`;
+      if (hours > 0) return `${hours}시간 전`;
+      if (minutes > 0) return `${minutes}분 전`;
+      return '방금 전';
+    } catch (error) {
+      console.warn('Time ago formatting error:', error, date);
+      return '';
+    }
   };
 
   return (

@@ -118,14 +118,29 @@ export const Step3LayoutWireframe: React.FC<Step3LayoutWireframeProps> = ({
     }
   };
 
-  const formatDate = (date: Date) => {
-    return new Intl.DateTimeFormat('ko-KR', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    }).format(date);
+  const formatDate = (date: Date | string | undefined) => {
+    if (!date) return '';
+    
+    try {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      
+      // Date 객체가 유효한지 확인
+      if (isNaN(dateObj.getTime())) {
+        console.warn('Invalid date:', date);
+        return '';
+      }
+      
+      return new Intl.DateTimeFormat('ko-KR', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      }).format(dateObj);
+    } catch (error) {
+      console.warn('Date formatting error:', error, date);
+      return '';
+    }
   };
 
   if (isGenerating) {
