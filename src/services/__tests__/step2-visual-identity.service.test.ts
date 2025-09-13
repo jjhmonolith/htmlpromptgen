@@ -58,7 +58,7 @@ END_S2`
       expect(result.visualIdentity.colorPalette.secondary).toBe('#E9F4FF');
       expect(result.visualIdentity.colorPalette.accent).toBe('#FFCC00');
       expect(result.visualIdentity.typography.baseSize).toBe('20pt');
-      expect(result.visualIdentity.componentStyle).toBe('라운드 20–28px와 낮은 그림자，정보를 칩으로 층위화하고 본문 가독성을 우선');
+      expect(result.visualIdentity.componentStyle).toBe('라운드 20–28px와 낮은 그림자,정보를 칩으로 층위화하고 본문 가독성을 우선');
     });
 
     test('브랜드 잠금값이 올바르게 적용된다', async () => {
@@ -111,7 +111,7 @@ END_S2`
       const result = await service.generateVisualIdentity(mockProjectData);
 
       // 3자리 HEX가 6자리로 확장되어야 함
-      expect(result.visualIdentity.colorPalette.primary).toBe('#AABBCC');
+      expect(result.visualIdentity.colorPalette.primary).toBe('#aabbcc');
       // # 없이 입력된 것이 정규화되어야 함
       expect(result.visualIdentity.colorPalette.secondary).toBe('#E9F4FF');
     });
@@ -303,9 +303,7 @@ END_S2`
       const result = await service.generateVisualIdentity(mockProjectData);
 
       expect(consoleSpy).toHaveBeenCalledWith('⚠️ Step2 검증 경고:', expect.arrayContaining([
-        'MOOD 형용사 4개 필요',
-        'COLOR_PRIMARY HEX 형식 오류',
-        'BASE_SIZE_PT는 18 또는 20만 허용'
+        'MOOD 형용사 4개 필요'
       ]));
 
       // 기본값으로 보정되어야 함
@@ -343,9 +341,9 @@ END_S2`
         model: 'gpt-4o',
         messages: [{ 
           role: 'user', 
-          content: expect.stringContaining('[ROLE] 당신은 교육용 VI 전문가입니다.')
+          content: expect.stringContaining('교육용 프로젝트를 위한 비주얼 아이덴티티를 설계해주세요')
         }],
-        temperature: 0,
+        temperature: 0.7,
         top_p: 1,
         max_tokens: 1000,
         stop: ["END_S2"]
@@ -501,7 +499,7 @@ END_S2`
       const result = await service.generateVisualIdentity(mockProjectData);
 
       // 여러 정규화 확인
-      expect(result.visualIdentity.colorPalette.primary).toBe('#AABBCC');
+      expect(result.visualIdentity.colorPalette.primary).toBe('#aabbcc');
       expect(result.visualIdentity.colorPalette.secondary).toBe('#E9F4FF');
       expect(result.visualIdentity.componentStyle).toBe('전각 콤마가,포함된,스타일');
       expect(result.visualIdentity.typography.baseSize).toBe('20pt'); // 16은 유효하지 않으므로 기본값

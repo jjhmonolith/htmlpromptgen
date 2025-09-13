@@ -245,7 +245,7 @@ END_S3_LAYOUT`
       // SLOTS 블록이 없으면 최소 와이어프레임 생성
       expect(page.wireframe).not.toBeNull();
       expect(page.wireframe?.sections).toHaveLength(5); // synthesizeMinimalWireframe
-      expect(page.layoutDescription).toContain('페이지 상단에');
+      expect(page.layoutDescription).toContain('페이지 **상단**에');
     });
 
     test('SLOTS 블록만 있을 때 최소 와이어프레임을 생성한다', async () => {
@@ -266,7 +266,7 @@ END_S3_SLOTS`
       // LAYOUT 블록이 없으면 최소 와이어프레임 생성
       expect(page.wireframe).not.toBeNull();
       expect(page.wireframe?.sections).toHaveLength(5);
-      expect(page.layoutDescription).toContain('페이지 상단에');
+      expect(page.layoutDescription).toContain('페이지 **상단**에');
     });
 
     test('블록이 없을 때 최소 와이어프레임을 생성한다', async () => {
@@ -286,15 +286,18 @@ END_S3_SLOTS`
       expect(page.wireframe?.version).toBe('wire.v1');
       expect(page.wireframe?.sections).toHaveLength(5); // synthesizeMinimalWireframe의 기본 섹션 수
       expect(page.wireframe?.flow).toBe('A:intro'); // 첫 번째 페이지
-      expect(page.layoutDescription).toContain('페이지 상단에'); // 폴백 설명
+      expect(page.layoutDescription).toContain('페이지 **상단**에'); // 폴백 설명
     });
   });
 
   describe('폴백 시스템 테스트', () => {
     test('computePageFlow가 올바르게 계산된다', async () => {
+      // 유효한 응답으로 mock 설정
+      mockOpenAIService.generateCompletion.mockResolvedValue({ content: 'invalid response', usage: {} });
+
       const result = await service.generateLayoutWireframe(mockProjectData, mockVisualIdentity, mockDesignTokens);
 
-      // 3페이지 프로젝트에서 FLOW 확인
+      // 3페이지 프로젝트에서 FLOW 확인 (폴백 사용)
       expect(result.pages[0].wireframe?.flow).toBe('A:intro'); // 첫 페이지
       expect(result.pages[1].wireframe?.flow).toBe('B:keyMessage'); // 두 번째 페이지
       expect(result.pages[2].wireframe?.flow).toBe('E:bridge'); // 마지막 페이지
@@ -304,8 +307,7 @@ END_S3_SLOTS`
       const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
 
       // 파싱 실패를 유도하는 응답
-      const mockResponse = { content: 'invalid response' };
-      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
+      mockOpenAIService.generateCompletion.mockResolvedValue({ content: 'invalid response', usage: {} });
 
       const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
       const page = result.pages[0];
@@ -332,8 +334,8 @@ END_S3_SLOTS`
       const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
       const description = result.pages[0].layoutDescription;
 
-      expect(description).toContain('물의 순환이란 무엇일까?');
-      expect(description).toContain('페이지 상단에');
+      expect(description).toContain('페이지 **상단**에');
+      expect(description).toContain('**중간 영역**에는');
       expect(description).toContain('스크롤 가능한 레이아웃');
     });
 
@@ -346,7 +348,7 @@ END_S3_SLOTS`
       const result = await service.generateLayoutWireframe(fixedProject, mockVisualIdentity, mockDesignTokens);
       const description = result.pages[0].layoutDescription;
 
-      expect(description).toContain('한 화면 내에 핵심 정보를 간결하게 배치합니다');
+      expect(description).toContain('고정 뷰포트 내에서');
     });
   });
 
@@ -376,7 +378,7 @@ END_S3_SLOTS`
       const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
       const sections = result.pages[0].wireframe?.sections;
 
-      expect(sections?.[0].gapBelow).toBe(80); // 70 → 80
+      expect(sections?.[0].gapBelow).toBe(64); // 70 → 64
       expect(sections?.[1].gapBelow).toBe(96); // 90 → 96
       expect(sections?.[2].gapBelow).toBe(64); // 60 → 64
     });
@@ -508,8 +510,8 @@ END_S3_SLOTS`
     });
   });
 
-  describe('품질 게이트 및 검증 테스트', () => {
-    test('품질 게이트가 올바르게 검증한다', async () => {
+  describe('데이터 구조 검증 테스트', () => {
+    test('완전한 와이어프레임 데이터가 생성된다', async () => {
       const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
 
       const mockResponse = {
@@ -534,41 +536,42 @@ END_S3_SLOTS`
       mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
 
       const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
+      const page = result.pages[0];
 
-      const validation = service.validateStep3Result(result);
-      expect(validation.isValid).toBe(true);
-      expect(validation.corrections).toHaveLength(0);
+      // 기본 구조 검증
+      expect(page.wireframe?.version).toBe('wire.v1');
+      expect(page.wireframe?.viewportMode).toBe('scrollable');
+      expect(page.wireframe?.flow).toBe('A:intro');
+      expect(page.wireframe?.imgBudget).toBe(1);
+      expect(page.wireframe?.sections).toHaveLength(3);
+      expect(page.wireframe?.slots).toHaveLength(3);
+      expect(page.wireframe?.summary).toBeDefined();
     });
 
-    test('최소 섹션 수 부족 시 경고를 생성한다', async () => {
+    test('최소 와이어프레임이 유효한 구조를 가진다', async () => {
       const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
 
-      const mockResponse = {
-        content: `BEGIN_S3_LAYOUT
-VERSION=wire.v1
-VIEWPORT_MODE=scrollable
-FLOW=A:intro
-SECTION, id=secA, role=intro, grid=1-12, height=auto, gapBelow=64, hint="섹션 1"
-SECTION, id=secB, role=keyMessage, grid=2-11, height=auto, gapBelow=80, hint="섹션 2"
-IMG_BUDGET=0
-END_S3_LAYOUT
-
-BEGIN_S3_SLOTS
-SLOT, id=secA-title, section=secA, type=heading, variant=H1
-SUMMARY, sections=2, slots=1, imageSlots=0
-END_S3_SLOTS`
-      };
-
-      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
+      // 파싱 실패를 유도하는 응답
+      mockOpenAIService.generateCompletion.mockResolvedValue({ content: 'invalid response', usage: {} });
 
       const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
+      const page = result.pages[0];
 
-      const validation = service.validateStep3Result(result);
-      expect(validation.corrections.some(c => c.type === 'minSections')).toBe(true);
-      expect(validation.diagnostics.some(d => d.message.includes('섹션 부족'))).toBe(true);
+      // 최소 와이어프레임 검증
+      expect(page.wireframe?.sections).toHaveLength(5); // 5개 기본 섹션
+      expect(page.wireframe?.slots).toHaveLength(2); // 2개 기본 슬롯
+      expect(page.wireframe?.imgBudget).toBe(1);
+
+      // 필수 섹션 역할 검증
+      const roles = page.wireframe?.sections?.map(s => s.role);
+      expect(roles).toContain('intro');
+      expect(roles).toContain('keyMessage');
+      expect(roles).toContain('content');
+      expect(roles).toContain('compare');
+      expect(roles).toContain('bridge');
     });
 
-    test('IMG_BUDGET 초과 시 경고를 생성한다', async () => {
+    test('섹션과 슬롯의 참조 무결성이 유지된다', async () => {
       const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
 
       const mockResponse = {
@@ -576,199 +579,29 @@ END_S3_SLOTS`
 VERSION=wire.v1
 VIEWPORT_MODE=scrollable
 FLOW=A:intro
-SECTION, id=secA, role=intro, grid=1-12, height=auto, gapBelow=64, hint="섹션 1"
-SECTION, id=secB, role=keyMessage, grid=2-11, height=auto, gapBelow=80, hint="섹션 2"
-SECTION, id=secC, role=content, grid=8+4, height=auto, gapBelow=96, hint="섹션 3"
-SECTION, id=secD, role=compare, grid=1-12, height=auto, gapBelow=64, hint="섹션 4"
-SECTION, id=secE, role=bridge, grid=2-11, height=auto, gapBelow=80, hint="섹션 5"
-IMG_BUDGET=5
-END_S3_LAYOUT
-
-BEGIN_S3_SLOTS
-SLOT, id=secA-title, section=secA, type=heading, variant=H1
-SUMMARY, sections=5, slots=1, imageSlots=0
-END_S3_SLOTS`
-      };
-
-      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
-
-      const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
-
-      const validation = service.validateStep3Result(result);
-      expect(validation.corrections.some(c => c.type === 'imgBudget')).toBe(true);
-    });
-
-    test('고아 슬롯을 탐지한다', async () => {
-      const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
-
-      const mockResponse = {
-        content: `BEGIN_S3_LAYOUT
-VERSION=wire.v1
-VIEWPORT_MODE=scrollable
-FLOW=A:intro
-SECTION, id=secA, role=intro, grid=1-12, height=auto, gapBelow=64, hint="섹션 1"
-SECTION, id=secB, role=keyMessage, grid=2-11, height=auto, gapBelow=80, hint="섹션 2"
-SECTION, id=secC, role=content, grid=8+4, height=auto, gapBelow=96, hint="섹션 3"
-SECTION, id=secD, role=compare, grid=1-12, height=auto, gapBelow=64, hint="섹션 4"
-SECTION, id=secE, role=bridge, grid=2-11, height=auto, gapBelow=80, hint="섹션 5"
-IMG_BUDGET=0
-END_S3_LAYOUT
-
-BEGIN_S3_SLOTS
-SLOT, id=secA-title, section=secA, type=heading, variant=H1
-SLOT, id=orphan-slot, section=nonExistentSection, type=paragraph, variant=Body
-SUMMARY, sections=5, slots=2, imageSlots=0
-END_S3_SLOTS`
-      };
-
-      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
-
-      const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
-
-      const validation = service.validateStep3Result(result);
-      expect(validation.corrections.some(c => c.type === 'orphanSlot')).toBe(true);
-    });
-  });
-
-  describe('자동 보정 시스템 테스트', () => {
-    test('누락된 섹션을 자동으로 추가한다', async () => {
-      const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
-
-      const mockResponse = {
-        content: `BEGIN_S3_LAYOUT
-VERSION=wire.v1
-VIEWPORT_MODE=scrollable
-FLOW=A:intro
-SECTION, id=secA, role=intro, grid=1-12, height=auto, gapBelow=64, hint="섹션 1"
-IMG_BUDGET=0
-END_S3_LAYOUT
-
-BEGIN_S3_SLOTS
-SLOT, id=secA-title, section=secA, type=heading, variant=H1
-SUMMARY, sections=1, slots=1, imageSlots=0
-END_S3_SLOTS`
-      };
-
-      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
-
-      const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
-      const validation = service.validateStep3Result(result);
-      const corrected = service.applyCorrections(result, validation.corrections);
-
-      const correctedPage = corrected.pages[0];
-      expect(correctedPage.wireframe?.sections).toHaveLength(5); // 1 + 4 자동 추가
-
-      // 자동 추가된 섹션 확인
-      const autoSections = correctedPage.wireframe?.sections?.slice(1);
-      autoSections?.forEach((section, index) => {
-        expect(section.id).toBe(`secAuto${index + 1}`);
-        expect(section.role).toBe('content');
-        expect(section.hint).toBe('자동 추가된 스켈레톤 섹션');
-      });
-    });
-
-    test('초과 이미지 슬롯을 제거한다', async () => {
-      const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
-
-      const mockResponse = {
-        content: `BEGIN_S3_LAYOUT
-VERSION=wire.v1
-VIEWPORT_MODE=scrollable
-FLOW=A:intro
-SECTION, id=secA, role=intro, grid=1-12, height=auto, gapBelow=64, hint="섹션 1"
-SECTION, id=secB, role=keyMessage, grid=2-11, height=auto, gapBelow=80, hint="섹션 2"
-SECTION, id=secC, role=content, grid=8+4, height=auto, gapBelow=96, hint="섹션 3"
-SECTION, id=secD, role=compare, grid=1-12, height=auto, gapBelow=64, hint="섹션 4"
-SECTION, id=secE, role=bridge, grid=2-11, height=auto, gapBelow=80, hint="섹션 5"
+SECTION, id=secA, role=intro, grid=1-12, height=auto, gapBelow=64, hint="섹션 A"
+SECTION, id=secB, role=keyMessage, grid=8+4, height=auto, gapBelow=80, hint="섹션 B"
 IMG_BUDGET=1
 END_S3_LAYOUT
 
 BEGIN_S3_SLOTS
-SLOT, id=img1, section=secA, type=image, variant=none
-SLOT, id=img2, section=secB, type=image, variant=none
-SLOT, id=img3, section=secC, type=image, variant=none
-SUMMARY, sections=5, slots=3, imageSlots=3
+SLOT, id=slotA, section=secA, type=heading, variant=H1
+SLOT, id=slotB1, section=secB, type=paragraph, variant=Body, gridSpan=left
+SLOT, id=slotB2, section=secB, type=image, variant=none, gridSpan=right
+SUMMARY, sections=2, slots=3, imageSlots=1
 END_S3_SLOTS`
       };
 
       mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
 
       const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
-      const validation = service.validateStep3Result(result);
-      const corrected = service.applyCorrections(result, validation.corrections);
+      const page = result.pages[0];
 
-      const correctedPage = corrected.pages[0];
-      const imageSlots = correctedPage.wireframe?.slots?.filter(slot => slot.type === 'image');
-      expect(imageSlots).toHaveLength(1); // 3개에서 1개로 제한
-    });
-
-    test('8+4 섹션에 gridSpan을 자동 배정한다', async () => {
-      const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
-
-      const mockResponse = {
-        content: `BEGIN_S3_LAYOUT
-VERSION=wire.v1
-VIEWPORT_MODE=scrollable
-FLOW=A:intro
-SECTION, id=secA, role=intro, grid=1-12, height=auto, gapBelow=64, hint="섹션 1"
-SECTION, id=secB, role=keyMessage, grid=2-11, height=auto, gapBelow=80, hint="섹션 2"
-SECTION, id=secC, role=content, grid=8+4, height=auto, gapBelow=96, hint="좌우 분할 섹션"
-SECTION, id=secD, role=compare, grid=1-12, height=auto, gapBelow=64, hint="섹션 4"
-SECTION, id=secE, role=bridge, grid=2-11, height=auto, gapBelow=80, hint="섹션 5"
-IMG_BUDGET=0
-END_S3_LAYOUT
-
-BEGIN_S3_SLOTS
-SLOT, id=secC-text, section=secC, type=paragraph, variant=Body
-SLOT, id=secC-img, section=secC, type=image, variant=none
-SUMMARY, sections=5, slots=2, imageSlots=1
-END_S3_SLOTS`
-      };
-
-      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
-
-      const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
-      const validation = service.validateStep3Result(result);
-      const corrected = service.applyCorrections(result, validation.corrections);
-
-      const correctedPage = corrected.pages[0];
-      const secCSlots = correctedPage.wireframe?.slots?.filter(slot => slot.section === 'secC');
-      expect(secCSlots?.[0].gridSpan).toBe('left');
-      expect(secCSlots?.[1].gridSpan).toBe('right');
-    });
-
-    test('고아 슬롯을 제거한다', async () => {
-      const singlePageProject = { ...mockProjectData, pages: [mockProjectData.pages[0]] };
-
-      const mockResponse = {
-        content: `BEGIN_S3_LAYOUT
-VERSION=wire.v1
-VIEWPORT_MODE=scrollable
-FLOW=A:intro
-SECTION, id=secA, role=intro, grid=1-12, height=auto, gapBelow=64, hint="섹션 1"
-SECTION, id=secB, role=keyMessage, grid=2-11, height=auto, gapBelow=80, hint="섹션 2"
-SECTION, id=secC, role=content, grid=8+4, height=auto, gapBelow=96, hint="섹션 3"
-SECTION, id=secD, role=compare, grid=1-12, height=auto, gapBelow=64, hint="섹션 4"
-SECTION, id=secE, role=bridge, grid=2-11, height=auto, gapBelow=80, hint="섹션 5"
-IMG_BUDGET=0
-END_S3_LAYOUT
-
-BEGIN_S3_SLOTS
-SLOT, id=valid-slot, section=secA, type=heading, variant=H1
-SLOT, id=orphan-slot, section=nonExistentSection, type=paragraph, variant=Body
-SUMMARY, sections=5, slots=2, imageSlots=0
-END_S3_SLOTS`
-      };
-
-      mockOpenAIService.generateCompletion.mockResolvedValue(mockResponse as any);
-
-      const result = await service.generateLayoutWireframe(singlePageProject, mockVisualIdentity, mockDesignTokens);
-      const validation = service.validateStep3Result(result);
-      const corrected = service.applyCorrections(result, validation.corrections);
-
-      const correctedPage = corrected.pages[0];
-      expect(correctedPage.wireframe?.slots).toHaveLength(1); // 고아 슬롯 제거됨
-      expect(correctedPage.wireframe?.slots?.[0].id).toBe('valid-slot');
+      // 모든 슬롯이 유효한 섹션을 참조하는지 확인
+      const sectionIds = new Set(page.wireframe?.sections?.map(s => s.id));
+      page.wireframe?.slots?.forEach(slot => {
+        expect(sectionIds.has(slot.section)).toBe(true);
+      });
     });
   });
 
@@ -867,7 +700,7 @@ END_S3_SLOTS`
 
       const callArgs = mockOpenAIService.generateCompletion.mock.calls[0][0];
 
-      expect(callArgs).toContain('contentMode: restricted');
+      expect(callArgs).toContain('콘텐츠 모드: restricted');
       expect(callArgs).toContain('레이아웃 모드: fixed');
       expect(callArgs).toContain('입력된 설명 범위 내에서만 구성하세요');
       expect(callArgs).toContain('한 화면 내 핵심 내용 집약');

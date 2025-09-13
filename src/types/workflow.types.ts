@@ -188,11 +188,60 @@ export interface FinalPrompt {
   task?: string;
 }
 
+// Step4 컴포넌트 계획 타입 정의
+export interface ComponentLine {
+  id: string;
+  type: 'heading' | 'paragraph' | 'card' | 'image' | 'caption';
+  variant?: string;           // H1|H2|Body|none ...
+  section: string;            // must exist in Step3.sections[].id
+  role: 'intro' | 'keyMessage' | 'content' | 'compare' | 'bridge';
+  gridSpan?: 'left' | 'right';  // only if section.grid === '8+4'
+  mode: 'enhanced' | 'restricted';
+  text?: string;              // non-image
+  src?: string;               // image only (e.g., "1.png")
+  width?: number;             // image only
+  height?: number;            // image only
+  slotRef?: 'IMG1' | 'IMG2' | 'IMG3'; // (선택) Step3 슬롯 참조시
+}
+
+export interface ImageLine {
+  filename: '1.png' | '2.png';
+  purpose: 'diagram' | 'comparison' | 'illustration';
+  section: string;            // place section id
+  place: 'left' | 'right' | 'center';
+  width: number;
+  height: number;
+  alt: string;                // ≤ 80 chars
+  caption: string;            // ≤ 80 chars
+}
+
+export interface Step4ComponentPlan {
+  version: 'cmp.v1';
+  comps: ComponentLine[];
+  images: ImageLine[];        // 0..2
+  generatedAt: Date;
+}
+
+// Step4 결과 - 페이지별 컴포넌트 계획
+export interface Step4Result {
+  layoutMode: 'scrollable' | 'fixed';
+  pages: Array<{
+    pageId: string;
+    pageTitle: string;
+    pageNumber: number;
+    componentPlan?: Step4ComponentPlan;
+    rawResponse?: string;      // 디버깅용 AI 원본 응답
+    parseError?: string;       // 디버깅용 파싱 에러
+    generatedAt: Date;
+  }>;
+  generatedAt: Date;
+}
+
 export interface WorkflowState {
   step1?: ProjectData;
   step2?: { visualIdentity: VisualIdentity; designTokens: DesignTokens };
   step3?: LayoutWireframe;
-  step4?: PageEnhancement[];
+  step4?: Step4Result;
   step5?: FinalPrompt;
   currentStep: number;
   lastSaved?: Date;
