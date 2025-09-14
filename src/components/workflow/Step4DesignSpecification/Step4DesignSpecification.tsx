@@ -468,15 +468,38 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
                             }
                           </td>
                           <td className="py-2 px-3 text-gray-600 text-xs">
-                            {comp.colors.text && (
-                              <div className="flex items-center space-x-1">
-                                <div
-                                  className="w-3 h-3 border rounded"
-                                  style={{ backgroundColor: comp.colors.text }}
-                                ></div>
-                                <span>{comp.colors.text}</span>
-                              </div>
-                            )}
+                            <div className="space-y-1">
+                              {/* 텍스트 색상 */}
+                              {comp.colors.text && comp.colors.text !== 'transparent' && (
+                                <div className="flex items-center space-x-1">
+                                  <div
+                                    className="w-3 h-3 border rounded"
+                                    style={{ backgroundColor: comp.colors.text }}
+                                  ></div>
+                                  <span className="text-xs">T: {comp.colors.text}</span>
+                                </div>
+                              )}
+                              {/* 배경 색상 */}
+                              {comp.colors.background && comp.colors.background !== 'transparent' && (
+                                <div className="flex items-center space-x-1">
+                                  <div
+                                    className="w-3 h-3 border rounded"
+                                    style={{ backgroundColor: comp.colors.background }}
+                                  ></div>
+                                  <span className="text-xs">BG: {comp.colors.background}</span>
+                                </div>
+                              )}
+                              {/* 테두리 색상 */}
+                              {comp.colors.border && comp.colors.border !== 'transparent' && comp.colors.border !== '#E2E8F0' && (
+                                <div className="flex items-center space-x-1">
+                                  <div
+                                    className="w-3 h-3 border-2 rounded"
+                                    style={{ borderColor: comp.colors.border }}
+                                  ></div>
+                                  <span className="text-xs">B: {comp.colors.border}</span>
+                                </div>
+                              )}
+                            </div>
                           </td>
                           <td className="py-2 px-3 text-gray-600 text-xs">
                             {comp.font && (
