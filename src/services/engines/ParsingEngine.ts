@@ -39,6 +39,10 @@ export class ParsingEngine {
     const keyValuePairs = this.parseKeyValueLines(s4Block);
     console.log(`📊 파싱된 Key-Value 쌍: ${Object.keys(keyValuePairs).length}개`);
 
+    // 색상 관련 키 확인
+    const colorKeys = Object.keys(keyValuePairs).filter(k => k.includes('COLOR'));
+    console.log('🎨 색상 관련 키들:', colorKeys.slice(0, 10));
+
     // 구조화된 데이터로 변환
     const layout = this.parseLayout(keyValuePairs);
     const componentStyles = this.parseComponentStyles(keyValuePairs);
@@ -189,6 +193,13 @@ export class ParsingEngine {
     const componentIds = this.findComponentIds(kv);
 
     for (const compNum of componentIds) {
+      console.log(`🔍 컴포넌트 ${compNum} 파싱:`, {
+        colorText: kv[`COMP_${compNum}_COLOR_TEXT`],
+        colorBg: kv[`COMP_${compNum}_COLOR_BG`],
+        fontFamily: kv[`COMP_${compNum}_FONT_FAMILY`],
+        fontSize: kv[`COMP_${compNum}_FONT_SIZE`]
+      });
+
       const component: ComponentStyleSpecification = {
         id: kv[`COMP_${compNum}_ID`] || `comp${compNum}`,
         type: kv[`COMP_${compNum}_TYPE`] as any || 'paragraph',
