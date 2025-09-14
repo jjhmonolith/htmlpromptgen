@@ -28,7 +28,7 @@ export class Step4DesignSpecificationService {
   private promptEngine: PromptEngine;
   private parsingEngine: ParsingEngine;
   private layoutEngine: LayoutRefinementEngine;
-  private styleEngine: StyleSpecificationEngine;
+  private _styleEngine: StyleSpecificationEngine; // AI 대신 사용하므로 private으로 변경
   private validationEngine: ValidationEngine;
   private interactionEngine: InteractionDesignEngine;
   private educationalEngine: EducationalFeatureEngine;
@@ -37,7 +37,7 @@ export class Step4DesignSpecificationService {
     this.promptEngine = new PromptEngine();
     this.parsingEngine = new ParsingEngine();
     this.layoutEngine = new LayoutRefinementEngine();
-    this.styleEngine = new StyleSpecificationEngine();
+    this._styleEngine = new StyleSpecificationEngine();
     this.validationEngine = new ValidationEngine();
     this.interactionEngine = new InteractionDesignEngine();
     this.educationalEngine = new EducationalFeatureEngine();
@@ -273,8 +273,8 @@ export class Step4DesignSpecificationService {
         projectData.layoutMode
       );
 
-      // 기본 designTokens 생성 (VisualIdentity에 없으므로)
-      const defaultDesignTokens = {
+      // 기본 designTokens 생성 (VisualIdentity에 없으므로) - AI 파싱에서 사용 안함
+      const _defaultDesignTokens = {
         viewport: {
           width: projectData.layoutMode === 'fixed' ? 1600 : 1600,
           height: projectData.layoutMode === 'fixed' ? 1000 : undefined
@@ -319,12 +319,15 @@ export class Step4DesignSpecificationService {
         }
       };
 
-      const refinedComponentStyles = this.styleEngine.specifyComponentStyles(
-        step3PageData.content?.components || [],
-        visualIdentity,
-        defaultDesignTokens,
-        projectData.layoutMode
-      );
+      // 🎨 AI가 생성한 정확한 컴포넌트 스타일 사용 (StyleEngine 덮어쓰기 방지)
+      // parsed.componentStyles에는 이미 AI가 생성한 다양한 색상과 폰트 정보가 포함됨
+      const refinedComponentStyles = parsed.componentStyles;
+
+      console.log('🎯 AI 생성 컴포넌트 스타일 사용:', {
+        totalComponents: refinedComponentStyles.length,
+        colorsPreserved: refinedComponentStyles.map((c: any) => c.colors.text).slice(0, 3),
+        fontsPreserved: refinedComponentStyles.map((c: any) => c.font?.family).slice(0, 3)
+      });
 
       // Phase 3: 상호작용 및 교육적 기능 강화 (정밀화된 컴포넌트 사용)
       const enhancedInteractions = this.enhanceInteractions(

@@ -479,7 +479,14 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
                             )}
                           </td>
                           <td className="py-2 px-3 text-gray-600 text-xs">
-                            {comp.font && `${comp.font.size} ${comp.font.weight}`}
+                            {comp.font && (
+                              <div className="space-y-1">
+                                <div className="font-semibold">{comp.font.family}</div>
+                                <div className="text-xs text-gray-500">
+                                  {comp.font.size} / {comp.font.weight} / {comp.font.lineHeight}
+                                </div>
+                              </div>
+                            )}
                           </td>
                         </tr>
                       ))}
