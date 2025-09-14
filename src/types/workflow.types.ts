@@ -1,5 +1,5 @@
-// 간단한 워크플로우 타입 정의
-import { LayoutWireframe } from '../services/step3-layout-wireframe.service';
+// 워크플로우 타입 정의
+import { Step4DesignResult } from './step4.types';
 
 export interface ProjectData {
   id: string;
@@ -193,6 +193,7 @@ export interface WorkflowState {
   step1?: ProjectData;
   step2?: { visualIdentity: VisualIdentity; designTokens: DesignTokens };
   step3?: Step3IntegratedResult;
+  step4?: Step4DesignResult;
   step5?: FinalPrompt;
   currentStep: number;
   lastSaved?: Date;
@@ -200,6 +201,7 @@ export interface WorkflowState {
     step1: boolean;
     step2: boolean;
     step3: boolean;
+    step4: boolean;
     step5: boolean;
   };
 }
@@ -255,4 +257,32 @@ export interface Step3Section {
   height: string;
   hint: string;
   gapBelow: number;
+}
+
+export interface ComponentLine {
+  id: string;
+  type: 'heading' | 'paragraph' | 'card' | 'image' | 'caption';
+  variant?: string;
+  section: string;
+  role: 'title' | 'content';
+  gridSpan?: 'left' | 'right';
+  text?: string;
+  src?: string;
+  width?: number;
+  height?: number;
+  slotRef?: 'IMG1' | 'IMG2' | 'IMG3';
+}
+
+export interface ImageLine {
+  filename: string;
+  purpose: 'diagram' | 'comparison' | 'illustration';
+  section: string;
+  place: 'left' | 'right' | 'center';
+  width: number;
+  height: number;
+  alt: string;
+  caption: string;
+  description: string;
+  aiPrompt: string;
+  style: string;
 }

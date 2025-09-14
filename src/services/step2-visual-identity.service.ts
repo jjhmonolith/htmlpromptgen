@@ -40,7 +40,7 @@ export class Step2VisualIdentityService {
   constructor(private openAIService: OpenAIService) {}
 
   generateVisualIdentity(projectData: ProjectData): Promise<{ visualIdentity: VisualIdentity; designTokens: DesignTokens }> {
-    return new Promise(async (resolve, reject) => {
+    return new Promise(async (resolve) => {
       try {
         console.log('🎨 Step2: 비주얼 아이덴티티 생성 시작');
         console.log('📋 입력 프로젝트 데이터:', projectData);
@@ -96,13 +96,15 @@ export class Step2VisualIdentityService {
       }
     }, null, 2);
 
-    // 랜덤성을 위한 시드 추가
-    const creativeSeed = Math.floor(Math.random() * 1000);
+    // 레이아웃 모드별 컴포넌트 스타일 가이드
+    const layoutGuide = this.getLayoutStyleGuide(projectData.layoutMode);
 
     return `교육용 프로젝트를 위한 비주얼 아이덴티티를 설계해주세요.
 
 프로젝트 정보:
 ${s1Json}
+
+${layoutGuide}
 
 다음 형식으로 응답해주세요:
 
@@ -110,17 +112,17 @@ BEGIN_S2
 VERSION=vi.v1
 MOOD=형용사1,형용사2,형용사3,형용사4
 COLOR_PRIMARY=#RRGGBB
-COLOR_SECONDARY=#RRGGBB  
+COLOR_SECONDARY=#RRGGBB
 COLOR_ACCENT=#RRGGBB
-BASE_SIZE_PT=18
+BASE_SIZE_PT=${projectData.layoutMode === 'fixed' ? '18' : '20'}
 COMPONENT_STYLE=교육용 디자인 컨셉 설명
 END_S2
 
 요구사항:
 - 색상은 HEX 형식 6자리로 작성
-- BASE_SIZE_PT는 18 또는 20으로 선택
+- BASE_SIZE_PT는 ${projectData.layoutMode === 'fixed' ? '18 (고정형 레이아웃 최적화)' : '20 (스크롤형 레이아웃 최적화)'}
 - MOOD는 쉼표로 구분된 4개 형용사
-- 프로젝트 주제에 적합한 창의적 디자인 제안`;
+- 프로젝트 주제와 레이아웃 제약에 적합한 창의적 디자인 제안`;
   }
 
   private parseStep2Response(content: string): Step2RawResponse {
@@ -274,5 +276,31 @@ END_S2
     const designTokens = layoutMode === 'fixed' ? FIXED_TOKENS : SCROLL_TOKENS;
 
     return { visualIdentity, designTokens };
+  }
+
+  private getLayoutStyleGuide(layoutMode: 'fixed' | 'scrollable'): string {
+    if (layoutMode === 'fixed') {
+      return `📐 **고정형 레이아웃 (1600×1000px) 제약사항:**
+- 한 화면에 모든 콘텐츠가 들어가야 하므로 효율적이고 간결한 스타일 필요
+- 공간 활용도를 최대화하는 미니멀한 디자인 컨셉
+- 작은 radius(8-16px), 얇은 border, 컴팩트한 spacing 권장
+- 색상은 명확한 구분과 가독성을 우선시
+- 컴포넌트별 여백을 최소화하여 공간 효율성 극대화
+
+**COMPONENT_STYLE 작성 가이드:**
+- "간결하고 효율적인", "공간 최적화", "미니멀", "컴팩트" 등의 키워드 활용
+- 예시: "얇은 테두리와 작은 반경으로 공간을 효율적으로 활용하는 미니멀한 스타일"`;
+    } else {
+      return `📜 **스크롤형 레이아웃 (1600×무제한) 활용 가능:**
+- 세로 스크롤이 가능하므로 풍부하고 시각적으로 매력적인 스타일 허용
+- 넉넉한 여백과 다양한 시각적 요소를 활용한 풍부한 디자인
+- 큰 radius(16-32px), 그림자 효과, 넉넉한 spacing 활용 권장
+- 색상은 계층적 구조와 시각적 흐름을 고려한 조화로운 팔레트
+- 교육적 효과를 높이는 다양한 시각적 장치 활용
+
+**COMPONENT_STYLE 작성 가이드:**
+- "풍부하고 매력적인", "시각적 계층", "교육적 몰입감", "다양한 요소" 등의 키워드 활용
+- 예시: "넉넉한 여백과 부드러운 그림자로 교육적 몰입감을 높이는 현대적 스타일"`;
+    }
   }
 }

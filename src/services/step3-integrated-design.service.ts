@@ -1,34 +1,5 @@
 import { OpenAIService } from './openai.service';
-import { ProjectData, VisualIdentity, Step3IntegratedResult, Step3Section } from '../types/workflow.types';
-
-// Local types for Step3 integrated design service
-export interface ComponentLine {
-  id: string;
-  type: 'heading' | 'paragraph' | 'card' | 'image' | 'caption';
-  variant?: string;
-  section: string;
-  role: 'title' | 'content';
-  gridSpan?: 'left' | 'right';
-  text?: string;
-  src?: string;
-  width?: number;
-  height?: number;
-  slotRef?: 'IMG1' | 'IMG2' | 'IMG3';
-}
-
-export interface ImageLine {
-  filename: string;
-  purpose: 'diagram' | 'comparison' | 'illustration';
-  section: string;
-  place: 'left' | 'right' | 'center';
-  width: number;
-  height: number;
-  alt: string;
-  caption: string;
-  description: string;
-  aiPrompt: string;
-  style: string;
-}
+import { ProjectData, VisualIdentity, Step3IntegratedResult, Step3Section, ComponentLine, ImageLine } from '../types/workflow.types';
 
 export class Step3IntegratedDesignService {
   constructor(private openAIService: OpenAIService) {}
@@ -47,7 +18,7 @@ export class Step3IntegratedDesignService {
     };
 
     // 초기 페이지 상태 설정
-    const initialPages = projectData.pages.map((page, i) => ({
+    const initialPages = projectData.pages.map((page) => ({
       pageId: page.id,
       pageTitle: page.topic,
       pageNumber: page.pageNumber,
@@ -240,15 +211,18 @@ export class Step3IntegratedDesignService {
   private buildPhase1Prompt(
     page: { id: string; pageNumber: number; topic: string; description?: string },
     projectData: ProjectData,
-    visualIdentity: VisualIdentity,
-    pageIndex: number
+    _visualIdentity: VisualIdentity,
+    _pageIndex: number
   ): string {
-    const allPages = projectData.pages.map((p, idx) =>
+    const allPages = projectData.pages.map((p) =>
       `${p.pageNumber}. ${p.topic}${p.description ? ` - ${p.description}` : ''}`
     ).join('\n');
 
     // 모든 페이지는 연결된 학습 내용으로 처리 (intro/bridge 제거)
     const pageFlow = 'C:content';
+
+    // 레이아웃별 섹션 구성 가이드
+    const layoutSectionGuide = this.getLayoutSectionGuide(projectData.layoutMode);
 
     return `당신은 웹 페이지 레이아웃 설계 전문가입니다. 연결된 프로젝트 수업의 한 페이지에 대한 와이어프레임 구조를 생성해주세요.
 
@@ -260,6 +234,8 @@ export class Step3IntegratedDesignService {
 
 **전체 프로젝트 구성:** (연결된 수업 흐름)
 ${allPages}
+
+${layoutSectionGuide}
 
 **페이지 역할:**
 이 페이지는 "${page.topic}" 내용을 다루는 강의 자료 페이지입니다.
@@ -280,7 +256,7 @@ SECTION, id=secC, role=content, grid=2-11, height=auto, hint=상세 내용과 �
 \`\`\`
 
 **규칙:**
-- 섹션 3-5개 생성
+${layoutSectionGuide.includes('고정형') ? '- 섹션 3-4개로 제한 (화면 공간 최적화)' : '- 섹션 4-5개 생성 (풍부한 콘텐츠 구성)'}
 - grid: "1-12"(전체폭), "8+4"(좌우분할), "2-11"(여백포함), "3-10"(중앙집중)
 - role: title/content (summary 제거 - 페이지별 마무리 콘텐츠 방지)
 - hint: 해당 섹션의 구체적인 내용과 목적 설명
@@ -293,7 +269,7 @@ SECTION, id=secC, role=content, grid=2-11, height=auto, hint=상세 내용과 �
   private buildPhase2Prompt(
     page: { id: string; pageNumber: number; topic: string; description?: string },
     projectData: ProjectData,
-    visualIdentity: VisualIdentity,
+    _visualIdentity: VisualIdentity,
     phase1Result: { sections: Step3Section[]; flow: string; imgBudget: number }
   ): string {
     const sectionsInfo = phase1Result.sections.map(section =>
@@ -327,8 +303,13 @@ ${contentLimits.componentLimits}
 - 이미지가 필요한 경우 반드시 COMP 라인과 IMG 라인을 모두 생성해야 합니다
 - COMP 라인: type=image로 이미지 컴포넌트 정의 (레이아웃 위치, 참조 정보)
 - IMG 라인: 이미지 메타데이터 정의 (생성용 프롬프트, 접근성 정보)
-- 이미지 크기는 반드시 픽셀 단위로 지정: width=520, height=320 (숫자만, px 생략)
+- 이미지 크기는 반드시 픽셀 단위로 지정 (숫자만, px 생략)
 - 상대 단위(1, 2, 3, 4) 사용 금지 - 반드시 실제 픽셀값 사용
+- 이미지 목적별 권장 크기:
+  * diagram: 600×400, 700×450, 550×350 등 (다이어그램용)
+  * illustration: 520×320, 480×360, 640×400 등 (일러스트용)
+  * comparison: 800×300, 750×350, 720×320 등 (비교표용)
+- 같은 페이지 내에서도 이미지마다 다른 크기 사용 권장
 
 [FORMAT 규칙 - 중요]
 **텍스트에 쉼표가 포함된 경우 반드시 따옴표로 감싸주세요**
@@ -338,7 +319,7 @@ ${contentLimits.componentLimits}
 BEGIN_CONTENT
 VERSION=content.v1
 COMP, id=컴포넌트ID, type=heading|paragraph|card|image, variant=H1|H2|Body|none, section=섹션ID, role=title|content, gridSpan=left|right(8+4섹션만), text="텍스트내용", src="파일명"
-IMG, filename=파일명, purpose=diagram|illustration|comparison, section=섹션ID, place=left|right|center, width=픽셀값, height=픽셀값, alt="대체텍스트", caption="캡션", description="설명", aiPrompt="한글프롬프트", style="스타일"
+IMG, filename=파일명, purpose=diagram|illustration|comparison, section=섹션ID, place=left|right|center, width=가로픽셀, height=세로픽셀, alt="대체텍스트", caption="캡션", description="설명", aiPrompt="한글프롬프트", style="스타일"
 END_CONTENT
 
 "${page.topic}" 페이지의 교육 콘텐츠를 생성하세요:
@@ -447,7 +428,7 @@ ${contentLimits.detailedGuide}
   }
 
   // 이미지 파일명을 간단한 숫자 인덱스로 정규화
-  private normalizeImageFilename(filename: string, imageIndex: number): string {
+  private normalizeImageFilename(_filename: string, imageIndex: number): string {
     // image_1.png, image1.png, 1.png 등 모든 형태를 1.png로 통일
     return `${imageIndex}.png`;
   }
@@ -512,22 +493,37 @@ ${contentLimits.detailedGuide}
             const parsedWidth = parseInt(String(img.width));
             const parsedHeight = parseInt(String(img.height));
 
-            // 너무 작은 값(1-10)은 상대 단위로 간주하고 픽셀값으로 변환
+            // 이미지 크기 검증 및 목적별 기본값 적용
             let finalWidth = parsedWidth;
             let finalHeight = parsedHeight;
 
+            // 목적별 기본 크기 정의
+            const getDefaultSize = (purpose: string) => {
+              switch (purpose) {
+                case 'diagram': return { width: 600, height: 400 };
+                case 'illustration': return { width: 520, height: 320 };
+                case 'comparison': return { width: 800, height: 300 };
+                default: return { width: 520, height: 320 };
+              }
+            };
+
+            const defaultSize = getDefaultSize(img.purpose || 'illustration');
+
+            // 상대 단위(1-10) 감지 및 변환
             if (parsedWidth && parsedWidth <= 10) {
-              console.warn(`⚠️ 이미지 ${normalizedFilename}: width=${parsedWidth}은 상대 단위로 추정됨. 520px로 변환`);
-              finalWidth = 520;
-            } else if (!parsedWidth || parsedWidth < 100) {
-              finalWidth = 520; // 기본값
+              console.warn(`⚠️ 이미지 ${normalizedFilename}: width=${parsedWidth}은 상대 단위로 추정됨. ${defaultSize.width}px로 변환`);
+              finalWidth = defaultSize.width;
+            } else if (!parsedWidth || parsedWidth < 200) {
+              // 200px 미만은 너무 작으므로 기본값 사용
+              finalWidth = defaultSize.width;
             }
 
             if (parsedHeight && parsedHeight <= 10) {
-              console.warn(`⚠️ 이미지 ${normalizedFilename}: height=${parsedHeight}은 상대 단위로 추정됨. 320px로 변환`);
-              finalHeight = 320;
-            } else if (!parsedHeight || parsedHeight < 100) {
-              finalHeight = 320; // 기본값
+              console.warn(`⚠️ 이미지 ${normalizedFilename}: height=${parsedHeight}은 상대 단위로 추정됨. ${defaultSize.height}px로 변환`);
+              finalHeight = defaultSize.height;
+            } else if (!parsedHeight || parsedHeight < 150) {
+              // 150px 미만은 너무 작으므로 기본값 사용
+              finalHeight = defaultSize.height;
             }
 
             images.push({
@@ -708,7 +704,7 @@ ${contentLimits.detailedGuide}
       // 파싱 실패한 페이지 찾기
       const failedPages = result.pages.filter(page =>
         page.parseError &&
-        page.retryCount < MAX_RETRIES &&
+        (page.retryCount || 0) < MAX_RETRIES &&
         (!page.phase1Complete || !page.phase2Complete)
       );
 
@@ -805,6 +801,34 @@ ${contentLimits.detailedGuide}
       });
     } else {
       console.log(`✅ 모든 페이지 파싱 성공! 총 ${result.pages.length}개 페이지 완료`);
+    }
+  }
+
+  private getLayoutSectionGuide(layoutMode: 'fixed' | 'scrollable'): string {
+    if (layoutMode === 'fixed') {
+      return `📐 **고정형 레이아웃 (1600×1000px) 섹션 구성 제약:**
+- 화면에서 내용이 벗어나지 않도록 섹션을 3-4개로 제한
+- 각 섹션의 gapBelow를 보수적으로 설정 (24-48px)
+- 간결하고 핵심적인 내용으로 구성
+- 8+4 그리드 사용 시 좌우 공간 배분 최적화
+- 세로 공간 제약으로 인한 컴팩트한 구조 필요
+
+**권장 섹션 구성:**
+- Title 섹션 (1개): 페이지 주제 간결하게 제시
+- Content 섹션 (2-3개): 핵심 내용과 필수 시각자료만
+- 각 섹션별 명확한 구분과 효율적 공간 활용`;
+    } else {
+      return `📜 **스크롤형 레이아웃 (1600×무제한) 섹션 구성 활용:**
+- 세로 스크롤 활용하여 4-5개 섹션으로 풍부한 내용 구성
+- 각 섹션의 gapBelow를 넉넉하게 설정 (48-80px)
+- 단계적이고 상세한 학습 흐름 구성
+- 8+4 그리드로 텍스트-이미지 조화로운 배치
+- 교육적 효과를 높이는 다층적 구조 가능
+
+**권장 섹션 구성:**
+- Title 섹션 (1개): 페이지 주제와 학습 목표 제시
+- Content 섹션 (3-4개): 단계별 상세 내용과 다양한 시각자료
+- 각 섹션별 충분한 여백과 시각적 구분`;
     }
   }
 }

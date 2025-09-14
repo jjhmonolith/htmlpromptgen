@@ -595,6 +595,12 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
           onClick={() => onComplete?.(step3Data)}
           disabled={!step3Data || step3Data.pages.every(page => !page.phase2Complete)}
           className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          title={
+            !step3Data ? '데이터를 불러오는 중입니다...' :
+            step3Data.pages.every(page => !page.phase2Complete)
+              ? `다음 페이지를 재생성해주세요: ${step3Data.pages.filter(p => !p.phase2Complete).map(p => `페이지 ${p.pageNumber}(${p.pageTitle})`).join(', ')}`
+              : ''
+          }
         >
           {step3Data?.pages.some(page => page.isGenerating)
             ? `다음 단계 (${step3Data.pages.filter(p => p.isGenerating).length}개 페이지 생성 중)`

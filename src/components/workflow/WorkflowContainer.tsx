@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Step1BasicInfo } from './Step1BasicInfo';
 import { Step2VisualIdentity } from './Step2VisualIdentity/Step2VisualIdentity';
 import { Step3IntegratedDesign } from './Step3IntegratedDesign';
-import { Step4ComponentPlan } from './Step4ComponentPlan';
+import { Step4DesignSpecification } from './Step4DesignSpecification';
 import { GNB } from '../common';
 
 interface WorkflowContainerProps {
@@ -281,8 +281,8 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   const getWorkflowSteps = () => [
     { num: 1, title: '기본 정보', isCompleted: !!workflowData.step1 },
     { num: 2, title: '비주얼 아이덴티티', isCompleted: !!workflowData.step2 },
-    { num: 3, title: '레이아웃 와이어프레임', isCompleted: !!workflowData.step3 },
-    { num: 4, title: '컴포넌트 계획', isCompleted: !!workflowData.step4 },
+    { num: 3, title: '페이지별 콘텐츠 설계', isCompleted: !!workflowData.step3 },
+    { num: 4, title: '정밀한 디자인 명세', isCompleted: !!workflowData.step4 },
     { num: 5, title: '최종 프롬프트', isCompleted: !!workflowData.step5 }
   ];
 
@@ -345,32 +345,37 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         );
 
       case 4:
-        // Step4 임시 비활성화 - Step3에서 모든 기능 제공
-        return (
-          <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
-            <div className="max-w-4xl mx-auto px-4 xl:px-8 2xl:px-12 py-12">
-              <div className="text-center py-16">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Step 4는 현재 개발 중입니다</h2>
-                <p className="text-gray-600 mb-8">
-                  모든 콘텐츠 설계 기능이 Step 3에 통합되었습니다.
-                  <br />
-                  Step 3에서 완전한 페이지 콘텐츠를 확인하실 수 있습니다.
-                </p>
-                <button
-                  onClick={() => setCurrentStep(3)}
-                  className="px-8 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors mr-4"
-                >
-                  Step 3로 돌아가기
-                </button>
-                <button
-                  onClick={() => setCurrentStep(5)}
-                  className="px-8 py-3 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
-                >
-                  Step 5로 건너뛰기
-                </button>
+        if (!workflowData.step1 || !workflowData.step2 || !workflowData.step3) {
+          return (
+            <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
+              <div className="max-w-4xl mx-auto px-4 xl:px-8 2xl:px-12 py-12">
+                <div className="text-center py-16">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">이전 단계를 완료해주세요</h2>
+                  <p className="text-gray-600 mb-8">Step 4를 진행하려면 Step 1, 2, 3을 먼저 완료해야 합니다.</p>
+                  <button
+                    onClick={() => setCurrentStep(!workflowData.step1 ? 1 : !workflowData.step2 ? 2 : 3)}
+                    className="px-8 py-3 bg-purple-600 text-white rounded-full hover:bg-purple-700 transition-colors"
+                  >
+                    {!workflowData.step1 ? 'Step 1로 이동' : !workflowData.step2 ? 'Step 2로 이동' : 'Step 3로 이동'}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          );
+        }
+
+        return (
+          <Step4DesignSpecification
+            initialData={workflowData.step4}
+            projectData={workflowData.step1}
+            visualIdentity={workflowData.step2.visualIdentity}
+            step3Result={workflowData.step3}
+            apiKey={apiKey || ''}
+            onComplete={handleStep4Complete}
+            onDataChange={handleStep4DataChange}
+            onBack={() => setCurrentStep(3)}
+            onGeneratingChange={setIsGenerating}
+          />
         );
 
       default:
