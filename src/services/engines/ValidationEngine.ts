@@ -38,6 +38,9 @@ export class ValidationEngine {
     // 5. 접근성 검증
     this.validateAccessibility(step4Result, warnings);
 
+    // 6. Phase 4 추가: 교육적 효과 검증
+    this.validateEducationalEffectiveness(step4Result, warnings);
+
     const result: ValidationResult = {
       isValid: errors.length === 0,
       errors,
@@ -145,13 +148,19 @@ export class ValidationEngine {
     result.pages.forEach((page) => {
       if (!page.layout) return;
 
-      // Fixed 모드 높이 제한 검증
+      // Fixed 모드 높이 제한 검증 (Phase 4 강화)
       if (result.layoutMode === 'fixed') {
         const totalHeight = this.calculatePageHeight(page);
+        const heightUsage = (totalHeight / 1000) * 100;
+
         if (totalHeight > 1000) {
-          errors.push(`페이지 ${page.pageNumber}: 높이 ${totalHeight}px가 1000px 제한 초과`);
+          errors.push(`🚨 CRITICAL: 페이지 ${page.pageNumber} 높이 ${totalHeight}px가 1000px 제한 초과 (${heightUsage.toFixed(1)}% 사용)`);
+        } else if (totalHeight > 980) {
+          errors.push(`⚠️ DANGER: 페이지 ${page.pageNumber} 높이 ${totalHeight}px가 위험 구간 (${heightUsage.toFixed(1)}% 사용)`);
         } else if (totalHeight > 950) {
-          warnings.push(`페이지 ${page.pageNumber}: 높이 ${totalHeight}px가 1000px에 근접`);
+          warnings.push(`⚡ WARNING: 페이지 ${page.pageNumber} 높이 ${totalHeight}px가 1000px에 근접 (${heightUsage.toFixed(1)}% 사용)`);
+        } else if (totalHeight < 600) {
+          warnings.push(`📏 INFO: 페이지 ${page.pageNumber} 높이 ${totalHeight}px로 공간 활용도 낮음 (${heightUsage.toFixed(1)}% 사용)`);
         }
       }
 
@@ -263,6 +272,44 @@ export class ValidationEngine {
           warnings.push(`이미지 ${img.id}: alt 텍스트 누락`);
         }
       });
+    });
+  }
+
+  /**
+   * Phase 4 추가: 교육적 효과 검증
+   */
+  private validateEducationalEffectiveness(result: Step4DesignResult, warnings: string[]): void {
+    result.pages.forEach((page) => {
+      // 인지 부하 검증 (컴포넌트 수)
+      const componentCount = page.componentStyles.length;
+      if (result.layoutMode === 'fixed' && componentCount > 7) {
+        warnings.push(`🧠 인지 부하: 페이지 ${page.pageNumber}의 컴포넌트 ${componentCount}개가 고정 모드 권장량(7개) 초과`);
+      } else if (result.layoutMode === 'scrollable' && componentCount > 12) {
+        warnings.push(`🧠 인지 부하: 페이지 ${page.pageNumber}의 컴포넌트 ${componentCount}개가 스크롤 모드 권장량(12개) 초과`);
+      }
+
+      // 시각적 계층 구조 검증
+      const headingCount = page.componentStyles.filter(comp => comp.type === 'heading').length;
+      const totalComponents = page.componentStyles.length;
+      const headingRatio = headingCount / totalComponents;
+
+      if (headingRatio < 0.2) {
+        warnings.push(`📚 구조화: 페이지 ${page.pageNumber}의 제목 비율 ${(headingRatio * 100).toFixed(1)}%가 낮음 (권장: 20% 이상)`);
+      } else if (headingRatio > 0.5) {
+        warnings.push(`📚 구조화: 페이지 ${page.pageNumber}의 제목 비율 ${(headingRatio * 100).toFixed(1)}%가 과도함 (권장: 50% 이하)`);
+      }
+
+      // 교육적 상호작용 검증
+      const interactionCount = page.interactions.length;
+      if (interactionCount === 0 && totalComponents > 3) {
+        warnings.push(`⚡ 상호작용: 페이지 ${page.pageNumber}에 교육적 인터랙션이 없음 (학습 효과 저하 가능)`);
+      }
+
+      // 교육적 기능 검증
+      const eduFeatureCount = page.educationalFeatures.length;
+      if (result.layoutMode === 'scrollable' && eduFeatureCount === 0 && totalComponents > 5) {
+        warnings.push(`🎯 교육 기능: 페이지 ${page.pageNumber}에 학습 가이드 기능이 없음 (진행률 표시 등 권장)`);
+      }
     });
   }
 
