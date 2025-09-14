@@ -2,8 +2,6 @@ import {
   Step4DesignResult,
   Step4PageResult,
   ValidationResult,
-  Step4ValidationError,
-  SectionSpecification,
   ComponentStyleSpecification
 } from '../../types/step4.types';
 

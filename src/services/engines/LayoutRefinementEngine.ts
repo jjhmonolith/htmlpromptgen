@@ -1,7 +1,6 @@
 import {
   LayoutSpecification,
   SectionSpecification,
-  Position,
   Dimensions,
   Padding
 } from '../../types/step4.types';

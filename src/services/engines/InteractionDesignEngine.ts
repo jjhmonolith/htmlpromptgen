@@ -107,7 +107,7 @@ export class InteractionDesignEngine {
    */
   private createSpecialInteraction(
     component: ComponentStyleSpecification,
-    layoutMode: 'fixed' | 'scrollable'
+    _layoutMode: 'fixed' | 'scrollable'
   ): InteractionSpecification | null {
 
     // 첫 번째 헤딩에는 특별한 등장 효과
@@ -172,7 +172,7 @@ export class InteractionDesignEngine {
   /**
    * 간소화된 진행 상태 인터랙션 생성 (네비게이션 제거)
    */
-  generateProgressInteractions(totalPages: number, currentPage: number): InteractionSpecification[] {
+  generateProgressInteractions(_totalPages: number, _currentPage: number): InteractionSpecification[] {
     // 네비게이션 관련 인터랙션은 별도 플랫폼에서 제공하므로 제거
     return [];
   }

@@ -8,8 +8,7 @@ import {
   Step4DesignResult,
   Step4PageResult,
   Step4GenerationError,
-  Step4ValidationError,
-  ValidationResult
+  Step4ValidationError
 } from '../types/step4.types';
 import { PromptEngine } from './engines/PromptEngine';
 import { ParsingEngine } from './engines/ParsingEngine';
@@ -268,10 +267,69 @@ export class Step4DesignSpecificationService {
       // 응답 파싱
       const parsed = this.parseResponse(rawContent, projectData.layoutMode);
 
-      // Phase 3: 상호작용 및 교육적 기능 강화
+      // Phase 2: 레이아웃 정밀화 및 스타일 구체화
+      const refinedLayout = this.layoutEngine.refineLayout(
+        step3PageData.structure?.sections || [],
+        projectData.layoutMode
+      );
+
+      // 기본 designTokens 생성 (VisualIdentity에 없으므로)
+      const defaultDesignTokens = {
+        viewport: {
+          width: projectData.layoutMode === 'fixed' ? 1600 : 1600,
+          height: projectData.layoutMode === 'fixed' ? 1000 : undefined
+        },
+        safeArea: {
+          top: 80,
+          right: 100,
+          bottom: 120,
+          left: 100
+        },
+        grid: {
+          columns: 12,
+          gap: 24
+        },
+        spacing: {
+          xs: 8,
+          sm: 16,
+          md: 24,
+          lg: 32,
+          xl: 48
+        },
+        radius: {
+          sm: 4,
+          md: 8,
+          lg: 16
+        },
+        shadow: {
+          sm: '0 2px 4px rgba(0, 0, 0, 0.1)',
+          md: '0 4px 8px rgba(0, 0, 0, 0.12)',
+          lg: '0 8px 16px rgba(0, 0, 0, 0.15)'
+        },
+        elevation: {
+          low: '0 1px 3px rgba(0, 0, 0, 0.12)',
+          medium: '0 4px 6px rgba(0, 0, 0, 0.16)',
+          high: '0 10px 20px rgba(0, 0, 0, 0.19)'
+        },
+        zIndex: {
+          base: 0,
+          image: 10,
+          card: 20,
+          text: 30
+        }
+      };
+
+      const refinedComponentStyles = this.styleEngine.specifyComponentStyles(
+        step3PageData.content?.components || [],
+        visualIdentity,
+        defaultDesignTokens,
+        projectData.layoutMode
+      );
+
+      // Phase 3: 상호작용 및 교육적 기능 강화 (정밀화된 컴포넌트 사용)
       const enhancedInteractions = this.enhanceInteractions(
         parsed.interactions,
-        parsed.componentStyles,
+        refinedComponentStyles, // 정밀화된 컴포넌트 스타일 사용
         projectData.layoutMode,
         step3PageData.pageNumber,
         projectData.pages.length
@@ -279,20 +337,20 @@ export class Step4DesignSpecificationService {
 
       const enhancedEducationalFeatures = this.enhanceEducationalFeatures(
         parsed.educationalFeatures,
-        parsed.componentStyles,
+        refinedComponentStyles, // 정밀화된 컴포넌트 스타일 사용
         projectData.layoutMode,
         step3PageData.pageNumber,
         projectData.pages.length
       );
 
-      // 검증 (ValidationEngine 사용)
+      // 검증 (ValidationEngine 사용) - 정밀화된 데이터 사용
       const tempPageResult: Step4PageResult = {
         pageId: step3PageData.pageId,
         pageTitle: step3PageData.pageTitle,
         pageNumber: step3PageData.pageNumber,
-        layout: parsed.layout,
-        componentStyles: parsed.componentStyles,
-        imagePlacements: parsed.imagePlacements,
+        layout: refinedLayout, // 정밀화된 레이아웃 사용
+        componentStyles: refinedComponentStyles, // 정밀화된 컴포넌트 스타일 사용
+        imagePlacements: parsed.imagePlacements, // AI 파싱 결과 유지 (이미지는 정밀화 없음)
         interactions: enhancedInteractions,
         educationalFeatures: enhancedEducationalFeatures,
         isGenerating: false,
@@ -315,9 +373,9 @@ export class Step4DesignSpecificationService {
         pageId: step3PageData.pageId,
         pageTitle: step3PageData.pageTitle,
         pageNumber: step3PageData.pageNumber,
-        layout: parsed.layout,
-        componentStyles: parsed.componentStyles,
-        imagePlacements: parsed.imagePlacements,
+        layout: refinedLayout, // 정밀화된 레이아웃 사용
+        componentStyles: refinedComponentStyles, // 정밀화된 컴포넌트 스타일 사용
+        imagePlacements: parsed.imagePlacements, // AI 파싱 결과 유지
         interactions: enhancedInteractions,
         educationalFeatures: enhancedEducationalFeatures,
         isGenerating: false,
@@ -348,7 +406,7 @@ export class Step4DesignSpecificationService {
   /**
    * AI 응답 파싱
    */
-  private parseResponse(content: string, layoutMode: 'fixed' | 'scrollable'): any {
+  private parseResponse(content: string, _layoutMode: 'fixed' | 'scrollable'): any {
     return this.parsingEngine.parseStep4Response(content);
   }
 

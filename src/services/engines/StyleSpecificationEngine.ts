@@ -62,7 +62,7 @@ export class StyleSpecificationEngine {
 
     return {
       id: component.id,
-      type: component.type,
+      type: component.type === 'caption' ? 'paragraph' : component.type as 'heading' | 'paragraph' | 'card' | 'image',
       section: component.section,
       position,
       dimensions,
@@ -111,7 +111,7 @@ export class StyleSpecificationEngine {
   /**
    * 색상 스키마 적용
    */
-  private applyColorScheme(baseStyle: any, visualIdentity: VisualIdentity): ColorSpecification {
+  private applyColorScheme(_baseStyle: any, visualIdentity: VisualIdentity): ColorSpecification {
     return {
       text: visualIdentity.colorPalette.text,
       background: 'transparent', // 기본적으로 투명, 필요시 개별 설정

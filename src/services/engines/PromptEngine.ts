@@ -1,4 +1,4 @@
-import { ProjectData, VisualIdentity, Step3IntegratedResult, ComponentLine, ImageLine } from '../../types/workflow.types';
+import { ProjectData, VisualIdentity, ComponentLine, ImageLine } from '../../types/workflow.types';
 
 /**
  * Step4 AI 프롬프트 생성 엔진
