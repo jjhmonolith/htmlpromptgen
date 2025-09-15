@@ -123,47 +123,8 @@ ${visualIdentity.moodAndTone.map(mood => `- ${mood}`).join('\n')}
 ### 컴포넌트 스타일
 ${visualIdentity.componentStyle}`);
 
-    // 3. HTML 구조 명세
-    sections.push(`## 🏗️ HTML 구조 명세
-
-### ⚠️ 중요한 구현 지침
-**파일 구조**: 각 페이지는 별도의 HTML 파일로 분리 (1.html, 2.html, 3.html ...)
-**네비게이션 금지**: 페이지 간 네비게이션 메뉴, 이전/다음 버튼, 페이지 이동 기능을 절대 추가하지 마세요
-**단일 페이지 구성**: 각 HTML 파일은 해당 페이지의 콘텐츠만 포함해야 합니다
-
-### 기본 HTML 템플릿 (각 페이지별로 개별 파일)
-${projectData.pages.map((page, index) => `
-**파일명**: ${index + 1}.html
-\`\`\`html
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>${projectData.projectTitle} - ${page.topic}</title>
-    <!-- CSS 스타일시트 -->
-    <link rel="stylesheet" href="styles.css">
-    <!-- 폰트 로드 -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-</head>
-<body>
-    <div class="app-container">
-        <main class="main-content">
-            <section class="page-section" data-page="${index + 1}">
-                <div class="page-container">
-                    <!-- ${page.topic} 콘텐츠 영역 -->
-                    ${generateSinglePageStructure(index)}
-                </div>
-            </section>
-        </main>
-    </div>
-    <!-- JavaScript 파일 -->
-    <script src="script.js"></script>
-</body>
-</html>
-\`\`\`
-`).join('\n')}`);
+    // 3. 페이지별 상세 명세 (새로운 구조)
+    sections.push(generatePageByPageSpecification());
 
     // 4. CSS 스타일 명세
     sections.push(generateCSSSpecification());
@@ -274,6 +235,214 @@ ${getImageFileList()}
     return sections.join('\n\n');
   };
 
+  // 페이지별 상세 명세 생성 (Step4 데이터 통합)
+  const generatePageByPageSpecification = (): string => {
+    if (!step3Result) return '';
+
+    // 디버깅용 로그
+    console.log('🔍 Step4 데이터 구조 분석:', {
+      step4Result: step4Result,
+      pages: step4Result?.pages,
+      firstPage: step4Result?.pages?.[0]
+    });
+
+    const pageSpecs = projectData.pages.map((page, index) => {
+      const step3Page = step3Result.pages[index];
+      const step4Page = step4Result?.pages?.find(p => p.pageNumber === page.pageNumber);
+      const pageContent = step3Page?.content;
+
+      // 페이지별 디버깅 로그
+      console.log(`📄 Page ${index + 1} 데이터:`, {
+        step3Page: step3Page?.structure,
+        step4Page: step4Page,
+        hasLayout: !!step4Page?.layout,
+        hasComponentStyles: !!step4Page?.componentStyles,
+        hasImagePlacements: !!step4Page?.imagePlacements,
+        hasInteractions: !!step4Page?.interactions
+      });
+
+      return `## 📄 Page ${index + 1}: ${page.topic}
+
+### 📝 페이지 정보
+- **파일명**: \`${index + 1}.html\`
+- **주제**: ${page.topic}
+- **설명**: ${page.description}
+- **교육 목표**: ${page.learningObjectives?.join(', ') || '명시되지 않음'}
+
+### 📐 레이아웃 명세 ${step4Page ? '(Step4 정밀 설계 반영)' : '(Step3 기본 구조)'}
+${generateLayoutSpecification(step3Page, step4Page, index)}
+
+### 🧩 컴포넌트 명세 ${step4Page ? '(정밀 위치/스타일 포함)' : '(기본 구조만)'}
+${generateComponentSpecification(pageContent, step4Page)}
+
+### 🖼️ 이미지 배치 명세 ${step4Page ? '(정확한 위치 정보 포함)' : '(기본 정보만)'}
+${generateImageSpecification(pageContent, step4Page)}
+
+### ⚡ 상호작용 및 애니메이션 명세
+${generateInteractionSpecification(step4Page)}
+
+### 🎓 교육적 기능 명세
+${generateEducationalFeatureSpecification(step4Page)}
+
+---`;
+    });
+
+    return `## 🏗️ 페이지별 통합 명세 (Step1-4 데이터 완전 반영)
+
+### ⚠️ 구현 지침
+- **개별 HTML 파일**: 각 페이지를 1.html, 2.html... 형태로 분리 구현
+- **정밀 레이아웃**: Step4의 좌표 및 크기 정보 활용
+- **독립적 동작**: 각 파일은 완전 독립적으로 작동
+- **네비게이션 금지**: 페이지 간 이동 기능 구현 금지
+
+${pageSpecs.join('\n\n')}`;
+  };
+
+  // 레이아웃 명세 생성 (Step4 데이터 우선 활용)
+  const generateLayoutSpecification = (step3Page: any, step4Page: any, pageIndex: number): string => {
+    if (step4Page?.layout) {
+      // Step4 정밀 레이아웃 정보 활용
+      const layout = step4Page.layout;
+      const sections = layout.sections || [];
+
+      return `**레이아웃 모드**: ${projectData.layoutMode} (${layout.pageWidth || 1600}×${layout.pageHeight === 'auto' ? '자동높이' : layout.pageHeight + 'px'})
+
+**섹션 구조**:
+${sections.map((section: any, idx: number) => {
+  // Step4 타입에 맞게 필드명 수정
+  const position = section.position || {};
+  const dimensions = section.dimensions || {};
+  return `${idx + 1}. **${section.id}** (${section.gridType || section.role || 'content'})
+   - 위치: x=${position.x || 0}px, y=${position.y || 0}px
+   - 크기: ${dimensions.width || 'auto'}px × ${dimensions.height || 'auto'}px
+   - 그리드: ${section.gridType || 'auto'}
+   - 여백: 하단 ${section.marginBottom || 0}px`;
+}).join('\n')}
+
+**전체 높이**: ${layout.totalHeight || '자동 계산'}`;
+    } else if (step3Page?.structure) {
+      // Step3 기본 구조 정보 활용
+      const structure = step3Page.structure;
+      return `**레이아웃 모드**: ${projectData.layoutMode}
+**기본 섹션 구조** (Step3):
+${structure.sections.map((section: any, idx: number) => {
+  return `${idx + 1}. **${section.id}** - ${section.role} (그리드: ${section.grid})
+   - 높이: ${section.height}
+   - 여백: 하단 ${section.gapBelow}px
+   - 힌트: ${section.hint}`;
+}).join('\n')}`;
+    } else {
+      return '레이아웃 정보가 없습니다.';
+    }
+  };
+
+  // 컴포넌트 명세 생성 (Step4 정밀 스타일 반영)
+  const generateComponentSpecification = (pageContent: any, step4Page: any): string => {
+    if (!pageContent?.components) {
+      return '컴포넌트 정보가 없습니다.';
+    }
+
+    return pageContent.components.map((comp: any, compIndex: number) => {
+      const step4Component = step4Page?.componentStyles?.find((c: any) =>
+        c.id === comp.slotRef || c.componentId === comp.slotRef || c.type === comp.type
+      );
+
+      let spec = `**${compIndex + 1}. ${comp.type.toUpperCase()}** \`${comp.text || '텍스트 없음'}\``;
+
+      if (step4Component) {
+        // Step4 타입에 맞게 필드명 수정
+        const position = step4Component.position || {};
+        const dimensions = step4Component.dimensions || {};
+        const colors = step4Component.colors || {};
+        const typography = step4Component.typography || {};
+        const spacing = step4Component.spacing || {};
+
+        spec += `
+   - **위치**: x=${position.x || 0}px, y=${position.y || 0}px
+   - **크기**: ${dimensions.width || 'auto'} × ${dimensions.height || 'auto'}
+   - **스타일**:
+     * 폰트: ${typography.fontSize || typography.fontFamily || '기본'}
+     * 색상: 텍스트 ${colors.text || '기본'}, 배경 ${colors.background || '투명'}
+     * 여백: top=${spacing.top || 0}px, right=${spacing.right || 0}px, bottom=${spacing.bottom || 0}px, left=${spacing.left || 0}px
+   - **역할**: ${comp.role || '기본'}`;
+      } else {
+        spec += `
+   - **기본 정보**: ${getComponentDescription(comp)}
+   - **역할**: ${comp.role || '기본'}`;
+      }
+
+      return spec;
+    }).join('\n\n');
+  };
+
+  // 이미지 배치 명세 생성 (Step4 정밀 위치 정보 반영)
+  const generateImageSpecification = (pageContent: any, step4Page: any): string => {
+    if (!pageContent?.images) {
+      return '이미지가 없습니다.';
+    }
+
+    return pageContent.images.map((img: any, imgIndex: number) => {
+      const step4Image = step4Page?.imagePlacements?.find((i: any) =>
+        i.imageId === img.filename || i.filename === img.filename || i.id === img.filename
+      );
+
+      let spec = `**${imgIndex + 1}. ${img.filename}**`;
+
+      if (step4Image) {
+        // Step4 타입에 맞게 필드명 수정
+        const position = step4Image.position || {};
+        const dimensions = step4Image.dimensions || {};
+        const margins = step4Image.margins || {};
+
+        spec += `
+   - **정밀 위치**: x=${position.x || 0}px, y=${position.y || 0}px
+   - **정확한 크기**: ${dimensions.width || img.width}×${dimensions.height || img.height}px
+   - **z-index**: ${step4Image.zIndex || 1}
+   - **배치 방식**: ${step4Image.placement || 'static'}
+   - **여백**: top=${margins.top || 0}px, right=${margins.right || 0}px, bottom=${margins.bottom || 0}px, left=${margins.left || 0}px`;
+      } else {
+        spec += `
+   - **기본 크기**: ${img.width}×${img.height}px`;
+      }
+
+      spec += `
+   - **용도**: ${img.description}
+   - **AI 프롬프트**: ${img.aiPrompt}
+   - **대체 텍스트**: ${img.alt}`;
+
+      return spec;
+    }).join('\n\n');
+  };
+
+  // 상호작용 명세 생성
+  const generateInteractionSpecification = (step4Page: any): string => {
+    if (!step4Page?.interactions || step4Page.interactions.length === 0) {
+      return step4Result ? '기본적인 상호작용 기능 (호버, 클릭 등)' : '상호작용 기능이 정의되지 않았습니다.';
+    }
+
+    return step4Page.interactions.map((interaction: any, idx: number) => {
+      return `**${idx + 1}. ${interaction.type || interaction.name || 'Interaction'}**
+- 대상: ${interaction.target || interaction.targetElement || '미정'}
+- 트리거: ${interaction.trigger || interaction.event || '기본'}
+- 효과: ${interaction.effect || interaction.animation || '기본 효과'}
+- 지속시간: ${interaction.duration || 300}ms`;
+    }).join('\n\n');
+  };
+
+  // 교육적 기능 명세 생성
+  const generateEducationalFeatureSpecification = (step4Page: any): string => {
+    if (!step4Page?.educationalFeatures || step4Page.educationalFeatures.length === 0) {
+      return '기본 교육적 레이아웃 및 시각적 계층 구조';
+    }
+
+    return step4Page.educationalFeatures.map((feature: any, idx: number) => {
+      return `**${idx + 1}. ${feature.type}**
+- 목적: ${feature.purpose}
+- 구현: ${feature.implementation}
+- 효과: ${feature.expectedOutcome}`;
+    }).join('\n\n');
+  };
+
   // 단일 페이지 구조 생성
   const generateSinglePageStructure = (pageIndex: number): string => {
     if (!step3Result) return '';
@@ -282,6 +451,24 @@ ${getImageFileList()}
     if (!page || !page.content) return '';
 
     return page.content.components.map(comp => generateComponentHTML(comp, page)).join('\n                    ');
+  };
+
+  // 컴포넌트 설명 생성
+  const getComponentDescription = (component: ComponentLine): string => {
+    switch (component.type) {
+      case 'heading':
+        return `제목 요소 (h${component.variant || '2'})`;
+      case 'paragraph':
+        return '본문 텍스트';
+      case 'image':
+        return `이미지 표시 (${component.width || 400}×${component.height || 300}px)`;
+      case 'card':
+        return `카드 컴포넌트 (${component.variant || 'default'} 스타일)`;
+      case 'caption':
+        return '이미지 캡션';
+      default:
+        return '일반 컨텐츠 요소';
+    }
   };
 
   // 컴포넌트별 HTML 생성
