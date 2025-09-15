@@ -4,6 +4,7 @@ import {
   ValidationResult,
   ComponentStyleSpecification
 } from '../../types/step4.types';
+import { AutoLayoutAdjustmentEngine } from './AutoLayoutAdjustmentEngine';
 
 /**
  * Step4 검증 엔진
@@ -12,12 +13,18 @@ import {
  * 99%+ 파싱 성공률을 보장하기 위한 다양한 검증 규칙을 적용합니다.
  */
 export class ValidationEngine {
+  private autoAdjustmentEngine: AutoLayoutAdjustmentEngine;
+
+  constructor() {
+    this.autoAdjustmentEngine = new AutoLayoutAdjustmentEngine();
+  }
   /**
-   * Step4 전체 결과 검증
+   * Step4 전체 결과 검증 (자동 수정 포함)
    * @param step4Result 검증할 Step4 결과
+   * @param autoFix 자동 수정 실행 여부 (기본: false)
    * @returns 검증 결과
    */
-  validate(step4Result: Step4DesignResult): ValidationResult {
+  validate(step4Result: Step4DesignResult, autoFix: boolean = false): ValidationResult {
     console.log('✅ ValidationEngine: Step4 결과 검증 시작');
 
     const errors: string[] = [];
@@ -26,8 +33,8 @@ export class ValidationEngine {
     // 1. 필수 요소 검증
     this.validateRequiredElements(step4Result, errors);
 
-    // 2. 레이아웃 제약 검증
-    this.validateLayoutConstraints(step4Result, errors, warnings);
+    // 2. 레이아웃 제약 검증 (자동 수정 포함)
+    this.validateLayoutConstraints(step4Result, errors, warnings, autoFix);
 
     // 3. CSS 속성값 유효성 검증
     this.validateCSSProperties(step4Result, errors, warnings);
@@ -143,7 +150,8 @@ export class ValidationEngine {
   private validateLayoutConstraints(
     result: Step4DesignResult,
     errors: string[],
-    warnings: string[]
+    warnings: string[],
+    autoFix: boolean = false
   ): void {
     result.pages.forEach((page) => {
       if (!page.layout) return;
@@ -154,7 +162,28 @@ export class ValidationEngine {
         const heightUsage = (totalHeight / 1000) * 100;
 
         if (totalHeight > 1000) {
-          errors.push(`🚨 CRITICAL: 페이지 ${page.pageNumber} 높이 ${totalHeight}px가 1000px 제한 초과 (${heightUsage.toFixed(1)}% 사용)`);
+          if (autoFix) {
+            console.log(`🔧 페이지 ${page.pageNumber} 자동 수정 시작: ${totalHeight}px → 980px 목표`);
+
+            // 자동 수정 실행
+            const adjustedPage = this.autoAdjustmentEngine.adjustPageHeight(page, 980);
+            const adjustedHeight = this.calculatePageHeight(adjustedPage);
+
+            if (adjustedHeight <= 1000) {
+              // 수정 성공: 원본 페이지 업데이트
+              page.layout = adjustedPage.layout;
+              page.componentStyles = adjustedPage.componentStyles;
+
+              warnings.push(`🔧 AUTO-FIX: 페이지 ${page.pageNumber} 자동 수정 완료 (${totalHeight}px → ${adjustedHeight}px)`);
+              console.log(`✅ 자동 수정 성공: ${totalHeight}px → ${adjustedHeight}px`);
+            } else {
+              // 수정 실패: 에러로 기록
+              errors.push(`🚨 CRITICAL: 페이지 ${page.pageNumber} 높이 ${totalHeight}px가 1000px 제한 초과 (자동 수정 실패: ${adjustedHeight}px)`);
+              console.log(`❌ 자동 수정 실패: ${totalHeight}px → ${adjustedHeight}px`);
+            }
+          } else {
+            errors.push(`🚨 CRITICAL: 페이지 ${page.pageNumber} 높이 ${totalHeight}px가 1000px 제한 초과 (${heightUsage.toFixed(1)}% 사용)`);
+          }
         } else if (totalHeight > 980) {
           errors.push(`⚠️ DANGER: 페이지 ${page.pageNumber} 높이 ${totalHeight}px가 위험 구간 (${heightUsage.toFixed(1)}% 사용)`);
         } else if (totalHeight > 950) {
@@ -320,7 +349,7 @@ export class ValidationEngine {
   /**
    * 페이지 총 높이 계산
    */
-  private calculatePageHeight(page: Step4PageResult): number {
+  calculatePageHeight(page: Step4PageResult): number {
     if (!page.layout || !page.layout.sections) return 0;
 
     let totalHeight = page.layout.safeArea.top;

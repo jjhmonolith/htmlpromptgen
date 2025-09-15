@@ -3,6 +3,7 @@ import { Step1BasicInfo } from './Step1BasicInfo';
 import { Step2VisualIdentity } from './Step2VisualIdentity/Step2VisualIdentity';
 import { Step3IntegratedDesign } from './Step3IntegratedDesign';
 import { Step4DesignSpecification } from './Step4DesignSpecification';
+import { Step5FinalPrompt } from './Step5FinalPrompt';
 import { GNB } from '../common';
 
 interface WorkflowContainerProps {
@@ -278,6 +279,33 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     onWorkflowDataChange?.(updatedWorkflowData);
   };
 
+  const handleStep5Complete = (data: any) => {
+    const newWorkflowData = {
+      ...workflowData,
+      step5: data,
+      stepCompletion: {
+        ...workflowData.stepCompletion,
+        step5: true
+      }
+    };
+    setWorkflowData(newWorkflowData);
+
+    // 부모에게 워크플로우 데이터 변경 알림
+    onWorkflowDataChange?.(newWorkflowData);
+  };
+
+  // Step5 실시간 데이터 변경 처리
+  const handleStep5DataChange = (partialData: any) => {
+    const updatedWorkflowData = {
+      ...workflowData,
+      step5: partialData,
+      currentStep: currentStep
+    };
+
+    setWorkflowData(updatedWorkflowData);
+    onWorkflowDataChange?.(updatedWorkflowData);
+  };
+
   const getWorkflowSteps = () => [
     { num: 1, title: '기본 정보', isCompleted: !!workflowData.step1 },
     { num: 2, title: '비주얼 아이덴티티', isCompleted: !!workflowData.step2 },
@@ -375,6 +403,42 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
             onDataChange={handleStep4DataChange}
             onBack={() => setCurrentStep(3)}
             onGeneratingChange={setIsGenerating}
+          />
+        );
+
+      case 5:
+        if (!workflowData.step1 || !workflowData.step2 || !workflowData.step3 || !workflowData.step4) {
+          return (
+            <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
+              <div className="max-w-4xl mx-auto px-4 xl:px-8 2xl:px-12 py-12">
+                <div className="text-center py-16">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-4">이전 단계를 완료해주세요</h2>
+                  <p className="text-gray-600 mb-8">Step 5를 진행하려면 Step 1, 2, 3, 4를 먼저 완료해야 합니다.</p>
+                  <button
+                    onClick={() => setCurrentStep(!workflowData.step1 ? 1 : !workflowData.step2 ? 2 : !workflowData.step3 ? 3 : 4)}
+                    className="px-8 py-3 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
+                  >
+                    {!workflowData.step1 ? 'Step 1로 이동' :
+                     !workflowData.step2 ? 'Step 2로 이동' :
+                     !workflowData.step3 ? 'Step 3로 이동' : 'Step 4로 이동'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        }
+
+        return (
+          <Step5FinalPrompt
+            initialData={workflowData.step5}
+            projectData={workflowData.step1}
+            visualIdentity={workflowData.step2.visualIdentity}
+            designTokens={workflowData.step2.designTokens}
+            step3Result={workflowData.step3}
+            step4Result={workflowData.step4}
+            onComplete={handleStep5Complete}
+            onDataChange={handleStep5DataChange}
+            onBack={() => setCurrentStep(4)}
           />
         );
 

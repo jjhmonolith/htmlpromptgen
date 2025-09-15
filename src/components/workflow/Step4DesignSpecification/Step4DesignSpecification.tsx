@@ -35,6 +35,7 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
   const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false);
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [debugMode, setDebugMode] = useState(false);
+  const [autoFixEnabled, setAutoFixEnabled] = useState(true); // 기본값을 true로 변경
   const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
 
   const lastStep4HashRef = useRef<string>('');
@@ -94,11 +95,52 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
     }
   }, [shouldAutoGenerate, isGenerating, apiKey]);
 
+  // AutoFix 설정 변경 시 재검증
+  useEffect(() => {
+    if (step4Data) {
+      validateAllPages(step4Data);
+    }
+  }, [autoFixEnabled]);
+
   const validateAllPages = (data: Step4DesignResult) => {
+    // 먼저 높이 초과 여부를 체크
+    let hasHeightOverflow = false;
+    if (data.layoutMode === 'fixed') {
+      data.pages.forEach(page => {
+        // ValidationEngine을 사용한 정확한 높이 계산
+        const totalHeight = validationEngine.current.calculatePageHeight(page);
+
+        if (totalHeight > 1000) {
+          hasHeightOverflow = true;
+          console.log(`📏 페이지 ${page.pageNumber} 높이 초과 감지: ${totalHeight}px > 1000px - AutoFix 자동 활성화`);
+        }
+      });
+    }
+
+    // 높이 초과 시 AutoFix 자동 활성화
+    let shouldUseAutoFix = autoFixEnabled;
+    if (hasHeightOverflow && !autoFixEnabled) {
+      console.log('🔧 높이 초과 감지 - AutoFix 자동 활성화');
+      shouldUseAutoFix = true;
+      setAutoFixEnabled(true); // UI 상태도 업데이트
+    }
+
+    // 전체 결과 검증 (autoFix 옵션 포함)
+    const overallValidation = validationEngine.current.validate(data, shouldUseAutoFix);
+
+    // 페이지별 개별 검증도 유지 (UI 표시용)
     const results = data.pages.map(page =>
       validationEngine.current.validatePage(page, data.layoutMode)
     );
     setValidationResults(results);
+
+    console.log('📊 검증 완료:', {
+      autoFixEnabled: shouldUseAutoFix,
+      overallValid: overallValidation.isValid,
+      errors: overallValidation.errors.length,
+      warnings: overallValidation.warnings.length,
+      heightOverflow: hasHeightOverflow
+    });
   };
 
   const generateStep4Data = async () => {
@@ -248,6 +290,17 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
             </p>
           </div>
           <div className="flex items-center space-x-3">
+            <button
+              onClick={() => setAutoFixEnabled(!autoFixEnabled)}
+              className={`px-3 py-1 text-sm rounded-md transition-colors ${
+                autoFixEnabled
+                  ? 'bg-green-100 text-green-800 border border-green-300'
+                  : 'bg-gray-100 text-gray-600 border border-gray-300'
+              }`}
+              title="높이 초과 오류 자동 수정"
+            >
+              {autoFixEnabled ? '🔧 AutoFix ON' : '🔧 AutoFix OFF'}
+            </button>
             <button
               onClick={() => setDebugMode(!debugMode)}
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
