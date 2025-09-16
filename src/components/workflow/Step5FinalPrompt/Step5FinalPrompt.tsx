@@ -12,7 +12,7 @@ interface Step5FinalPromptProps {
   visualIdentity: VisualIdentity;
   designTokens: DesignTokens;
   step3Result: Step3IntegratedResult;
-  step4Result: Step4DesignResult;
+  step4Result?: Step4DesignResult | null; // 옵셔널로 변경 (Step 4 생략 가능)
   onComplete: (data: FinalPrompt) => void;
   onDataChange?: (data: Partial<FinalPrompt>) => void;
   onBack?: () => void;

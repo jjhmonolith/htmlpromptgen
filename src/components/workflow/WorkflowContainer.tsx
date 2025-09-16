@@ -186,18 +186,18 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   };
 
   const handleStep3Complete = (data: any) => {
-    const newWorkflowData = { 
-      ...workflowData, 
-      step3: data, 
-      currentStep: 4,
+    const newWorkflowData = {
+      ...workflowData,
+      step3: data,
+      currentStep: 5, // Step 4를 생략하고 바로 Step 5로
       stepCompletion: {
         ...workflowData.stepCompletion,
         step3: true
       }
     };
     setWorkflowData(newWorkflowData);
-    setCurrentStep(4);
-    
+    setCurrentStep(5); // Step 4를 생략하고 바로 Step 5로
+
     // 부모에게 워크플로우 데이터 변경 알림
     onWorkflowDataChange?.(newWorkflowData);
   };
@@ -310,8 +310,7 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     { num: 1, title: '학습 여정 설계', isCompleted: !!workflowData.step1 },
     { num: 2, title: '감성 무드 지휘', isCompleted: !!workflowData.step2 },
     { num: 3, title: '교육 콘텐츠 설계', isCompleted: !!workflowData.step3 },
-    { num: 4, title: '창의적 레이아웃 정밀화', isCompleted: !!workflowData.step4 },
-    { num: 5, title: '창작 브리프 생성', isCompleted: !!workflowData.step5 }
+    { num: 5, title: '창작 브리프 생성', isCompleted: !!workflowData.step5 } // Step 4 생략
   ];
 
   const renderCurrentStep = () => {
@@ -407,20 +406,19 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         );
 
       case 5:
-        if (!workflowData.step1 || !workflowData.step2 || !workflowData.step3 || !workflowData.step4) {
+        if (!workflowData.step1 || !workflowData.step2 || !workflowData.step3) {
           return (
             <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
               <div className="max-w-4xl mx-auto px-4 xl:px-8 2xl:px-12 py-12">
                 <div className="text-center py-16">
                   <h2 className="text-2xl font-bold text-gray-900 mb-4">이전 단계를 완료해주세요</h2>
-                  <p className="text-gray-600 mb-8">Step 5를 진행하려면 Step 1, 2, 3, 4를 먼저 완료해야 합니다.</p>
+                  <p className="text-gray-600 mb-8">Step 5를 진행하려면 Step 1, 2, 3을 먼저 완료해야 합니다.</p>
                   <button
-                    onClick={() => setCurrentStep(!workflowData.step1 ? 1 : !workflowData.step2 ? 2 : !workflowData.step3 ? 3 : 4)}
+                    onClick={() => setCurrentStep(!workflowData.step1 ? 1 : !workflowData.step2 ? 2 : 3)}
                     className="px-8 py-3 bg-green-600 text-white rounded-full hover:bg-green-700 transition-colors"
                   >
                     {!workflowData.step1 ? 'Step 1로 이동' :
-                     !workflowData.step2 ? 'Step 2로 이동' :
-                     !workflowData.step3 ? 'Step 3로 이동' : 'Step 4로 이동'}
+                     !workflowData.step2 ? 'Step 2로 이동' : 'Step 3로 이동'}
                   </button>
                 </div>
               </div>
@@ -435,10 +433,10 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
             visualIdentity={workflowData.step2.visualIdentity}
             designTokens={workflowData.step2.designTokens}
             step3Result={workflowData.step3}
-            step4Result={workflowData.step4}
+            step4Result={workflowData.step4} // null일 수 있음
             onComplete={handleStep5Complete}
             onDataChange={handleStep5DataChange}
-            onBack={() => setCurrentStep(4)}
+            onBack={() => setCurrentStep(3)} // Step 3으로 돌아가기
           />
         );
 
