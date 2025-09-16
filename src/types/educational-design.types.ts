@@ -88,11 +88,16 @@ export interface EducationalPageDesign {
   generatedAt: Date;
   error?: string;
 
+  // 품질 관리
+  qualityMetrics?: QualityMetrics;
+
   // 디버그 정보
   debugInfo?: {
     originalPrompt: string;
     originalResponse: string;
-    parsedSections: Record<string, string>;
+    parsedSections: Record<string, string> | string | { simplified: string };
+    layoutValidation?: LayoutValidation;
+    qualityMetrics?: QualityMetrics;
   };
 }
 
@@ -155,16 +160,51 @@ export interface EmotionalContext {
   overallTone: string;            // 전체적인 톤앤매너 설명
 }
 
+// 레이아웃 제약 검증을 위한 타입
+export interface LayoutValidation {
+  isValid: boolean;
+  errorType?: 'AREA_LIMIT_EXCEEDED' | 'HEIGHT_EXCEEDED' | 'INTERACTION_DETECTED' | 'COLOR_CODE_DETECTED';
+  areaCount?: number;
+  maxAllowed?: number;
+  suggestions: string[];
+  warnings?: string[];
+}
+
+// 이미지 구조화된 메타데이터 (8가지 요소)
+export interface ImageStructuredMetadata {
+  visualElements: string;      // 주요 시각 요소
+  colorScheme: string;         // 색상 구성 (자연어만)
+  pageContext: string;         // 페이지 내 맥락 (흐름과 연결점)
+  styleTexture: string;        // 스타일과 질감
+  learnerPerspective: string;  // 학습자 관점
+  educationalFunction: string; // 교육적 기능
+  visualDynamics: string;      // 시각적 역동성
+}
+
+// 품질 관리 시스템을 위한 타입
+export interface QualityMetrics {
+  imageDetailScore: number;     // 이미지 상세도 점수 (0-100)
+  layoutDiversityScore: number; // 레이아웃 다양성 점수 (0-100)
+  constraintComplianceScore: number; // 제약 준수 점수 (0-100)
+  overallQualityScore: number;  // 전체 품질 점수 (0-100)
+  suggestions: string[];
+  warnings: string[];
+}
+
 // 품질 평가를 위한 타입
 export interface EducationalDesignQuality {
   completenessScore: number;       // 필수 정보 완성도 (0-100)
   specificityScore: number;        // 구체성 점수 (0-100)
   educationalValueScore: number;   // 교육적 가치 점수 (0-100)
   implementabilityScore: number;   // 구현 가능성 점수 (0-100)
+  layoutConstraintScore: number;   // 레이아웃 제약 준수 점수 (0-100)
+  imageQualityScore: number;       // 이미지 품질 점수 (0-100)
 
   overallScore: number;
 
   strengths: string[];
   improvements: string[];
   recommendations: string[];
+  layoutValidation?: LayoutValidation;
+  qualityMetrics?: QualityMetrics;
 }

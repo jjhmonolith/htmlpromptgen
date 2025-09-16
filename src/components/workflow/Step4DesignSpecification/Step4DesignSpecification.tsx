@@ -284,9 +284,9 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
       <div className="bg-white p-6 rounded-lg shadow-sm border">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Step 4: 정밀한 디자인 명세</h2>
+            <h2 className="text-2xl font-bold text-gray-900">🎨 창의적 레이아웃 정밀화</h2>
             <p className="text-gray-600 mt-1">
-              구현 가능한 상세한 디자인 명세서를 확인하세요
+              🌟 교육 콘텐츠의 시각적 완성도를 극대화하는 창의적 레이아웃 마법사
             </p>
           </div>
           <div className="flex items-center space-x-3">

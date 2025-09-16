@@ -23,6 +23,11 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   const [layoutMode, setLayoutMode] = useState<'fixed' | 'scrollable'>('scrollable');
   const [contentMode, setContentMode] = useState<'original' | 'enhanced' | 'restricted'>('enhanced');
   const [suggestions, setSuggestions] = useState('');
+
+  // Learning Journey Designer 상태 추가
+  const [emotionalArc, setEmotionalArc] = useState('');
+  const [learnerPersona, setLearnerPersona] = useState('');
+  const [ahaMoments, setAhaMoments] = useState<string[]>(['']);
   
   // 초기 데이터 로딩 (한 번만 실행)
   const hasLoadedInitialData = useRef(false);
@@ -36,12 +41,19 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       setLayoutMode(initialData.layoutMode || 'scrollable');
       setContentMode(initialData.contentMode || 'enhanced');
       setSuggestions(
-        typeof initialData.suggestions === 'string' 
-          ? initialData.suggestions 
-          : Array.isArray(initialData.suggestions) 
-            ? initialData.suggestions[0] || '' 
+        typeof initialData.suggestions === 'string'
+          ? initialData.suggestions
+          : Array.isArray(initialData.suggestions)
+            ? initialData.suggestions[0] || ''
             : ''
       );
+
+      // Learning Journey 초기 데이터 로드
+      if (initialData.emotionalArc) setEmotionalArc(initialData.emotionalArc);
+      if (initialData.learnerPersona) setLearnerPersona(initialData.learnerPersona);
+      if (initialData.ahaMoments && Array.isArray(initialData.ahaMoments)) {
+        setAhaMoments(initialData.ahaMoments.length > 0 ? initialData.ahaMoments : ['']);
+      }
       
       hasLoadedInitialData.current = true;
       setIsDataLoaded(true);
@@ -64,6 +76,9 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     layoutMode,
     contentMode,
     suggestions: suggestions.trim() ? [suggestions.trim()] : undefined,
+    emotionalArc: emotionalArc.trim() || undefined,
+    learnerPersona: learnerPersona.trim() || undefined,
+    ahaMoments: ahaMoments.filter(moment => moment.trim()).length > 0 ? ahaMoments.filter(moment => moment.trim()) : undefined,
     createdAt: initialData?.createdAt || new Date()
   });
 
@@ -88,7 +103,10 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
           pages: pages.filter(p => p.topic.trim()),
           layoutMode,
           contentMode,
-          suggestions: suggestions.trim() || null // 빈 문자열은 null로 통일
+          suggestions: suggestions.trim() || null, // 빈 문자열은 null로 통일
+          emotionalArc: emotionalArc.trim() || null,
+          learnerPersona: learnerPersona.trim() || null,
+          ahaMoments: ahaMoments.filter(moment => moment.trim())
         });
         
         // 실제로 변경된 경우에만 알림 및 로그
@@ -100,7 +118,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     }, 500); // 0.5초 디바운스
 
     return () => clearTimeout(timeoutId);
-  }, [projectTitle, targetAudience, pages, layoutMode, contentMode, suggestions, onDataChange]); // isDataLoaded 제거
+  }, [projectTitle, targetAudience, pages, layoutMode, contentMode, suggestions, emotionalArc, learnerPersona, ahaMoments, onDataChange]); // isDataLoaded 제거
   
   // 테스트 모드용 목업 데이터
   const mockData = {
@@ -128,7 +146,14 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
         description: '비와 눈이 내리는 과정, 강과 바다로 흘러가는 물의 흐름을 이해하고 물의 순환 사이클을 완성합니다.'
       }
     ],
-    suggestions: '시각적 애니메이션과 실험 활동을 포함해 주세요. 아이들이 직접 관찰할 수 있는 예시를 많이 넣어주시고, 퀴즈나 상호작용 요소도 추가해 주세요.'
+    suggestions: '시각적 애니메이션과 실험 활동을 포함해 주세요. 아이들이 직접 관찰할 수 있는 예시를 많이 넣어주시고, 퀴즈나 상호작용 요소도 추가해 주세요.',
+    emotionalArc: '호기심 → 놀라움 → 이해 → 성취감',
+    learnerPersona: '초등학교 3학년 민수와 지영이. 과학을 어려워하지만 실험과 관찰을 좋아하고, 물에 대한 기본적인 호기심이 있어요.',
+    ahaMoments: [
+      '물이 사라진다고 생각했는데 하늘로 올라간다는 사실!',
+      '구름이 물방울로 이루어져 있다는 발견!',
+      '비가 내려서 바다로 돌아가는 순환 과정의 이해!'
+    ]
   };
   
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -338,6 +363,9 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     setContentMode(mockData.contentMode);
     setPages(mockData.pages);
     setSuggestions(mockData.suggestions);
+    setEmotionalArc(mockData.emotionalArc);
+    setLearnerPersona(mockData.learnerPersona);
+    setAhaMoments(mockData.ahaMoments);
     setErrors({});
   };
 
@@ -358,6 +386,9 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       layoutMode,
       contentMode,
       suggestions: suggestions.trim() ? [suggestions.trim()] : undefined,
+      emotionalArc: emotionalArc.trim() || undefined,
+      learnerPersona: learnerPersona.trim() || undefined,
+      ahaMoments: ahaMoments.filter(moment => moment.trim()).length > 0 ? ahaMoments.filter(moment => moment.trim()) : undefined,
       createdAt: initialData?.createdAt || new Date()
     };
 
@@ -366,8 +397,38 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
 
   return (
     <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
+      {/* 페이지 헤더 */}
+      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-8 pb-6">
+        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
+          <div className="flex items-center mb-6">
+            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
+              1
+            </div>
+            <h1 className="text-3xl font-bold text-gray-900">학습 여정 설계</h1>
+          </div>
+          <p className="text-lg text-gray-600 mb-6">
+            🌆 학습자의 감정적 여정을 매핑하고 의미 있는 학습 경험을 설계합니다.
+          </p>
+          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8 rounded-r-lg">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="ml-3">
+                <p className="text-sm text-blue-700">
+                  <span className="font-medium">새로운 접근법:</span> 단순한 정보 입력을 넘어서 학습자의 감정적 여정과 '아하!' 순간들을 설계하세요.<br/>
+                  <span className="font-medium">기대 효과:</span> 기술적 명세를 넘어서 감동적이고 기억에 남는 학습 경험 창조
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* 상단 흰색 영역 - 뷰포트 전체 너비 */}
-      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-14 pb-5">
+      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-6 pb-5">
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
           {/* 상단 영역: 기본 정보 + 프로젝트 설정 (3등분) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
@@ -722,8 +783,102 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
           </div>
         </div>
         
-        {/* 추가 제안사항 - 페이지 구성과 같은 회색 영역에 포함 */}
-        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-3">
+        {/* Learning Journey Designer 영역 */}
+        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            {/* 감정적 여정 설계 */}
+            <div className="bg-white rounded-2xl px-6 py-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
+                  🌆
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">감정적 여정</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">학습자가 경험할 감정의 흐름을 설계하세요</p>
+              <input
+                type="text"
+                value={emotionalArc}
+                onChange={(e) => setEmotionalArc(e.target.value)}
+                placeholder="예: 호기심 → 놀라움 → 이해 → 성취감"
+                className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-gray-900 placeholder-gray-400"
+              />
+            </div>
+
+            {/* 학습자 페르소나 */}
+            <div className="bg-white rounded-2xl px-6 py-6 shadow-sm">
+              <div className="flex items-center mb-4">
+                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                  😊
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900">학습자 페르소나</h3>
+              </div>
+              <p className="text-sm text-gray-600 mb-4">구체적인 학습자의 상황과 성향을 묘사하세요</p>
+              <textarea
+                value={learnerPersona}
+                onChange={(e) => setLearnerPersona(e.target.value)}
+                placeholder="예: 초등학교 3학년 민수와 지영이. 과학을 어려워하지만 실험과 관찰을 좋아하고..."
+                className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all resize-none h-24 text-gray-900 placeholder-gray-400"
+              />
+            </div>
+          </div>
+
+          {/* '아하!' 순간들 */}
+          <div className="bg-white rounded-2xl px-6 py-6 shadow-sm mb-6">
+            <div className="flex items-center mb-4">
+              <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                💡
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">각 페이지별 '아하!' 순간</h3>
+              <span className="text-sm text-gray-600 ml-2">{ahaMoments.filter(moment => moment.trim()).length}개</span>
+            </div>
+            <p className="text-sm text-gray-600 mb-4">학습자가 각 페이지에서 경험할 '깨달음의 순간'들을 매핑하세요</p>
+            <div className="space-y-3">
+              {ahaMoments.map((moment, index) => (
+                <div key={index} className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-xs font-medium text-yellow-800">
+                    {index + 1}
+                  </div>
+                  <input
+                    type="text"
+                    value={moment}
+                    onChange={(e) => {
+                      const updated = [...ahaMoments];
+                      updated[index] = e.target.value;
+                      setAhaMoments(updated);
+                    }}
+                    placeholder={`페이지 ${index + 1}의 '아하!' 순간을 작성하세요`}
+                    className="flex-1 px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-gray-900 placeholder-gray-400"
+                  />
+                  {ahaMoments.length > 1 && (
+                    <button
+                      onClick={() => {
+                        const updated = ahaMoments.filter((_, i) => i !== index);
+                        setAhaMoments(updated.length > 0 ? updated : ['']);
+                      }}
+                      className="text-red-400 hover:text-red-600 transition-colors p-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+              ))}
+              {ahaMoments.length < pages.filter(p => p.topic.trim()).length && (
+                <button
+                  onClick={() => setAhaMoments([...ahaMoments, ''])}
+                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-all flex items-center justify-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                  </svg>
+                  '아하!' 순간 추가
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 추가 제안사항 */}
           <div className="bg-white rounded-2xl px-6 py-4 mb-3 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">추가 제안사항</h3>
             <textarea

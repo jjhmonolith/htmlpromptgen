@@ -19,6 +19,127 @@ interface Step3IntegratedDesignProps {
   onGeneratingChange?: (isGenerating: boolean) => void;
 }
 
+// DetailCard 컴포넌트 - 8가지 구조화된 이미지 메타데이터 표시용
+interface DetailCardProps {
+  icon: string;
+  title: string;
+  content: string;
+  className?: string;
+}
+
+const DetailCard: React.FC<DetailCardProps> = ({ icon, title, content, className = '' }) => {
+  return (
+    <div className={`bg-gradient-to-br from-gray-50 to-gray-100 rounded-lg p-3 border border-gray-200 ${className}`}>
+      <div className="flex items-center mb-2">
+        <span className="text-lg mr-2">{icon}</span>
+        <h6 className="text-sm font-semibold text-gray-800">{title}</h6>
+      </div>
+      <p className="text-xs text-gray-600 leading-relaxed">
+        {content || `${title} 정보가 없습니다.`}
+      </p>
+    </div>
+  );
+};
+
+// 품질 배지 컴포넌트
+interface QualityBadgeProps {
+  label: string;
+  score: number;
+  threshold: number;
+}
+
+const QualityBadge: React.FC<QualityBadgeProps> = ({ label, score, threshold }) => {
+  const getColorClass = (score: number, threshold: number) => {
+    if (score >= threshold) return 'bg-green-100 text-green-800 border-green-200';
+    if (score >= threshold * 0.7) return 'bg-yellow-100 text-yellow-800 border-yellow-200';
+    return 'bg-red-100 text-red-800 border-red-200';
+  };
+
+  return (
+    <div className={`px-2 py-1 rounded-full text-xs font-medium border ${getColorClass(score, threshold)}`}>
+      {label}: {score}%
+    </div>
+  );
+};
+
+// 품질 지표 표시 컴포넌트
+interface QualityIndicatorProps {
+  quality: any; // QualityMetrics 타입 (any로 임시 처리)
+}
+
+const QualityIndicator: React.FC<QualityIndicatorProps> = ({ quality }) => {
+  if (!quality) return null;
+
+  return (
+    <div className="bg-white border rounded-lg p-4 mb-4">
+      <div className="flex items-center justify-between mb-3">
+        <h5 className="font-semibold text-gray-900">🎯 설계 품질 지표</h5>
+        <div className="flex space-x-2">
+          <QualityBadge
+            label="이미지 상세도"
+            score={quality.imageDetailScore || 0}
+            threshold={80}
+          />
+          <QualityBadge
+            label="레이아웃 다양성"
+            score={quality.layoutDiversityScore || 0}
+            threshold={75}
+          />
+          <QualityBadge
+            label="제약 준수"
+            score={quality.constraintComplianceScore || 0}
+            threshold={90}
+          />
+        </div>
+      </div>
+
+      {/* 전체 품질 점수 */}
+      <div className="mb-3">
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-sm font-medium text-gray-700">전체 품질 점수</span>
+          <span className="text-lg font-bold text-blue-600">{quality.overallQualityScore || 0}%</span>
+        </div>
+        <div className="w-full bg-gray-200 rounded-full h-2">
+          <div
+            className="bg-gradient-to-r from-blue-400 to-blue-600 h-2 rounded-full transition-all duration-300"
+            style={{ width: `${quality.overallQualityScore || 0}%` }}
+          ></div>
+        </div>
+      </div>
+
+      {/* 개선 제안 */}
+      {quality.suggestions && quality.suggestions.length > 0 && (
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 rounded-r">
+          <h6 className="font-medium text-yellow-800 mb-2">💡 개선 제안</h6>
+          <ul className="text-sm text-yellow-700 space-y-1">
+            {quality.suggestions.map((suggestion: string, idx: number) => (
+              <li key={idx} className="flex items-start">
+                <span className="mr-2">•</span>
+                {suggestion}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {/* 경고 */}
+      {quality.warnings && quality.warnings.length > 0 && (
+        <div className="bg-red-50 border-l-4 border-red-400 p-3 rounded-r mt-2">
+          <h6 className="font-medium text-red-800 mb-2">⚠️ 주의사항</h6>
+          <ul className="text-sm text-red-700 space-y-1">
+            {quality.warnings.map((warning: string, idx: number) => (
+              <li key={idx} className="flex items-start">
+                <span className="mr-2">•</span>
+                {warning}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // Phase 2 단순화: Educational Design Result를 Step3 "2개 큰 덩어리" 형태로 변환
 const convertEducationalDesignToStep3 = (educationalResult: EducationalDesignResult): Step3IntegratedResult => {
   const layoutMode = educationalResult.projectOverview.layoutMode;
@@ -533,30 +654,20 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
                     </div>
 
                     <div className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
-                      <div className="prose prose-sm max-w-none">
+                      <div className="prose prose-sm max-w-none markdown-content">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
-                          rehypePlugins={[rehypeHighlight]}
-                          components={{
-                            h1: ({children}) => <h1 className="text-2xl font-bold text-gray-900 mb-4">{children}</h1>,
-                            h2: ({children}) => <h2 className="text-xl font-semibold text-gray-800 mb-3 mt-6">{children}</h2>,
-                            h3: ({children}) => <h3 className="text-lg font-medium text-gray-700 mb-2 mt-4">{children}</h3>,
-                            p: ({children}) => <p className="mb-3 text-gray-700">{children}</p>,
-                            ul: ({children}) => <ul className="list-disc list-inside mb-3 space-y-1">{children}</ul>,
-                            ol: ({children}) => <ol className="list-decimal list-inside mb-3 space-y-1">{children}</ol>,
-                            li: ({children}) => <li className="text-gray-700">{children}</li>,
-                            strong: ({children}) => <strong className="font-semibold text-gray-900">{children}</strong>,
-                            em: ({children}) => <em className="italic text-gray-600">{children}</em>,
-                            code: ({children}) => <code className="bg-gray-100 px-1 py-0.5 rounded text-sm font-mono text-gray-800">{children}</code>,
-                            pre: ({children}) => <pre className="bg-gray-100 p-3 rounded-lg overflow-x-auto text-sm">{children}</pre>,
-                            blockquote: ({children}) => <blockquote className="border-l-4 border-blue-200 pl-4 py-2 bg-blue-50 text-gray-700 italic mb-3">{children}</blockquote>
-                          }}
                         >
                           {selectedPage.fullDescription}
                         </ReactMarkdown>
                       </div>
                     </div>
                   </div>
+                )}
+
+                {/* 품질 지표 섹션 */}
+                {selectedPage.debugInfo && selectedPage.debugInfo.qualityMetrics && (
+                  <QualityIndicator quality={selectedPage.debugInfo.qualityMetrics} />
                 )}
 
                 {/* 이미지 섹션 - 개선된 파싱 구조 */}
@@ -597,26 +708,42 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
                             </div>
                           </div>
 
-                          {/* 이미지 상세 정보 */}
-                          <div className="bg-white rounded-lg p-4 mb-4">
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <div>
-                                <h6 className="text-sm font-semibold text-gray-900 mb-2">📍 배치 정보</h6>
-                                <div className="space-y-1 text-xs text-gray-600">
-                                  <div><span className="font-medium">섹션:</span> {image.section}</div>
-                                  <div><span className="font-medium">위치:</span> {image.place}</div>
-                                  <div><span className="font-medium">스타일:</span> {image.style}</div>
-                                </div>
+                          {/* 8가지 구조화된 이미지 메타데이터 표시 */}
+                          {(image as any).structuredMetadata ? (
+                            <div className="mb-4">
+                              <h6 className="text-sm font-semibold text-gray-900 mb-3">🎨 8가지 이미지 메타데이터</h6>
+                              <div className="grid grid-cols-2 gap-3">
+                                <DetailCard icon="🎨" title="시각 요소" content={(image as any).structuredMetadata.visualElements || '기본 시각 요소'} />
+                                <DetailCard icon="🌈" title="색상 구성" content={(image as any).structuredMetadata.colorScheme || '기본 색상 구성'} />
+                                <DetailCard icon="🔗" title="페이지 맥락" content={(image as any).structuredMetadata.pageContext || '기본 맥락'} />
+                                <DetailCard icon="🎭" title="스타일" content={(image as any).structuredMetadata.styleTexture || '기본 스타일'} />
+                                <DetailCard icon="👥" title="학습자 관점" content={(image as any).structuredMetadata.learnerPerspective || '기본 관점'} />
+                                <DetailCard icon="🔄" title="교육 기능" content={(image as any).structuredMetadata.educationalFunction || '기본 기능'} />
+                                <DetailCard icon="⚡" title="시각 역동성" content={(image as any).structuredMetadata.visualDynamics || '기본 역동성'} className="col-span-2" />
                               </div>
-                              <div>
-                                <h6 className="text-sm font-semibold text-gray-900 mb-2">🔍 접근성</h6>
-                                <div className="space-y-1 text-xs text-gray-600">
-                                  <div><span className="font-medium">대체텍스트:</span> {image.alt}</div>
-                                  <div><span className="font-medium">캡션:</span> {image.caption}</div>
+                            </div>
+                          ) : (
+                            /* 기존 이미지 상세 정보 */
+                            <div className="bg-white rounded-lg p-4 mb-4">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                  <h6 className="text-sm font-semibold text-gray-900 mb-2">📍 배치 정보</h6>
+                                  <div className="space-y-1 text-xs text-gray-600">
+                                    <div><span className="font-medium">섹션:</span> {image.section}</div>
+                                    <div><span className="font-medium">위치:</span> {image.place}</div>
+                                    <div><span className="font-medium">스타일:</span> {image.style}</div>
+                                  </div>
+                                </div>
+                                <div>
+                                  <h6 className="text-sm font-semibold text-gray-900 mb-2">🔍 접근성</h6>
+                                  <div className="space-y-1 text-xs text-gray-600">
+                                    <div><span className="font-medium">대체텍스트:</span> {image.alt}</div>
+                                    <div><span className="font-medium">캡션:</span> {image.caption}</div>
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
+                          )}
 
                           {/* AI 생성 프롬프트 (영문만) */}
                           <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
@@ -675,6 +802,50 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
                           : '파싱된 섹션이 없습니다'}
                       </div>
                     </div>
+
+                    {/* 레이아웃 제약 검증 결과 */}
+                    {selectedPage.debugInfo.layoutValidation && (
+                      <div>
+                        <h5 className="text-sm font-medium text-blue-800 mb-2">🔍 레이아웃 제약 검증:</h5>
+                        <div className="text-xs text-blue-700 bg-white p-3 rounded border">
+                          <div className={`p-2 rounded mb-2 ${
+                            selectedPage.debugInfo.layoutValidation.isValid
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-red-100 text-red-800'
+                          }`}>
+                            <span className="font-medium">상태:</span> {selectedPage.debugInfo.layoutValidation.isValid ? '✅ 제약 준수' : '❌ 제약 위반'}
+                            {selectedPage.debugInfo.layoutValidation.errorType && (
+                              <span className="ml-2">({selectedPage.debugInfo.layoutValidation.errorType})</span>
+                            )}
+                          </div>
+                          {selectedPage.debugInfo.layoutValidation.areaCount && (
+                            <div className="mb-2">
+                              <span className="font-medium">영역 개수:</span> {selectedPage.debugInfo.layoutValidation.areaCount} / {selectedPage.debugInfo.layoutValidation.maxAllowed}
+                            </div>
+                          )}
+                          {selectedPage.debugInfo.layoutValidation.suggestions.length > 0 && (
+                            <div className="mb-2">
+                              <span className="font-medium">제안:</span>
+                              <ul className="mt-1 ml-4">
+                                {selectedPage.debugInfo.layoutValidation.suggestions.map((suggestion, idx) => (
+                                  <li key={idx} className="list-disc">{suggestion}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                          {selectedPage.debugInfo.layoutValidation.warnings && selectedPage.debugInfo.layoutValidation.warnings.length > 0 && (
+                            <div>
+                              <span className="font-medium">주의사항:</span>
+                              <ul className="mt-1 ml-4">
+                                {selectedPage.debugInfo.layoutValidation.warnings.map((warning, idx) => (
+                                  <li key={idx} className="list-disc">{warning}</li>
+                                ))}
+                              </ul>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

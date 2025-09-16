@@ -307,11 +307,11 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   };
 
   const getWorkflowSteps = () => [
-    { num: 1, title: '기본 정보', isCompleted: !!workflowData.step1 },
-    { num: 2, title: '비주얼 아이덴티티', isCompleted: !!workflowData.step2 },
-    { num: 3, title: '페이지별 콘텐츠 설계', isCompleted: !!workflowData.step3 },
-    { num: 4, title: '정밀한 디자인 명세', isCompleted: !!workflowData.step4 },
-    { num: 5, title: '최종 프롬프트', isCompleted: !!workflowData.step5 }
+    { num: 1, title: '학습 여정 설계', isCompleted: !!workflowData.step1 },
+    { num: 2, title: '감성 무드 지휘', isCompleted: !!workflowData.step2 },
+    { num: 3, title: '교육 콘텐츠 설계', isCompleted: !!workflowData.step3 },
+    { num: 4, title: '창의적 레이아웃 정밀화', isCompleted: !!workflowData.step4 },
+    { num: 5, title: '창작 브리프 생성', isCompleted: !!workflowData.step5 }
   ];
 
   const renderCurrentStep = () => {

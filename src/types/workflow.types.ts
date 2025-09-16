@@ -9,6 +9,10 @@ export interface ProjectData {
   contentMode: 'original' | 'enhanced' | 'restricted';
   pages: PageData[];
   suggestions?: string[];
+  // Learning Journey Designer 필드들
+  emotionalArc?: string;
+  learnerPersona?: string;
+  ahaMoments?: string[];
   createdAt: Date;
 }
 
@@ -214,14 +218,19 @@ export interface Step3IntegratedResult {
     pageTitle: string;
     pageNumber: number;
 
-    // Phase1: 구조 설계 (내부 사용)
+    // Step3에서 추가된 필드들
+    fullDescription?: string;
+    phase1Complete?: boolean;
+    phase2Complete?: boolean;
+
+    // 구조 설계 (내부 사용)
     structure?: {
       sections: Step3Section[];
       flow: string;
       imgBudget: number;
     };
 
-    // Phase2: 콘텐츠 상세 (사용자 표시)
+    // 콘텐츠 상세 (사용자 표시)
     content?: {
       components: ComponentLine[];
       images: ImageLine[];
@@ -229,24 +238,21 @@ export interface Step3IntegratedResult {
     };
 
     isGenerating: boolean;
-    phase1Complete: boolean;
-    phase2Complete: boolean;
     retryCount?: number;  // 자동 재시도 횟수
 
     // 디버깅 정보
     debugInfo?: {
-      phase1?: {
-        prompt: string;
-        response: string;
-      };
-      phase2?: {
-        prompt: string;
-        response: string;
-      };
+      originalPrompt: string;
+      originalResponse: string;
+      parsedSections: string | { simplified: string } | Record<string, string>;
+      layoutValidation?: any;
+      qualityMetrics?: any;
     };
     parseError?: string;
     generatedAt: Date;
   }>;
+  designTokens?: DesignTokens;
+  processingTime?: number;
   generatedAt: Date;
 }
 
@@ -274,15 +280,29 @@ export interface ComponentLine {
 }
 
 export interface ImageLine {
-  filename: string;
-  purpose: 'diagram' | 'comparison' | 'illustration';
-  section: string;
-  place: 'left' | 'right' | 'center';
-  width: number;
-  height: number;
-  alt: string;
-  caption: string;
-  description: string;
-  aiPrompt: string;
-  style: string;
+  id?: string;
+  filename?: string;
+  fileName?: string;  // 호환성을 위해 추가
+  type?: 'image' | 'audio' | 'video' | 'animation';
+  purpose?: 'diagram' | 'comparison' | 'illustration' | string;
+  section?: string;
+  place?: 'left' | 'right' | 'center';
+  width?: number;
+  height?: number;
+  alt?: string;
+  caption?: string;
+  description?: string;
+  aiPrompt?: string;
+  style?: string;
+  sizeGuide?: string;
+  placement?: string | {
+    section: string;
+    position: string;
+    size: string;
+  };
+  accessibility?: {
+    altText: string;
+    caption: string;
+  };
+  structuredMetadata?: any; // 8가지 구조화된 메타데이터
 }

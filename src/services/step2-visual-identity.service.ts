@@ -86,151 +86,137 @@ export class Step2VisualIdentityService {
   }
 
   private createStep2Prompt(projectData: ProjectData): string {
-    const s1Json = JSON.stringify({
-      projectData: {
-        projectTitle: projectData.projectTitle,
-        targetAudience: projectData.targetAudience,
-        layoutMode: projectData.layoutMode,
-        contentMode: projectData.contentMode,
-        pages: projectData.pages
-      }
-    }, null, 2);
+    const constraintGuide = this.getSpaceConstraintGuide(projectData.layoutMode);
+    const audienceContext = this.getAudienceContext(projectData.targetAudience);
 
-    // 레이아웃 모드별 컴포넌트 스타일 가이드
-    const layoutGuide = this.getLayoutStyleGuide(projectData.layoutMode);
+    return `🎨 교육용 감성 무드 창작 브리프
 
-    return `교육용 프로젝트를 위한 비주얼 아이덴티티를 설계해주세요.
+당신은 교육 콘텐츠의 감정적 경험을 설계하는 창의적 파트너입니다.
+개발자가 "이런 분위기로 만들어보고 싶다!"고 느낄 수 있는 영감적 무드 가이드를 작성해주세요.
 
-프로젝트 정보:
-${s1Json}
+## 📚 프로젝트 맥락
+**주제**: ${projectData.projectTitle}
+**학습자**: ${projectData.targetAudience}
+${audienceContext}
 
-${layoutGuide}
+## 📐 중요한 공간 제약 (반드시 고려!)
+${constraintGuide}
 
-다음 형식으로 응답해주세요:
+## 🎭 당신의 임무
+이 교육 프로젝트가 학습자에게 어떤 감정적 경험을 선사할지 상상해보세요.
+단순히 "파란색을 써라"가 아니라 "왜 이 색상이 이 순간의 학습에 도움이 되는가"를 생각해주세요.
 
-BEGIN_S2
-VERSION=vi.v1
-MOOD=형용사1,형용사2,형용사3,형용사4
-COLOR_PRIMARY=#RRGGBB
-COLOR_SECONDARY=#RRGGBB
-COLOR_ACCENT=#RRGGBB
-BASE_SIZE_PT=${projectData.layoutMode === 'fixed' ? '18' : '20'}
-COMPONENT_STYLE=교육용 디자인 컨셉 설명
-END_S2
+다음과 같은 서술형 무드 가이드를 자유롭게 작성해주세요:
 
-요구사항:
-- 색상은 HEX 형식 6자리로 작성
-- BASE_SIZE_PT는 ${projectData.layoutMode === 'fixed' ? '18 (고정형 레이아웃 최적화)' : '20 (스크롤형 레이아웃 최적화)'}
-- MOOD는 쉼표로 구분된 4개 형용사
-- 프로젝트 주제와 레이아웃 제약에 적합한 창의적 디자인 제안`;
+---
+
+**🌟 이 교안이 전하고 싶은 감정과 분위기**
+(학습자가 느껴야 할 감정의 여정을 2-3문장으로 서술)
+
+**🎨 색상 감성 이야기**
+- **주요 색상**: "[감정을 불러일으키는 색상 설명]" (예: "신뢰감을 주는 딥 블루")
+- **보조 색상**: "[분위기를 받쳐주는 색상 설명]"
+- **강조 색상**: "[중요한 순간에 사용할 색상 설명]"
+
+**✨ 타이포그래피의 성격**
+- **제목 스타일**: "[어떤 느낌으로 읽혀야 하는지]" (예: "자신감 있으면서도 친근한")
+- **본문 스타일**: "[어떤 느낌으로 읽혀야 하는지]" (예: "편안하게 읽히는")
+
+**🎪 전체적인 컴포넌트 성격**
+(요소들이 서로 어떻게 조화를 이루면서도 각각의 개성을 살릴 수 있는지 2-3문장으로)
+
+**🎯 개발자를 위한 창의적 방향성**
+"이런 점을 고려하시면 더 좋을 것 같아요..." 식으로 구체적 제안이 아닌 영감을 주는 방향성 제시
+
+---
+
+**중요**: HEX 코드나 픽셀 단위는 언급하지 마세요. 감성과 경험 중심으로 서술해주세요.`;
+  }
+
+  private getSpaceConstraintGuide(layoutMode: 'fixed' | 'scrollable'): string {
+    if (layoutMode === 'fixed') {
+      return `**🚨 Fixed Mode (1600×1000px) - 절대 준수!**
+- 모든 콘텐츠가 스크롤 없이 한 화면에 들어와야 함
+- 높이 1000px를 절대 넘을 수 없음 (개발자가 이 점을 놓치기 쉬움)
+- 공간 효율성이 핵심: 압축적이면서도 아름다운 디자인이 필요
+- "제한된 공간에서 최대한의 임팩트"를 낼 수 있는 무드 제안`;
+    } else {
+      return `**📜 Scrollable Mode (1600×무제한) - 가로 너비만 준수!**
+- 가로 1600px는 절대 넘을 수 없음 (개발자가 가로 오버플로우 실수하기 쉬움)
+- 세로는 자유롭게 스크롤 가능하여 여유로운 구성 가능
+- 호흡감 있는 레이아웃: 섹션별 충분한 여백과 단계적 전개
+- "스토리텔링하듯 자연스러운 흐름"을 만들 수 있는 무드 제안`;
+    }
+  }
+
+  private getAudienceContext(targetAudience: string): string {
+    if (targetAudience.includes('초등') || targetAudience.includes('어린이')) {
+      return `**👶 어린이 대상**: 밝고 친근하며 호기심을 자극하는 분위기가 중요합니다.`;
+    } else if (targetAudience.includes('중학') || targetAudience.includes('청소년')) {
+      return `**🧒 중학생 대상**: 어리지 않다고 느끼면서도 부담스럽지 않은 세련된 분위기가 좋습니다.`;
+    } else if (targetAudience.includes('고등') || targetAudience.includes('고등학생')) {
+      return `**👨‍🎓 고등학생 대상**: 성숙하면서도 지루하지 않은, 트렌디한 감성이 효과적입니다.`;
+    } else if (targetAudience.includes('성인') || targetAudience.includes('대학생')) {
+      return `**👩‍💼 성인 대상**: 전문적이면서도 접근하기 쉬운, 신뢰할 수 있는 분위기가 필요합니다.`;
+    }
+    return `**🎯 대상 학습자**: ${targetAudience}의 특성을 고려한 적절한 분위기 연출이 중요합니다.`;
   }
 
   private parseStep2Response(content: string): Step2RawResponse {
-    console.log('🔍 Step2 응답 파싱 시작');
-    console.log('📄 전체 응답 내용:', content);
-    
-    const extracted = this.extractBetween(content, "BEGIN_S2", "END_S2");
-    if (!extracted) {
-      console.error('❌ 마커 파싱 실패. 응답에서 BEGIN_S2 또는 END_S2를 찾을 수 없습니다.');
-      console.log('🔍 BEGIN_S2 위치:', content.indexOf('BEGIN_S2'));
-      console.log('🔍 END_S2 위치:', content.indexOf('END_S2'));
-      throw new Error('BEGIN_S2/END_S2 마커를 찾을 수 없습니다');
-    }
+    console.log('🔍 Step2 창의적 브리프 처리 시작');
+    console.log('📄 전체 응답 내용:', content.substring(0, 500) + '...');
 
-    const lines = extracted.split('\n').filter(line => line.trim());
-    const kvPairs: Record<string, string> = {};
-    
-    for (const line of lines) {
-      const [key, ...valueParts] = line.split('=');
-      if (key && valueParts.length > 0) {
-        kvPairs[key.trim()] = valueParts.join('=').trim();
-      }
-    }
-
-    console.log('📋 파싱된 K/V 쌍:', kvPairs);
+    // 자연어 응답을 기본 구조로 변환
+    const creativeBrief = this.extractCreativeMood(content);
 
     const result: Step2RawResponse = {
-      version: kvPairs.VERSION || 'vi.v1',
-      mood: kvPairs.MOOD || '',
-      colorPrimary: this.normalizeHex(kvPairs.COLOR_PRIMARY || '#004D99'),
-      colorSecondary: this.normalizeHex(kvPairs.COLOR_SECONDARY || '#E9F4FF'),
-      colorAccent: this.normalizeHex(kvPairs.COLOR_ACCENT || '#FFCC00'),
-      baseSizePt: this.parseBaseSizePt(kvPairs.BASE_SIZE_PT || '20'),
-      componentStyle: this.normalizeCommaText(kvPairs.COMPONENT_STYLE || '기본 스타일')
+      version: 'creative.v1',
+      mood: creativeBrief.emotionalKeywords || '친근한,창의적인,교육적인,희망적인',
+      colorPrimary: '#2563EB', // 기본 신뢰감 있는 블루
+      colorSecondary: '#F1F5F9', // 기본 배경색
+      colorAccent: '#F59E0B', // 기본 강조색
+      baseSizePt: 20, // 기본 크기
+      componentStyle: creativeBrief.fullText || '창의적이고 교육적인 디자인'
     };
 
-    this.validateStep2Data(result);
+    console.log('✅ 창의적 브리프 처리 완료:', {
+      mood: result.mood,
+      hasFullText: result.componentStyle.length > 50
+    });
+
     return result;
   }
 
-  private extractBetween(text: string, startMarker: string, endMarker: string): string | null {
-    const startIndex = text.indexOf(startMarker);
-    
-    if (startIndex === -1) {
-      return null;
+  private extractCreativeMood(content: string): { emotionalKeywords: string; fullText: string } {
+    // 실제로는 자연어 처리하지만 현재는 기본값 반환
+    // 향후 더 정교한 자연어 파싱 또는 AI 기반 키워드 추출 적용 가능
+
+    // 감정 키워드 추출 시도
+    let emotionalKeywords = '';
+    const moodPatterns = [
+      /(?:분위기|느낌|감정).*?([가-힣]+(?:적인|한|로운))/g,
+      /(?:색상|컬러).*?([가-힣]+(?:적인|한|로운))/g
+    ];
+
+    const foundMoods: string[] = [];
+    moodPatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        foundMoods.push(match[1]);
+      }
+    });
+
+    if (foundMoods.length >= 4) {
+      emotionalKeywords = foundMoods.slice(0, 4).join(',');
     }
-    
-    const endIndex = text.indexOf(endMarker, startIndex);
-    
-    if (endIndex === -1) {
-      // END 마커가 없으면 START 마커 이후의 모든 내용을 사용
-      console.log('⚠️ END 마커를 찾을 수 없습니다. START 마커 이후의 모든 내용을 사용합니다.');
-      return text.slice(startIndex + startMarker.length).trim();
-    }
-    
-    return text.slice(startIndex + startMarker.length, endIndex).trim();
+
+    return {
+      emotionalKeywords,
+      fullText: content.trim()
+    };
   }
 
-  private normalizeHex(hex: string): string {
-    const cleanHex = hex.replace(/[^0-9a-fA-F]/g, '');
-    
-    if (cleanHex.length === 3) {
-      return '#' + cleanHex.split('').map(char => char + char).join('');
-    }
-    
-    if (cleanHex.length === 6) {
-      return '#' + cleanHex.toUpperCase();
-    }
-    
-    return '#004D99';
-  }
-
-  private parseBaseSizePt(value: string): number {
-    const num = parseInt(value, 10);
-    return (num === 18 || num === 20) ? num : 20;
-  }
-
-  private normalizeCommaText(text: string): string {
-    return text.replace(/，/g, ',');
-  }
-
-  private validateStep2Data(data: Step2RawResponse): void {
-    const warnings: string[] = [];
-    
-    if (!data.mood || data.mood.split(',').length !== 4) {
-      warnings.push('MOOD 형용사 4개 필요');
-    }
-    
-    if (!/^#[0-9A-F]{6}$/i.test(data.colorPrimary)) {
-      warnings.push('COLOR_PRIMARY HEX 형식 오류');
-    }
-    
-    if (!/^#[0-9A-F]{6}$/i.test(data.colorSecondary)) {
-      warnings.push('COLOR_SECONDARY HEX 형식 오류');
-    }
-    
-    if (!/^#[0-9A-F]{6}$/i.test(data.colorAccent)) {
-      warnings.push('COLOR_ACCENT HEX 형식 오류');
-    }
-    
-    if (data.baseSizePt !== 18 && data.baseSizePt !== 20) {
-      warnings.push('BASE_SIZE_PT는 18 또는 20만 허용');
-    }
-    
-    if (warnings.length > 0) {
-      console.warn('⚠️ Step2 검증 경고:', warnings);
-    }
-  }
+  // 기존의 복잡한 파싱 메서드들 제거됨 - 창의적 브리프 시스템에서는 불필요
 
   private assembleStep2(rawKV: Step2RawResponse, layoutMode: 'fixed' | 'scrollable'): { visualIdentity: VisualIdentity; designTokens: DesignTokens } {
     const visualIdentity: VisualIdentity = {

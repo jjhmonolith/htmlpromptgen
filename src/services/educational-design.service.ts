@@ -6,7 +6,8 @@ import {
   EmotionalContext,
   ComponentSpec,
   InteractionSpec,
-  ContentData
+  ContentData,
+  LayoutValidation
 } from '../types/educational-design.types';
 
 /**
@@ -103,7 +104,15 @@ export class EducationalDesignService {
 
     const response = await this.openAIService.generateCompletion(prompt, 'Educational Design');
 
-    return this.parseEducationalDesign(response.content, page, projectData, emotionalContext, prompt, response.content);
+    // 레이아웃 제약 검증 수행
+    const layoutValidation = this.validateLayoutConstraints(response.content, projectData.layoutMode);
+
+    if (!layoutValidation.isValid) {
+      console.warn(`⚠️ 페이지 ${page.pageNumber} 레이아웃 제약 위반:`, layoutValidation.errorType);
+      console.warn('제안 사항:', layoutValidation.suggestions);
+    }
+
+    return this.parseEducationalDesign(response.content, page, projectData, emotionalContext, prompt, response.content, layoutValidation);
   }
 
   private createEducationalDesignPrompt(
@@ -116,6 +125,7 @@ export class EducationalDesignService {
     const constraintInfo = this.getDetailedConstraints(projectData.layoutMode);
     const audienceInfo = this.getAudienceCharacteristics(projectData.targetAudience);
     const pageContext = this.getPageContext(pageIndex, totalPages);
+    const layoutConstraints = this.getLayoutConstraints(projectData.layoutMode);
 
     return `🎓 교육 콘텐츠 UI/UX 설계 전문가
 
@@ -136,6 +146,8 @@ ${pageContext}
 ## 📐 캔버스 제약
 ${constraintInfo}
 
+${layoutConstraints}
+
 ---
 
 # 🎯 완전한 교육 페이지 설계서
@@ -148,28 +160,47 @@ ${constraintInfo}
 
 ### 1. 페이지 구성 및 내용
 
-\`\`\`
 다음은 ${projectData.layoutMode === 'fixed' ? '1600x1000px 고정 화면(스크롤 없음)' : '1600px 너비, 세로 스크롤'} 기준, '${page.topic}' 페이지의 교육 콘텐츠 레이아웃 설계안입니다. ${emotionalContext.overallTone} 분위기를 살리면서, 콘텐츠의 중요도에 따른 시각적 계층을 분명히 합니다. ${projectData.targetAudience} 대상이므로 정보량은 부담 없이 핵심이 한눈에 들어오도록 구성합니다.
 
-1) 캔버스, 그리드, 여백
+**캔버스, 그리드, 여백**
 - 캔버스: ${projectData.layoutMode === 'fixed' ? '1600x1000px' : '1600x∞px (세로 스크롤)'}
 - 안전 여백: 사방 64px
 - 그리드: 12컬럼, 컬럼 폭 108px, 거터 24px (콘텐츠 폭 1472px)
 - 시선 흐름: [좌상단에서 시작하여 교육적 논리 순서에 따른 시선 흐름 설계]
 
-2) 타이포그래피(모든 텍스트 18pt 이상)
-- 제목(H1): 44pt, SemiBold, 행간 120%, 글자간 -1%, 컬러 #1E2A3A
-- 부제/리드(H2): 22pt, Medium, 행간 140%, 컬러 #2A3A4A
-- 본문: 19pt, Regular, 행간 150%, 컬러 #27323C
-- 캡션/라벨: 18pt, Medium, 행간 140%, 컬러 #4A5B6B
+**타이포그래피**
+- 제목(H1): 44pt, SemiBold, 행간 120%, 글자간 -1%
+- 부제/리드(H2): 22pt, Medium, 행간 140%
+- 본문: 19pt, Regular, 행간 150%
+- 캡션/라벨: 18pt, Medium, 행간 140%
 
-3) 컬러 & 분위기
-- 배경: [교육 주제에 맞는 배경색 #XXXXXX]
-- 주요 포인트: [3-4개 색상과 hex 코드]
+**컬러 & 분위기**
+- 배경: [교육 주제에 맞는 배경색]
+- 주요 포인트: [3-4개 색상 이름으로 표현]
 - 구분선/연결선: [색상과 스타일]
 - 접근성: 텍스트 대비율 4.5:1 이상 유지
 
-4) 레이아웃 구조(영역별 좌표/크기와 콘텐츠)
+**레이아웃 구조**
+
+🚨 **필수 제약사항**:
+- **${projectData.layoutMode === 'scrollable' ? 'Scrollable' : 'Fixed'} 모드**: 제목 포함 최대 ${projectData.layoutMode === 'scrollable' ? '5' : '3'}개 영역 (초과 절대 금지)
+- **인터랙션 요소 금지**: 퀴즈, 실습, 아코디언, 카드 뒤집기 등 Step4에서 처리
+- **반응형 고려 불필요**: 고정 크기 기준 설계
+${projectData.layoutMode === 'fixed' ? '- **총 높이 1000px 절대 초과 금지**' : ''}
+
+📐 **그리드 시스템**:
+
+**${projectData.layoutMode === 'scrollable' ? 'Scrollable' : 'Fixed'} 모드 (1600×${projectData.layoutMode === 'fixed' ? '1000' : '∞'}px)**:
+- 가로 12그리드: 컴럼 폭 108px, 거터 24px
+- 세로 ${projectData.layoutMode === 'fixed' ? '6그리드: 행 높이 140px, 거터 20px (안전여백 고려)' : '자유: 각 영역별 적절한 높이 설정'}
+- 영역 예시: A(풀와이드) → B(8/12+4/12) → C(6/12+6/12)${projectData.layoutMode === 'fixed' ? ' → D(4/12+4/12+4/12)' : ''}
+${projectData.layoutMode === 'fixed' ? '- 2D 그리드 활용: 예) A영역(12×2), B영역(8×3), C영역(4×3)' : ''}
+
+⚠️ **창의성 요구사항**:
+- 모든 영역이 풀와이드인 단조로운 구성 금지
+- 최소 2가지 이상의 그리드 조합 사용
+- 교육적 우선순위에 따른 시각적 위계 차등화
+
 [최소 4-6개 영역을 픽셀 단위로 정확히 설계]
 
 A. [영역명] (예: 상단 타이틀 영역)
@@ -184,41 +215,52 @@ B. [영역명] (예: 메인 비주얼 영역)
 
 [C, D, E, F... 영역들 계속]
 
-5) 교육 콘텐츠(문구) 상세
+**교육 콘텐츠(문구) 상세**
 - 제목: "[실제 사용할 구체적이고 매력적인 제목]"
 - 리드 문장: "[2-3줄의 핵심 설명]"
 - 학습 목표 (3-4개): "[체크 가능한 구체적 목표들]"
 - 핵심 내용: [실제 교육 내용을 구체적으로]
 
-6) 맞춤형 시각 요소
+**맞춤형 시각 요소**
 - 연결선/화살표: [교육 흐름을 보여주는 시각 요소]
 - 강조 카드: [중요 정보의 카드 디자인]
 - 인터랙션 힌트: [클릭, 호버 등 상호작용 가이드]
 
-7) 접근성/가독성
+**접근성/가독성**
 - 텍스트 최소 18pt 준수
 - 색상 대비율 4.5:1 이상
 - 스크린리더 대응
 - 키보드 네비게이션 고려
 
-8) 개발 구현 요약(픽셀 가이드)
-- [각 영역별 정확한 CSS 포지셀 정보]
+**개발 구현 요약(픽셀 가이드)**
+- [각 영역별 정확한 CSS 포지션 정보]
 - [반응형 고려사항]
 - [애니메이션 가이드]
 
-9) 페이지 교육 효과
+**페이지 교육 효과**
 - [이 설계가 달성하는 교육적 목표]
 - [인지 부하 최적화 방법]
 - [기억과 이해를 돕는 시각적 전략]
-\`\`\`
 
 ### 2. 페이지에 사용될 이미지
 
-**1.png**: [매우 구체적이고 상세한 이미지 설명. 교육 주제, 시각적 요소, 색상, 구성, 스타일, 배치까지 모두 명시. 최소 200-300자의 자세한 설명]
+각 이미지는 반드시 다음 7가지 요소를 모두 포함하여 300-400자로 상세히 설명해주세요:
 
-**2.png**: [두 번째 이미지의 매우 구체적인 설명]
+**1.png**:
+- 🎨 **주요 시각 요소**: [구체적인 객체들과 배치]
+- 🌈 **색상 구성**: [색상 이름으로만 표현, hex 코드 절대 금지]
+- 🔗 **페이지 내 맥락**: [이 이미지가 페이지의 어느 단계에서 어떤 흐름으로 사용되는지, 앞뒤 콘텐츠와의 연결점]
+- 🎭 **스타일과 질감**: [일러스트 스타일, 선의 굵기, 그라데이션 등]
+- 👥 **학습자 관점**: [이 연령대가 어떻게 인식할지]
+- 🔄 **교육적 기능**: [이 이미지가 달성하는 구체적 학습 목표]
+- ⚡ **시각적 역동성**: [움직임, 흐름, 시선 유도 방식]
 
-**3.png** (필요시): [세 번째 이미지의 매우 구체적인 설명]
+**2.png**, **3.png** (필요시): 위와 같은 7가지 형식으로 각각 작성
+
+⚠️ **필수 주의사항**:
+- 색상은 "밝은 파란색", "따뜻한 주황색" 등 자연어로만 표현
+- #000000, rgb() 등 모든 색상 코드 절대 금지
+- AI가 텍스트를 이미지에 포함시키는 오류 방지
 
 ---
 
@@ -231,7 +273,8 @@ B. [영역명] (예: 메인 비주얼 영역)
     projectData: ProjectData,
     emotionalContext: EmotionalContext,
     originalPrompt?: string,
-    originalResponse?: string
+    originalResponse?: string,
+    layoutValidation?: LayoutValidation
   ): EducationalPageDesign {
     console.log(`✅ 페이지 ${page.pageNumber} 2단위 구조 처리: 전체설명 + 기본구조`);
 
@@ -315,6 +358,9 @@ B. [영역명] (예: 메인 비주얼 영역)
       // Phase 2 개선: AI 응답에서 실제 이미지들 파싱 시도 + 기본 보장 이미지
       mediaAssets: this.parseAndGenerateImages(response, page, projectData, emotionalContext),
 
+      // 품질 관리 시스템 통합
+      qualityMetrics: this.calculatePageQuality(response, page, projectData),
+
       designRationale: '안정적이고 효과적인 교육 구조',
       implementationHints: '사용자 중심의 직관적 인터페이스 구현',
       uxConsiderations: '접근성과 학습 효과 최우선',
@@ -326,7 +372,9 @@ B. [영역명] (예: 메인 비주얼 영역)
       debugInfo: originalPrompt && originalResponse ? {
         originalPrompt,
         originalResponse,
-        parsedSections: { fullContent: response.substring(0, 200) + '...' }
+        parsedSections: { fullContent: response.substring(0, 200) + '...' },
+        layoutValidation,
+        qualityMetrics: this.calculatePageQuality(response, page, projectData)
       } : undefined
     };
   }
@@ -465,7 +513,7 @@ B. [영역명] (예: 메인 비주얼 영역)
     return fallbackImages;
   }
 
-  // AI 응답에서 이미지 정보 추출 (새로운 형식에 맞춘 버전)
+  // AI 응답에서 이미지 정보 추출 (개선된 8가지 메타데이터 파싱)
   private extractImagesFromResponse(response: string, page: any, projectData: ProjectData, emotionalContext: EmotionalContext): any[] {
     const images: any[] = [];
 
@@ -479,12 +527,14 @@ B. [영역명] (예: 메인 비주얼 영역)
     const imageContent = imageSection[1];
     console.log('🔍 이미지 섹션 내용:', imageContent.substring(0, 300) + '...');
 
-    // 새로운 설계서 형식에 맞춘 파싱:
-    // **1.png**: [매우 구체적이고 상세한 이미지 설명...]
-    // **2.png**: [두 번째 이미지의 매우 구체적인 설명...]
+    // 개선된 8가지 메타데이터 파싱:
+    // **1.png**:
+    // - 🎨 **주요 시각 요소**: [...]
+    // - 🌈 **색상 구성**: [...]
+    // ...
 
-    // 이미지 항목들을 찾기
-    const imageMatches = imageContent.match(/\*\*(\d+)\.png\*\*:\s*([^\n*]+(?:\n(?!\*\*)[^\n*]+)*)/g);
+    // 이미지 항목들을 찾기 (구조화된 형식)
+    const imageMatches = imageContent.match(/\*\*(\d+)\.png\*\*:[\s\S]*?(?=\*\*\d+\.png\*\*:|$)/g);
 
     if (!imageMatches) {
       console.log('❌ 이미지 항목을 찾을 수 없음');
@@ -494,47 +544,59 @@ B. [영역명] (예: 메인 비주얼 영역)
     console.log(`🔍 발견된 이미지 항목: ${imageMatches.length}개`);
 
     imageMatches.forEach((match, index) => {
-      console.log(`📝 이미지 항목 ${index + 1} 파싱 시도:`, match.substring(0, 100) + '...');
+      console.log(`📝 이미지 항목 ${index + 1} 파싱 시도:`, match.substring(0, 200) + '...');
 
-      // 파일명과 설명 추출
-      const itemMatch = match.match(/\*\*(\d+)\.png\*\*:\s*(.+)/s);
-
-      if (itemMatch) {
-        const [, imageNumber, description] = itemMatch;
-        const imageCounter = parseInt(imageNumber);
-
-        console.log(`✅ 이미지 ${imageCounter} 파싱 성공`);
-        console.log(`- 파일명: ${imageNumber}.png`);
-        console.log(`- 설명: ${description.substring(0, 100)}...`);
-
-        // 설명에서 크기 정보 추출 시도 (있다면)
-        const sizeMatch = description.match(/(\d+)×(\d+)px/);
-        const width = sizeMatch ? parseInt(sizeMatch[1]) : 600;
-        const height = sizeMatch ? parseInt(sizeMatch[2]) : 400;
-
-        images.push({
-          id: `page-${page.pageNumber}-${imageCounter}`,
-          fileName: `${imageCounter}.png`,
-          path: `~/image/page${page.pageNumber}/${imageCounter}.png`,
-          type: 'image',
-          category: '교육 시각화',
-          purpose: `교육 시각 자료 ${imageCounter}`,
-          description: description.trim(),
-          sizeGuide: `${width}×${height}px`,
-          placement: {
-            section: '메인 영역',
-            position: imageCounter === 1 ? '중앙' : `위치${imageCounter}`,
-            size: `${width}×${height}px`
-          },
-          accessibility: {
-            altText: `${page.topic} 관련 교육 이미지`,
-            caption: `${page.topic} 시각 자료`
-          },
-          aiPrompt: this.extractAIPromptFromDescription(description, page.topic)
-        });
-      } else {
-        console.log(`❌ 이미지 항목 ${index + 1} 파싱 실패`);
+      // 파일명 추출
+      const fileNameMatch = match.match(/\*\*(\d+)\.png\*\*:/);
+      if (!fileNameMatch) {
+        console.log(`❌ 이미지 ${index + 1} 파일명 추출 실패`);
+        return;
       }
+
+      const imageNumber = fileNameMatch[1];
+      const imageCounter = parseInt(imageNumber);
+
+      // 8가지 메타데이터 추출
+      const structuredMetadata = this.parseStructuredImageMetadata(match, page.topic);
+
+      // 색상 코드 검증
+      this.validateNoColorCodes(structuredMetadata.colorScheme || '');
+
+      console.log(`✅ 이미지 ${imageCounter} 구조화된 파싱 성공`);
+      console.log(`- 파일명: ${imageNumber}.png`);
+      console.log(`- 시각 요소: ${(structuredMetadata.visualElements || '').substring(0, 50)}...`);
+      console.log(`- 색상 구성: ${(structuredMetadata.colorScheme || '').substring(0, 50)}...`);
+
+      // 설명에서 크기 정보 추출 시도
+      const sizeMatch = match.match(/(\d+)×(\d+)px/);
+      const width = sizeMatch ? parseInt(sizeMatch[1]) : 600;
+      const height = sizeMatch ? parseInt(sizeMatch[2]) : 400;
+
+      // AI 프롬프트 생성 (8가지 요소 종합, 색상은 자연어만)
+      const enhancedAIPrompt = this.generateEnhancedAIPrompt(structuredMetadata, page.topic);
+
+      images.push({
+        id: `page-${page.pageNumber}-${imageCounter}`,
+        fileName: `${imageCounter}.png`,
+        path: `~/image/page${page.pageNumber}/${imageCounter}.png`,
+        type: 'image',
+        category: '교육 시각화',
+        purpose: `교육 시각 자료 ${imageCounter}`,
+        description: match.trim(),
+        sizeGuide: `${width}×${height}px`,
+        placement: {
+          section: '메인 영역',
+          position: imageCounter === 1 ? '중앙' : `위치${imageCounter}`,
+          size: `${width}×${height}px`
+        },
+        accessibility: {
+          altText: `${page.topic} 관련 교육 이미지`,
+          caption: `${page.topic} 시각 자료`
+        },
+        aiPrompt: enhancedAIPrompt,
+        // 8가지 구조화된 메타데이터 추가
+        structuredMetadata
+      });
     });
 
     return images;
@@ -812,6 +874,23 @@ Create an image that serves as an effective educational tool, helping learners g
     }
   }
 
+  private getLayoutConstraints(layoutMode: 'fixed' | 'scrollable'): string {
+    const maxAreas = layoutMode === 'fixed' ? 3 : 5;
+    return `
+🚨 **절대 준수 사항** (개발 실패 방지):
+- **영역 개수 제한**: ${layoutMode} 모드는 제목 포함 최대 ${maxAreas}개 영역만 허용
+- **인터랙션 요소 금지**: 퀴즈, 실습, 아코디언, 카드 뒤집기, 애니메이션 등 Step4에서 처리
+${layoutMode === 'fixed' ? '- **총 높이 제한**: 1000px 절대 초과 금지' : ''}
+- **반응형 고려 불필요**: 고정 크기 기준 설계
+- **색상 코드 금지**: 이미지 설명에서 헥스 코드 사용 절대 금지
+
+📐 **레이아웃 창의성 가이드**:
+- 모든 영역이 풀와이드인 단조로운 구성 금지
+- 최소 2가지 이상의 그리드 조합 사용 필수
+- 교육적 우선순위에 따른 시각적 위계 차등화 필수
+`;
+  }
+
   private getSpaceConstraintReminders(layoutMode: 'fixed' | 'scrollable'): string[] {
     if (layoutMode === 'fixed') {
       return [
@@ -828,6 +907,284 @@ Create an image that serves as an effective educational tool, helping learners g
         '자연스러운 세로 흐름 유지'
       ];
     }
+  }
+
+  // 8가지 메타데이터 파싱
+  private parseStructuredImageMetadata(imageText: string, topic: string): any {
+    const metadata: any = {};
+
+    // 8가지 요소 추출
+    const patterns = {
+      visualElements: /🎨 \*\*주요 시각 요소\*\*:\s*([^\n-]+)/,
+      colorScheme: /🌈 \*\*색상 구성\*\*:\s*([^\n-]+)/,
+      pageContext: /🔗 \*\*페이지 내 맥락\*\*:\s*([^\n-]+)/,
+      styleTexture: /🎭 \*\*스타일과 질감\*\*:\s*([^\n-]+)/,
+      learnerPerspective: /👥 \*\*학습자 관점\*\*:\s*([^\n-]+)/,
+      educationalFunction: /🔄 \*\*교육적 기능\*\*:\s*([^\n-]+)/,
+      visualDynamics: /⚡ \*\*시각적 역동성\*\*:\s*([^\n-]+)/
+    };
+
+    Object.entries(patterns).forEach(([key, pattern]) => {
+      const match = imageText.match(pattern);
+      metadata[key] = match ? match[1].trim() : `${topic} 관련 ${key}`;
+    });
+
+    return metadata;
+  }
+
+  // 색상 코드 검증
+  private validateNoColorCodes(colorDescription: string): void {
+    const colorCodePatterns = [/#[A-Fa-f0-9]{3,6}/, /rgb\(/, /rgba\(/, /hsl\(/];
+
+    colorCodePatterns.forEach(pattern => {
+      if (pattern.test(colorDescription)) {
+        console.warn('⚠️ 색상 코드 감지됨 - AI 이미지 생성 오류 위험:', colorDescription);
+        // 색상 코드를 자연어로 변환하는 로직 추가 가능
+      }
+    });
+  }
+
+  // 8가지 요소 종합 AI 프롬프트 생성
+  private generateEnhancedAIPrompt(metadata: any, topic: string): string {
+    return `Educational illustration for "${topic}".
+
+Visual Elements: ${metadata.visualElements || 'Clear educational content'}
+Color Composition: ${metadata.colorScheme || 'Natural, readable colors'} (NO hex codes, natural color names only)
+Page Context: ${metadata.pageContext || 'Main content area'}
+Style and Texture: ${metadata.styleTexture || 'Clean educational style'}
+Learner Perspective: ${metadata.learnerPerspective || 'Age-appropriate design'}
+Educational Function: ${metadata.educationalFunction || 'Support learning objectives'}
+Visual Dynamics: ${metadata.visualDynamics || 'Clear information flow'}
+
+Create a comprehensive educational image that combines all these elements effectively, using only natural color descriptions without any color codes.`;
+  }
+
+  // 레이아웃 제약 검증 시스템
+  private validateLayoutConstraints(
+    response: string,
+    layoutMode: 'fixed' | 'scrollable'
+  ): LayoutValidation {
+    const layoutSection = response.match(/4\) 레이아웃 구조.*?(?=\n5\)|$)/s);
+    if (!layoutSection) {
+      return {
+        isValid: false,
+        errorType: 'AREA_LIMIT_EXCEEDED',
+        suggestions: ['레이아웃 구조 섹션을 찾을 수 없음']
+      };
+    }
+
+    const layoutContent = layoutSection[0];
+
+    // 1. 영역 개수 검증
+    const areaMatches = layoutContent.match(/[A-Z]\.\s/g);
+    const areaCount = areaMatches ? areaMatches.length : 0;
+    const maxAreas = layoutMode === 'fixed' ? 3 : 5;
+
+    if (areaCount > maxAreas) {
+      return {
+        isValid: false,
+        errorType: 'AREA_LIMIT_EXCEEDED',
+        areaCount,
+        maxAllowed: maxAreas,
+        suggestions: [
+          `${layoutMode} 모드는 최대 ${maxAreas}개 영역만 허용 (현재: ${areaCount}개)`,
+          '영역을 통합하거나 중요도에 따라 제거 필요'
+        ]
+      };
+    }
+
+    // 2. Fixed 모드 높이 검증
+    if (layoutMode === 'fixed') {
+      const heightMatches = layoutContent.match(/(\d+)px/g);
+      if (heightMatches) {
+        const totalHeight = heightMatches
+          .map(h => parseInt(h.replace('px', '')))
+          .reduce((sum, h) => sum + (h > 100 ? h : 0), 0); // 높이값만 합산
+
+        if (totalHeight > 1000) {
+          return {
+            isValid: false,
+            errorType: 'HEIGHT_EXCEEDED',
+            suggestions: [
+              `총 높이 ${totalHeight}px로 1000px 초과`,
+              '각 영역 높이 축소 또는 2D 그리드 시스템 활용 필요'
+            ]
+          };
+        }
+      }
+    }
+
+    // 3. 인터랙션 요소 검증
+    const interactionKeywords = ['퀴즈', '실습', '아코디언', '카드 뒤집기', '애니메이션', '드래그', '클릭'];
+    const hasInteraction = interactionKeywords.some(keyword =>
+      layoutContent.toLowerCase().includes(keyword.toLowerCase())
+    );
+
+    if (hasInteraction) {
+      return {
+        isValid: false,
+        errorType: 'INTERACTION_DETECTED',
+        suggestions: [
+          '인터랙션 요소는 Step4에서 처리 예정',
+          '정적 콘텐츠 구조만 설계'
+        ]
+      };
+    }
+
+    // 4. 색상 코드 검증
+    const colorCodePattern = /#[A-Fa-f0-9]{3,6}|rgb\(|rgba\(|hsl\(/;
+    if (colorCodePattern.test(response)) {
+      return {
+        isValid: false,
+        errorType: 'COLOR_CODE_DETECTED',
+        suggestions: [
+          '색상 코드 감지됨 - AI 이미지 생성 오류 위험',
+          '자연어 색상 표현으로 변경 필요'
+        ]
+      };
+    }
+
+    // 5. 창의성 검증
+    const isMonotone = this.checkLayoutMonotone(layoutContent);
+    const suggestions: string[] = [];
+
+    if (isMonotone) {
+      suggestions.push('더 다양한 그리드 조합 사용 권장');
+    }
+
+    if (areaCount < 2) {
+      suggestions.push('교육적 우선순위에 따른 시각적 위계 적용 권장');
+    }
+
+    return {
+      isValid: true,
+      suggestions,
+      warnings: suggestions.length > 0 ? ['레이아웃 창의성 개선 가능'] : undefined
+    };
+  }
+
+  // 단조로운 레이아웃 검사
+  private checkLayoutMonotone(layoutContent: string): boolean {
+    const fullWidthCount = (layoutContent.match(/1600px|풀와이드|전체\s*너비/g) || []).length;
+    const totalAreas = (layoutContent.match(/[A-Z]\.\s/g) || []).length;
+
+    return totalAreas > 2 && fullWidthCount >= totalAreas - 1;
+  }
+
+  // 페이지 전체 품질 계산
+  private calculatePageQuality(response: string, page: any, projectData: ProjectData): QualityMetrics {
+    const imageSection = response.match(/### 2\. 페이지에 사용될 이미지(.*?)(?=\n###|\n---|\n##|$)/s);
+    const layoutSection = response.match(/4\) 레이아웃 구조(.*?)(?=\n\d+\)|$)/s);
+
+    // 이미지 품질 점수 계산
+    let imageDetailScore = 50; // 기본값
+    if (imageSection) {
+      const imageQuality = this.checkImageDescriptionQuality(imageSection[1]);
+      imageDetailScore = imageQuality.imageDetailScore;
+    }
+
+    // 레이아웃 다양성 점수 계산
+    let layoutDiversityScore = 50; // 기본값
+    if (layoutSection) {
+      layoutDiversityScore = this.calculateLayoutDiversity(layoutSection[1]);
+    }
+
+    // 제약 준수 점수 계산
+    const layoutValidation = this.validateLayoutConstraints(response, projectData.layoutMode);
+    const constraintComplianceScore = layoutValidation.isValid ? 100 : 30;
+
+    // 전체 품질 점수
+    const overallQualityScore = Math.round(
+      (imageDetailScore * 0.4 + layoutDiversityScore * 0.3 + constraintComplianceScore * 0.3)
+    );
+
+    // 제안사항 수집
+    const suggestions: string[] = [];
+    const warnings: string[] = [];
+
+    if (imageDetailScore < 80) suggestions.push('이미지 설명의 구체성을 향상시키세요');
+    if (layoutDiversityScore < 75) suggestions.push('더 다양한 레이아웃 패턴을 사용하세요');
+    if (!layoutValidation.isValid) {
+      warnings.push(`레이아웃 제약 위반: ${layoutValidation.errorType}`);
+      suggestions.push(...layoutValidation.suggestions);
+    }
+
+    return {
+      imageDetailScore,
+      layoutDiversityScore,
+      constraintComplianceScore,
+      overallQualityScore,
+      suggestions,
+      warnings
+    };
+  }
+
+  // 이미지 설명 품질 검사
+  private checkImageDescriptionQuality(imageSection: string): { imageDetailScore: number } {
+    let score = 0;
+    const checks = [
+      { pattern: /🎨.*주요 시각 요소/s, points: 15, name: '시각 요소' },
+      { pattern: /🌈.*색상 구성/s, points: 15, name: '색상 구성' },
+      { pattern: /🔗.*페이지 내 맥락/s, points: 15, name: '페이지 맥락' },
+      { pattern: /🎭.*스타일과 질감/s, points: 15, name: '스타일' },
+      { pattern: /👥.*학습자 관점/s, points: 15, name: '학습자 관점' },
+      { pattern: /🔄.*교육적 기능/s, points: 15, name: '교육 기능' },
+      { pattern: /⚡.*시각적 역동성/s, points: 10, name: '시각 역동성' }
+    ];
+
+    // 8가지 요소 체크
+    checks.forEach(check => {
+      if (check.pattern.test(imageSection)) {
+        score += check.points;
+      }
+    });
+
+    // 길이 보너스 (300-400자 권장)
+    const cleanText = imageSection.replace(/[🎨🌈📐🎭👥🔄⚡\*\-\n]/g, '').trim();
+    if (cleanText.length >= 300 && cleanText.length <= 500) {
+      score += 10; // 적절한 길이 보너스
+    } else if (cleanText.length >= 200) {
+      score += 5; // 부분 점수
+    }
+
+    return { imageDetailScore: Math.min(score, 100) };
+  }
+
+  // 레이아웃 다양성 점수 계산
+  private calculateLayoutDiversity(layoutText: string): number {
+    const diversityIndicators = [
+      { pattern: /풀와이드|1600px|전체.*너비/g, type: 'fullwidth', score: 10 },
+      { pattern: /8\/12|67%|2\/3/g, type: 'two-thirds', score: 15 },
+      { pattern: /6\/12|50%|1\/2/g, type: 'half', score: 15 },
+      { pattern: /4\/12|33%|1\/3/g, type: 'one-third', score: 20 },
+      { pattern: /중앙.*정렬|센터/g, type: 'centered', score: 10 },
+      { pattern: /좌우.*분할|양쪽/g, type: 'split', score: 15 },
+      { pattern: /3분할|tri/g, type: 'triple', score: 20 }
+    ];
+
+    const usedPatterns = new Set<string>();
+    let totalScore = 0;
+
+    diversityIndicators.forEach(indicator => {
+      const matches = layoutText.match(indicator.pattern);
+      if (matches && matches.length > 0) {
+        usedPatterns.add(indicator.type);
+        totalScore += indicator.score;
+      }
+    });
+
+    // 다양성 보너스
+    const uniquePatterns = usedPatterns.size;
+    let diversityBonus = 0;
+    if (uniquePatterns >= 3) diversityBonus = 20;
+    else if (uniquePatterns >= 2) diversityBonus = 10;
+
+    // 창의성 패널티 (모든 영역이 풀와이드인 경우)
+    const areaCount = (layoutText.match(/[A-Z]\.\s/g) || []).length;
+    const fullwidthCount = (layoutText.match(/풀와이드|1600px|전체.*너비/g) || []).length;
+    const monotonePenalty = (areaCount > 2 && fullwidthCount >= areaCount - 1) ? -30 : 0;
+
+    return Math.max(0, Math.min(100, totalScore + diversityBonus + monotonePenalty));
   }
 
   private createFallbackPageDesign(page: any): EducationalPageDesign {

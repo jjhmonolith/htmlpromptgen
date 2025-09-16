@@ -136,14 +136,40 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
       <div className="max-w-4xl mx-auto px-4 xl:px-8 2xl:px-12 py-12">
         <div className="mb-8">
           <div className="flex items-center mb-6">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
+            <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
               2
             </div>
-            <h1 className="text-3xl font-bold text-gray-900">비주얼 아이덴티티</h1>
+            <h1 className="text-3xl font-bold text-gray-900">감성 무드 지휘</h1>
           </div>
-          <p className="text-lg text-gray-600 mb-8">
-            프로젝트의 분위기와 색상, 타이포그래피를 정의합니다.
+          <p className="text-lg text-gray-600 mb-6">
+            🎭 학습자의 감정적 여정에 맞는 색상, 타이포그래피, 무드를 창조하는 감성 오케스트레이터입니다.
           </p>
+          <div className="bg-gradient-to-r from-purple-50 via-pink-50 to-blue-50 border-l-4 border-purple-400 p-6 mb-8 rounded-r-xl">
+            <div className="flex">
+              <div className="flex-shrink-0">
+                <div className="w-8 h-8 bg-purple-100 rounded-full flex items-center justify-center">
+                  🎭
+                </div>
+              </div>
+              <div className="ml-4">
+                <h4 className="text-lg font-semibold text-purple-900 mb-2">감성 지휘자 역할 분담</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="bg-white/70 rounded-lg p-3">
+                    <p className="text-sm text-purple-800">
+                      <span className="font-semibold">🎨 AI 감성 설계:</span><br/>
+                      스토리 배경, 색상 감정, 타이포그래피 성격, 컴포넌트 캐릭터
+                    </p>
+                  </div>
+                  <div className="bg-white/70 rounded-lg p-3">
+                    <p className="text-sm text-purple-800">
+                      <span className="font-semibold">⭐ 개발자 창작:</span><br/>
+                      시각적 완성도, 감성 애니메이션, 사용자와의 감정적 소통
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
         {error && (
@@ -181,101 +207,211 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
         
         {step2Data && (
           <div className="space-y-6">
-            <div className="bg-white rounded-xl p-6 shadow-sm">
-              <h3 className="text-xl font-semibold text-gray-900 mb-6">생성된 비주얼 아이덴티티</h3>
-              
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <div className="bg-white rounded-xl p-8 shadow-sm border border-gray-100">
+              <div className="flex items-center mb-8">
+                <div className="p-3 bg-gradient-to-br from-purple-200 via-pink-200 to-blue-200 rounded-xl mr-4">
+                  <div className="text-2xl">🎭</div>
+                </div>
                 <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">무드 & 톤</h4>
-                  <div className="flex flex-wrap gap-2 mb-6">
-                    {step2Data.visualIdentity.moodAndTone.map((mood, index) => (
-                      <span key={index} className="px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm font-medium">
-                        {mood}
-                      </span>
-                    ))}
+                  <h3 className="text-2xl font-bold text-gray-900">감성 오케스트라 완성</h3>
+                  <p className="text-sm text-gray-600 mt-1">
+                    <span className="bg-purple-100 px-2 py-1 rounded-full text-purple-800 text-xs font-medium mr-2">
+                      {projectData.targetAudience}
+                    </span>
+                    <span className="text-gray-700">{projectData.projectTitle} 전용 감성 무드</span>
+                  </p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2">
+                  <div className="mb-8">
+                    <div className="flex items-center mb-4">
+                      <div className="w-8 h-8 bg-gradient-to-br from-purple-200 to-pink-200 rounded-full flex items-center justify-center mr-3">
+                        <span className="text-lg">🌅</span>
+                      </div>
+                      <h4 className="text-lg font-semibold text-gray-900">감성적 무드 오케스트라</h4>
+                    </div>
+                    <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 rounded-xl p-6 mb-4 border border-purple-100">
+                      <div className="flex flex-wrap gap-3 mb-6">
+                        {step2Data.visualIdentity.moodAndTone.map((mood, index) => (
+                          <div key={index} className="group relative">
+                            <span className="inline-block px-4 py-3 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-900 rounded-full text-sm font-semibold shadow-sm border border-purple-200 hover:shadow-md transition-all duration-200 hover:scale-105">
+                              {mood}
+                            </span>
+                            <div className="absolute -top-2 -right-2 w-4 h-4 bg-yellow-300 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                              <span className="text-xs">✨</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="bg-white/80 backdrop-blur-sm rounded-lg p-4 border border-purple-200">
+                        <p className="text-sm text-purple-800 leading-relaxed font-medium">
+                          🎼 <span className="font-semibold">감성 하모니:</span> 이 무드들이 조화롭게 어우러져 학습자에게 몰입감 있는 교육 경험을 선사합니다.
+                        </p>
+                      </div>
+                    </div>
                   </div>
 
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">색상 팔레트</h4>
-                  <div className="grid grid-cols-3 gap-4 mb-6">
-                    <div className="text-center">
-                      <div 
-                        className="w-full h-16 rounded-lg mb-2 border"
-                        style={{ backgroundColor: step2Data.visualIdentity.colorPalette.primary }}
-                      ></div>
-                      <p className="text-sm font-medium text-gray-700">Primary</p>
-                      <p className="text-xs text-gray-500">{step2Data.visualIdentity.colorPalette.primary}</p>
+                  <div className="mb-8">
+                    <div className="flex items-center mb-4">
+                      <div className="w-6 h-6 bg-pink-100 rounded-full flex items-center justify-center mr-3">
+                        🎨
+                      </div>
+                      <h4 className="text-lg font-medium text-gray-900">색상 팔레트</h4>
                     </div>
-                    <div className="text-center">
-                      <div 
-                        className="w-full h-16 rounded-lg mb-2 border"
-                        style={{ backgroundColor: step2Data.visualIdentity.colorPalette.secondary }}
-                      ></div>
-                      <p className="text-sm font-medium text-gray-700">Secondary</p>
-                      <p className="text-xs text-gray-500">{step2Data.visualIdentity.colorPalette.secondary}</p>
-                    </div>
-                    <div className="text-center">
-                      <div 
-                        className="w-full h-16 rounded-lg mb-2 border"
-                        style={{ backgroundColor: step2Data.visualIdentity.colorPalette.accent }}
-                      ></div>
-                      <p className="text-sm font-medium text-gray-700">Accent</p>
-                      <p className="text-xs text-gray-500">{step2Data.visualIdentity.colorPalette.accent}</p>
+                    <div className="space-y-4">
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <div className="grid grid-cols-5 gap-3 mb-4">
+                          <div className="text-center">
+                            <div
+                              className="w-full h-20 rounded-lg mb-2 border shadow-sm"
+                              style={{ backgroundColor: step2Data.visualIdentity.colorPalette.primary }}
+                            ></div>
+                            <p className="text-xs font-medium text-gray-700">Primary</p>
+                            <p className="text-xs text-gray-500 font-mono">{step2Data.visualIdentity.colorPalette.primary}</p>
+                          </div>
+                          <div className="text-center">
+                            <div
+                              className="w-full h-20 rounded-lg mb-2 border shadow-sm"
+                              style={{ backgroundColor: step2Data.visualIdentity.colorPalette.secondary }}
+                            ></div>
+                            <p className="text-xs font-medium text-gray-700">Secondary</p>
+                            <p className="text-xs text-gray-500 font-mono">{step2Data.visualIdentity.colorPalette.secondary}</p>
+                          </div>
+                          <div className="text-center">
+                            <div
+                              className="w-full h-20 rounded-lg mb-2 border shadow-sm"
+                              style={{ backgroundColor: step2Data.visualIdentity.colorPalette.accent }}
+                            ></div>
+                            <p className="text-xs font-medium text-gray-700">Accent</p>
+                            <p className="text-xs text-gray-500 font-mono">{step2Data.visualIdentity.colorPalette.accent}</p>
+                          </div>
+                          <div className="text-center">
+                            <div
+                              className="w-full h-20 rounded-lg mb-2 border shadow-sm"
+                              style={{ backgroundColor: step2Data.visualIdentity.colorPalette.text }}
+                            ></div>
+                            <p className="text-xs font-medium text-gray-700">Text</p>
+                            <p className="text-xs text-gray-500 font-mono">{step2Data.visualIdentity.colorPalette.text}</p>
+                          </div>
+                          <div className="text-center">
+                            <div
+                              className="w-full h-20 rounded-lg mb-2 border shadow-sm"
+                              style={{ backgroundColor: step2Data.visualIdentity.colorPalette.background }}
+                            ></div>
+                            <p className="text-xs font-medium text-gray-700">Background</p>
+                            <p className="text-xs text-gray-500 font-mono">{step2Data.visualIdentity.colorPalette.background}</p>
+                          </div>
+                        </div>
+                        <div className="bg-white rounded-lg p-3">
+                          <p className="text-xs text-gray-600">
+                            💡 <span className="font-medium">개발자 팁:</span> Primary는 주요 요소에, Accent는 중요한 버튼이나 강조 요소에 사용하세요.
+                          </p>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
 
-                <div>
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">타이포그래피</h4>
-                  <div className="bg-gray-50 rounded-lg p-4 mb-6">
-                    <div className="mb-3">
-                      <p className="text-sm text-gray-600">헤딩 폰트</p>
-                      <p className="font-semibold text-gray-900">{step2Data.visualIdentity.typography.headingFont}</p>
+                <div className="space-y-6">
+                  <div>
+                    <div className="flex items-center mb-4">
+                      <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3">
+                        🔠
+                      </div>
+                      <h4 className="text-lg font-medium text-gray-900">타이포그래피</h4>
                     </div>
-                    <div className="mb-3">
-                      <p className="text-sm text-gray-600">본문 폰트</p>
-                      <p className="font-medium text-gray-900">{step2Data.visualIdentity.typography.bodyFont}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-600">기본 크기</p>
-                      <p className="font-medium text-gray-900">{step2Data.visualIdentity.typography.baseSize}</p>
+                    <div className="bg-gradient-to-b from-green-50 to-blue-50 rounded-lg p-6">
+                      <div className="space-y-4">
+                        <div className="bg-white rounded-lg p-4 shadow-sm">
+                          <p className="text-xs text-green-600 font-medium mb-2">헤딩 폰트</p>
+                          <p className="text-2xl font-bold text-gray-900" style={{ fontFamily: step2Data.visualIdentity.typography.headingFont }}>
+                            {step2Data.visualIdentity.typography.headingFont}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">제목과 주요 헤딩에 사용</p>
+                        </div>
+
+                        <div className="bg-white rounded-lg p-4 shadow-sm">
+                          <p className="text-xs text-blue-600 font-medium mb-2">본문 폰트</p>
+                          <p className="text-lg font-medium text-gray-900" style={{ fontFamily: step2Data.visualIdentity.typography.bodyFont }}>
+                            {step2Data.visualIdentity.typography.bodyFont}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">본문 텍스트와 설명에 사용</p>
+                        </div>
+
+                        <div className="bg-white rounded-lg p-4 shadow-sm">
+                          <p className="text-xs text-purple-600 font-medium mb-2">기본 크기</p>
+                          <p className="text-lg font-semibold text-gray-900">
+                            {step2Data.visualIdentity.typography.baseSize}
+                          </p>
+                          <p className="text-xs text-gray-500 mt-1">반응형 디자인의 기준점</p>
+                        </div>
+                      </div>
                     </div>
                   </div>
 
-                  <h4 className="text-lg font-medium text-gray-900 mb-4">컴포넌트 스타일</h4>
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <p className="text-sm text-gray-700 leading-relaxed">
-                      {step2Data.visualIdentity.componentStyle}
-                    </p>
+                  <div>
+                    <div className="flex items-center mb-4">
+                      <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
+                        ✨
+                      </div>
+                      <h4 className="text-lg font-medium text-gray-900">시각적 느낌</h4>
+                    </div>
+                    <div className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-lg p-6">
+                      <div className="bg-white rounded-lg p-4 shadow-sm">
+                        <p className="text-sm text-gray-700 leading-relaxed">
+                          {step2Data.visualIdentity.componentStyle}
+                        </p>
+                        <div className="mt-4 p-3 bg-amber-50 rounded-lg">
+                          <p className="text-xs text-amber-700">
+                            💡 <span className="font-medium">기대 효과:</span> 이 스타일 가이드에 따라 개발하면 학습자가 편안하고 집중할 수 있는 환경이 만들어집니다.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-between items-center">
-              <div className="flex gap-3">
-                {onBack && (
+            {/* 액션 버튼 */}
+            <div className="bg-gray-50 rounded-xl p-6 mt-8">
+              <div className="flex justify-between items-center">
+                <div className="flex gap-3">
+                  {onBack && (
+                    <button
+                      onClick={onBack}
+                      className="px-6 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-colors shadow-sm border border-gray-200 font-medium"
+                    >
+                      ← 이전 단계
+                    </button>
+                  )}
                   <button
-                    onClick={onBack}
-                    className="px-6 py-3 bg-white text-gray-700 rounded-full hover:bg-gray-50 transition-colors shadow-sm border border-gray-300"
+                    onClick={handleRegenerate}
+                    disabled={isGenerating}
+                    className="px-6 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-colors border border-gray-200 font-medium flex items-center gap-2"
                   >
-                    ← 이전 단계
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    다시 생성
                   </button>
-                )}
-                <button
-                  onClick={handleRegenerate}
-                  disabled={isGenerating}
-                  className="px-6 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors"
-                >
-                  🔄 다시 생성
-                </button>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <div className="text-right">
+                    <p className="text-sm font-medium text-gray-900">감성 가이드 완성</p>
+                    <p className="text-xs text-gray-600">다음: 교육 콘텐츠 설계</p>
+                  </div>
+                  <button
+                    onClick={handleComplete}
+                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg transform hover:scale-105"
+                  >
+                    다음 단계 →
+                  </button>
+                </div>
               </div>
-              
-              <button
-                onClick={handleComplete}
-                className="px-8 py-3 bg-blue-600 text-white rounded-full hover:bg-blue-700 transition-colors font-medium shadow-sm"
-              >
-                다음 단계 →
-              </button>
             </div>
           </div>
         )}

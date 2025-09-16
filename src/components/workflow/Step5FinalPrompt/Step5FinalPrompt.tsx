@@ -844,10 +844,10 @@ ${imagePrompts.join('\n\n---\n\n')}`;
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-gray-900 mb-4">
-              실행 가능한 개발 명세서
+              🚀 창작 브리프 생성기
             </h1>
             <p className="text-xl text-gray-600 mb-6">
-              Step 1-4의 모든 데이터를 통합하여 완성된 개발 가이드를 생성합니다
+              모든 창의적 여정을 통합하여 개발자에게 영감을 주는 실행 가능한 창작 브리프를 완성합니다
             </p>
 
             {/* 섹션 토글 */}
@@ -962,10 +962,13 @@ ${imagePrompts.join('\n\n---\n\n')}`;
                 <div className="p-6">
                   <div className="bg-gray-50 rounded-xl p-4 max-h-96 overflow-y-auto">
                     {viewMode === 'preview' ? (
-                      <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed">
+                      <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed markdown-content">
                         <ReactMarkdown
                           remarkPlugins={[remarkGfm]}
                           rehypePlugins={[rehypeHighlight]}
+                          components={{
+                            ol: ({children}) => <ol className="list-decimal list-outside ml-6 mb-3 space-y-1">{children}</ol>,
+                          }}
                         >
                           {activeSection === 'main'
                             ? finalPrompt.htmlPrompt

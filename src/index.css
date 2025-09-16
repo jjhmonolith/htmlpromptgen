@@ -405,6 +405,28 @@ body {
   margin-top: 0.75rem;
   margin-bottom: 0.75rem;
   padding-left: 1.625rem;
+  list-style-type: decimal;
+  counter-reset: list-counter;
+}
+
+.prose ol li {
+  list-style-type: decimal;
+  display: list-item;
+  list-style-position: outside;
+}
+
+/* ReactMarkdown 전용 스타일 */
+.markdown-content ol {
+  list-style-type: decimal !important;
+  list-style-position: outside !important;
+  padding-left: 1.5rem !important;
+  counter-reset: none !important;
+}
+
+.markdown-content ol li {
+  display: list-item !important;
+  list-style-type: decimal !important;
+  list-style-position: outside !important;
 }
 
 .prose li {

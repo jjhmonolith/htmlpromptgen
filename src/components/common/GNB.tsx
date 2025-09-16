@@ -157,16 +157,22 @@ export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, c
             </div>
           )}
 
-          {/* Right Section */}
+          {/* Right Section - Enhanced */}
           <div className="flex items-center gap-4">
+
             {/* Save Status */}
             {lastSaved && (
-              <div className="flex items-center gap-1 text-xs text-gray-500">
-                <div className="w-1.5 h-1.5 bg-green-500 rounded-full"></div>
-                {new Date(lastSaved).toLocaleTimeString('ko-KR', { 
-                  hour: '2-digit', 
-                  minute: '2-digit'
-                })}
+              <div className="hidden md:flex items-center gap-2 px-2 py-1 bg-green-50 rounded text-xs text-green-700">
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <span className="font-medium">저장됨</span>
+                <span className="text-green-600">
+                  {new Date(lastSaved).toLocaleTimeString('ko-KR', {
+                    hour: '2-digit',
+                    minute: '2-digit'
+                  })}
+                </span>
               </div>
             )}
             
