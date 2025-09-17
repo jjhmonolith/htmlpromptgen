@@ -24,8 +24,14 @@ export class EducationalDesignService {
     visualIdentity: VisualIdentity
   ): Promise<EducationalDesignResult> {
     console.log('🎓 Educational Design Service: 교육 설계 생성 시작');
+    console.log(`📐 레이아웃 모드: ${projectData.layoutMode}`);
+    console.log(`🎯 콘텐츠 모드: ${projectData.contentMode}`);
 
     const startTime = Date.now();
+
+    // 레이아웃 모드 검증 및 처리
+    const layoutModeInfo = this.validateAndProcessLayoutMode(projectData);
+    console.log(`✅ 레이아웃 검증 완료: ${layoutModeInfo.mode} (${layoutModeInfo.constraints})`);
 
     // 감성 컨텍스트 준비
     const emotionalContext = this.createEmotionalContext(visualIdentity);
@@ -35,15 +41,19 @@ export class EducationalDesignService {
       title: projectData.projectTitle,
       targetAudience: projectData.targetAudience,
       layoutMode: projectData.layoutMode,
+      contentMode: projectData.contentMode,
       overallLearningGoals: this.inferLearningGoals(projectData),
-      educationalApproach: this.determineEducationalApproach(projectData, emotionalContext)
+      educationalApproach: this.determineEducationalApproach(projectData, emotionalContext),
+      layoutConstraints: layoutModeInfo.constraints
     };
 
-    // 공간 제약 정보
+    // 공간 제약 정보 (개선된 버전)
     const spaceConstraints = {
       mode: projectData.layoutMode,
-      dimensions: projectData.layoutMode === 'fixed' ? '1600×1000px' : '1600×∞px',
-      criticalReminders: this.getSpaceConstraintReminders(projectData.layoutMode)
+      dimensions: layoutModeInfo.dimensions,
+      criticalReminders: this.getSpaceConstraintReminders(projectData.layoutMode),
+      heightBudget: layoutModeInfo.heightBudget,
+      contentStrategy: this.getContentStrategyByMode(projectData.contentMode)
     };
 
     // 페이지별 설계 생성 (병렬 처리)
@@ -104,15 +114,26 @@ export class EducationalDesignService {
 
     const response = await this.openAIService.generateCompletion(prompt, 'Educational Design');
 
-    // 레이아웃 제약 검증 수행
-    const layoutValidation = this.validateLayoutConstraints(response.content, projectData.layoutMode);
+    // Fixed 모드일 때 높이 검증 및 자동 조정
+    let finalResponse = response.content;
+    let layoutValidation = { isValid: true, suggestions: [] };
 
-    if (!layoutValidation.isValid) {
-      console.warn(`⚠️ 페이지 ${page.pageNumber} 레이아웃 제약 위반:`, layoutValidation.errorType);
-      console.warn('제안 사항:', layoutValidation.suggestions);
+    if (projectData.layoutMode === 'fixed') {
+      const heightCheck = this.validateContentHeight(finalResponse, page);
+
+      if (!heightCheck.withinBounds) {
+        console.log(`⚠️ 페이지 ${page.pageNumber} 높이 초과 감지: ${heightCheck.estimatedHeight}px`);
+
+        // 자동 조정 시도
+        finalResponse = this.adjustContentForFixed(finalResponse, heightCheck);
+        layoutValidation = {
+          isValid: false,
+          suggestions: [`높이 ${heightCheck.estimatedHeight}px로 자동 조정됨`]
+        };
+      }
     }
 
-    return this.parseEducationalDesign(response.content, page, projectData, emotionalContext, prompt, response.content, layoutValidation);
+    return this.parseEducationalDesign(finalResponse, page, projectData, emotionalContext, prompt, finalResponse, layoutValidation);
   }
 
   private createEducationalDesignPrompt(
@@ -122,151 +143,166 @@ export class EducationalDesignService {
     pageIndex: number,
     totalPages: number
   ): string {
-    const constraintInfo = this.getDetailedConstraints(projectData.layoutMode);
-    const audienceInfo = this.getAudienceCharacteristics(projectData.targetAudience);
-    const pageContext = this.getPageContext(pageIndex, totalPages);
-    const layoutConstraints = this.getLayoutConstraints(projectData.layoutMode);
+    // 페이지 컨텍스트 생성
+    const prevPageContext = pageIndex > 0
+      ? `이전 페이지: ${projectData.pages[pageIndex - 1]?.topic || '없음'}`
+      : '첫 번째 페이지입니다';
 
-    return `🎓 교육 콘텐츠 UI/UX 설계 전문가
+    const nextPageContext = pageIndex < totalPages - 1
+      ? `다음 페이지: ${projectData.pages[pageIndex + 1]?.topic || '없음'}`
+      : '마지막 페이지입니다';
 
-당신은 개발자가 바로 구현할 수 있는 수준의 정밀하고 구체적인 교육 콘텐츠 UI를 설계하는 전문가입니다. 픽셀 단위의 정확한 레이아웃과 완전한 디자인 시스템을 제공해야 합니다.
+    const suggestionsText = projectData.additionalRequirements
+      ? `\n- 추가 요구사항: ${projectData.additionalRequirements}`
+      : '';
 
-## 📋 프로젝트 정보
-**주제**: ${projectData.projectTitle}
-**학습자**: ${projectData.targetAudience}
-${audienceInfo}
-**이 페이지**: ${page.topic}
-**설명**: ${page.description}
-${pageContext}
+    const visualIdentity = {
+      moodAndTone: emotionalContext.overallTone,
+      layoutPhilosophy: projectData.layoutMode === 'scrollable'
+        ? '세로 스크롤을 통한 자연스러운 콘텐츠 전개'
+        : '한 화면에 모든 내용을 효과적으로 배치'
+    };
 
-## 🎨 디자인 맥락
-**전체 분위기**: ${emotionalContext.overallTone}
-**컬러 팔레트**: ${emotionalContext.colorEmotions.primary}, ${emotionalContext.colorEmotions.secondary}, ${emotionalContext.colorEmotions.accent}
+    // 콘텐츠 모드별 차별화 전략
+    const getContentModeStrategy = (mode: string): string => {
+      switch (mode) {
+        case 'enhanced':
+          return `
+### 🎯 Enhanced 모드 (AI 보강)
+- 시각적 요소 추가하되 공간 예산 내에서
+- 텍스트 요약하고 인포그래픽으로 보완
+- 여백과 타이포그래피로 시각적 완성도 향상
+- 학습 효과를 높이는 추가 설명 요소 포함`;
+        case 'restricted':
+          return `
+### 🎯 Restricted 모드 (그대로 사용)
+- 주어진 콘텐츠만 사용, 추가 생성 금지
+- 레이아웃 최적화에만 집중
+- 긴 텍스트는 여러 컬럼으로 분할
+- 기존 내용의 가독성 최대화`;
+        case 'original':
+          return `
+### 🎯 Original 모드
+- 원본 내용 최대한 보존
+- 필요시 텍스트 분할하여 여러 영역에 배치
+- 내용 변경 없이 레이아웃만 최적화`;
+        default:
+          return '';
+      }
+    };
 
-## 📐 캔버스 제약
-${constraintInfo}
+    // Fixed 모드와 Scrollable 모드별 프롬프트
+    if (projectData.layoutMode === 'fixed') {
+      return `당신은 주어진 '비주얼 아이덴티티'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 스크롤 없는 1600x1000px 화면에 들어갈 콘텐츠 레이아웃을 **자유롭게, 상세하게, 창의적으로 서술**해주세요.
 
-${layoutConstraints}
+### 🔴 FIXED 레이아웃 필수 준수사항 (절대 위반 금지)
 
----
+1. **전체 높이 제한**: 900px 이내 (여백 100px 제외)
+2. **콘텐츠 예산**:
+   - 제목: 최대 2줄 (80px)
+   - 본문: 최대 20줄 (480px)
+   - 이미지: 최대 2개, 각 150px 높이
+   - 카드/박스: 최대 3개, 각 80px 높이
+   - 여백 및 간격: 총 110px
 
-# 🎯 완전한 교육 페이지 설계서
+3. **폰트 크기 고려 계산**:
+   - 제목: 28pt = 37px + 여백 = 45px/줄
+   - 본문: 18pt = 24px + 여백 = 30px/줄
+   - 이미지 캡션: 18pt = 24px
 
-다음 형식으로 개발자가 바로 구현할 수 있는 수준의 상세한 설계를 제공해주세요:
+4. **자동 조정 규칙**:
+   - 내용이 많으면: 텍스트 줄이기 → 이미지 크기 축소 → 요소 개수 감소
+   - 절대 스크롤 생성하지 않음
 
-## 페이지 ${page.pageNumber}: [창의적이고 구체적인 페이지 제목]
+### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${visualIdentity.moodAndTone}
+- **핵심 디자인 원칙**: 콘텐츠의 중요도에 따라 시각적 계층(Visual Hierarchy)을 만드세요. 사용자의 시선이 자연스럽게 흐르도록 유도하고, 콘텐츠를 단순히 박스에 넣는 것이 아니라 콘텐츠 자체의 형태에 맞는 맞춤형 디자인을 하세요.
 
-[페이지 주제에 대한 2-3줄 교육적 설명]
+### 📍 페이지 컨텍스트
+- ${prevPageContext}
+- **현재 페이지 ${page.pageNumber}: ${page.topic}**
+- ${nextPageContext}
+${page.contentAnalysis ? `
+### 📊 콘텐츠 분석 결과
+- **예상 구성**: ${page.contentAnalysis.outline.join(', ')}
+- **예상 섹션 수**: ${page.contentAnalysis.estimatedSections}개
+- **콘텐츠 밀도**: ${page.contentAnalysis.densityScore >= 0.8 ? '높음 (분할 권장)' : page.contentAnalysis.densityScore >= 0.6 ? '적정' : '여유'}
+` : ''}
 
-### 1. 페이지 구성 및 내용
+### 📜 핵심 규칙
+1.  **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.
+2.  **공간 최적화**: 콘텐츠를 화면에 효과적으로 배치하여 어색한 빈 공간이 생기지 않도록 하세요.
+3.  **이미지 최소화**: 학습에 필수적인 이미지만 사용하고, 장식용 이미지는 피하세요.
+4.  **상세한 이미지 프롬프트**: 이미지 계획이 있다면, \`[IMAGE: page${page.pageNumber}/1.png | AI 이미지 생성기용 상세 프롬프트]\` 형식으로 본문에 포함시켜주세요.
+5.  **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.
 
-다음은 ${projectData.layoutMode === 'fixed' ? '1600x1000px 고정 화면(스크롤 없음)' : '1600px 너비, 세로 스크롤'} 기준, '${page.topic}' 페이지의 교육 콘텐츠 레이아웃 설계안입니다. ${emotionalContext.overallTone} 분위기를 살리면서, 콘텐츠의 중요도에 따른 시각적 계층을 분명히 합니다. ${projectData.targetAudience} 대상이므로 정보량은 부담 없이 핵심이 한눈에 들어오도록 구성합니다.
+### 🚫 절대 금지 사항
+- **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.
+- **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.
+- **최소 폰트 크기**: 모든 텍스트는 반드시 18pt 이상으로 설정하세요. 본문은 18-20pt, 제목은 24pt 이상을 권장합니다.
 
-**1) 캔버스, 그리드, 여백**
-- 캔버스: ${projectData.layoutMode === 'fixed' ? '1600x1000px' : '1600x∞px (세로 스크롤)'}
-- 안전 여백: 사방 64px
-- 그리드: 12컬럼, 컬럼 폭 108px, 거터 24px (콘텐츠 폭 1472px)
-- 시선 흐름: [좌상단에서 시작하여 교육적 논리 순서에 따른 시선 흐름 설계]
+### 📝 프로젝트 정보
+- 프로젝트: ${projectData.projectTitle}
+- 대상: ${projectData.targetAudience}${suggestionsText}
 
-**2) 타이포그래피 (최소 18pt 필수!)**
-- 제목(H1): 28-36pt, SemiBold, 행간 120%, 글자간 -1%
-- 부제/리드(H2): 22-24pt, Medium, 행간 140%
-- 본문: 18-20pt, Regular, 행간 150%
-- 캡션/라벨: 18pt (최소값), Medium, 행간 140%
-- **⚠️ 모든 텍스트는 18pt 미만 절대 금지**
+${getContentModeStrategy(projectData.contentMode)}
 
-**3) 컬러 & 분위기**
-- 배경: [교육 주제에 맞는 배경색]
-- 주요 포인트: [3-4개 색상 이름으로 표현]
-- 구분선/연결선: [색상과 스타일]
-- 접근성: 텍스트 대비율 4.5:1 이상 유지
+이제 위의 가이드라인에 맞춰 페이지 레이아웃을 창의적으로 서술해주세요.`;
+    } else {
+      return `당신은 주어진 '비주얼 아이덴티티'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. **1600px 너비의 가변 높이 화면**에 들어갈 콘텐츠 레이아웃을 **자유롭게, 상세하게, 창의적으로 서술**해주세요.
 
-**4) 레이아웃 구조**
+### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${visualIdentity.moodAndTone}
+- **레이아웃 철학**: ${visualIdentity.layoutPhilosophy || '세로 스크롤을 통한 자연스러운 콘텐츠 전개'}
+- **핵심 디자인 원칙**: 콘텐츠의 중요도에 따라 시각적 계층(Visual Hierarchy)을 만드세요. 사용자의 시선이 자연스럽게 위에서 아래로 흐르도록 유도하고, 각 섹션별로 적절한 여백과 구분을 두어 읽기 편안한 경험을 제공하세요.
 
-🚨 **필수 제약사항**:
-- **${projectData.layoutMode === 'scrollable' ? 'Scrollable' : 'Fixed'} 모드**: 제목 포함 최대 ${projectData.layoutMode === 'scrollable' ? '5' : '3'}개 영역 (초과 절대 금지)
-- **인터랙션 요소 금지**: 퀴즈, 실습, 아코디언, 카드 뒤집기 등 Step4에서 처리
-- **반응형 고려 불필요**: 고정 크기 기준 설계
-${projectData.layoutMode === 'fixed' ? '- **총 높이 1000px 절대 초과 금지**' : ''}
+### 🖼️ 새로운 레이아웃 가능성
+- **자유로운 높이**: 1600px 너비는 고정하되, 높이는 콘텐츠에 따라 자유롭게 확장 가능합니다
+- **풍부한 콘텐츠**: 더 많은 설명, 예시, 단계별 가이드, 상세한 도표 등을 포함할 수 있습니다
+- **창의적 섹션 구성**: 히어로 섹션, 콘텐츠 섹션, 예시 섹션, 실습 섹션, 정리 섹션 등을 자유롭게 조합하세요
+- **시각적 여유**: 각 요소 간 충분한 여백을 두어 답답하지 않은 레이아웃을 만드세요
 
-📐 **그리드 시스템**:
+### 📍 페이지 컨텍스트
+- ${prevPageContext}
+- **현재 페이지 ${page.pageNumber}: ${page.topic}**
+- ${nextPageContext}
 
-**${projectData.layoutMode === 'scrollable' ? 'Scrollable' : 'Fixed'} 모드 (1600×${projectData.layoutMode === 'fixed' ? '1000' : '∞'}px)**:
-- 가로 12그리드: 컴럼 폭 108px, 거터 24px
-- 세로 ${projectData.layoutMode === 'fixed' ? '6그리드: 행 높이 140px, 거터 20px (안전여백 고려)' : '자유: 각 영역별 적절한 높이 설정'}
-- 영역 예시: A(풀와이드) → B(8/12+4/12) → C(6/12+6/12)${projectData.layoutMode === 'fixed' ? ' → D(4/12+4/12+4/12)' : ''}
-${projectData.layoutMode === 'fixed' ? '- 2D 그리드 활용: 예) A영역(12×2), B영역(8×3), C영역(4×3)' : ''}
+### 📜 핵심 규칙
+1.  **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.
+2.  **세로 스크롤 친화적**: 사용자가 세로로 스크롤하며 자연스럽게 콘텐츠를 소비할 수 있도록 구성하세요.
+3.  **섹션별 구성**: 페이지를 논리적인 섹션들로 나누어 각각의 목적과 내용을 명확히 하세요.
+4.  **이미지 활용 확대**: 학습 효과를 높이는 이미지를 적극적으로 활용하세요 (다이어그램, 일러스트, 인포그래픽 등).
+5.  **상세한 이미지 프롬프트**: 이미지 계획이 있다면, \`[IMAGE: page${page.pageNumber}/1.png | AI 이미지 생성기용 상세 프롬프트]\` 형식으로 본문에 포함시켜주세요.
+6.  **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.
+7.  **충분한 여백**: 각 섹션과 요소 간 충분한 여백(padding, margin)을 두어 읽기 편안한 경험을 제공하세요.
 
-⚠️ **창의성 요구사항**:
-- 모든 영역이 풀와이드인 단조로운 구성 금지
-- 최소 2가지 이상의 그리드 조합 사용
-- 교육적 우선순위에 따른 시각적 위계 차등화
+### 🎯 권장 레이아웃 구조
+\`\`\`
+[히어로 섹션] - 페이지 제목과 핵심 메시지
+↓ (여백)
+[도입 섹션] - 학습 목표나 개요 소개
+↓ (여백)
+[메인 콘텐츠 섹션] - 핵심 학습 내용
+↓ (여백)
+[예시/실습 섹션] - 구체적 예시나 활동
+↓ (여백)
+[정리 섹션] - 요약 및 핵심 포인트
+\`\`\`
 
-[최소 4-6개 영역을 픽셀 단위로 정확히 설계]
+### 🚫 절대 금지 사항
+- **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.
+- **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.
+- **최소 폰트 크기**: 모든 텍스트는 반드시 18px 이상으로 설정하세요. 본문은 18-20px, 제목은 24px 이상을 권장합니다.
+- **가로 스크롤 금지**: 너비는 1600px를 넘지 않도록 하여 가로 스크롤이 발생하지 않게 하세요.
 
-A. [영역명] (예: 상단 타이틀 영역)
-- 위치/크기: x=64, y=64, 폭=약 XXXpx(컬럼 X–X), 높이=XXXpx
-- 구성: [구체적인 UI 요소와 텍스트 내용]
-- 시각 강조: [배경, 언더라인, 그라데이션 등 구체적 스타일]
+### 📝 프로젝트 정보
+- 프로젝트: ${projectData.projectTitle}
+- 대상: ${projectData.targetAudience}${suggestionsText}
 
-B. [영역명] (예: 메인 비주얼 영역)
-- 위치/크기: x=XXX, y=XXX, 폭=XXXpx, 높이=XXXpx
-- 콘텐츠 의도: [교육적 목적과 시각적 효과]
-- 연결 요소: [다른 영역과의 시각적 연결]
+${getContentModeStrategy(projectData.contentMode)}
 
-[C, D, E, F... 영역들 계속]
-
-**5) 교육 콘텐츠(문구) 상세**
-- 제목: "[실제 사용할 구체적이고 매력적인 제목]"
-- 리드 문장: "[2-3줄의 핵심 설명]"
-- 학습 목표 (3-4개): "[체크 가능한 구체적 목표들]"
-- 핵심 내용: [실제 교육 내용을 구체적으로]
-
-**6) 맞춤형 시각 요소**
-- 연결선/화살표: [교육 흐름을 보여주는 시각 요소]
-- 강조 카드: [중요 정보의 카드 디자인]
-- 인터랙션 힌트: [클릭, 호버 등 상호작용 가이드]
-
-**7) 접근성/가독성 (필수 준수사항)**
-- 🔴 **텍스트 최소 18pt 절대 준수** (18pt 미만 절대 금지)
-- 색상 대비율 4.5:1 이상 필수
-- 스크린리더 대응 및 alt 속성 필수
-- 키보드 네비게이션 지원
-- **페이지 독립성**: 다른 페이지로의 링크나 네비게이션 요소 절대 금지
-
-**8) 개발 구현 요약(픽셀 가이드)**
-- [각 영역별 정확한 CSS 포지션 정보]
-- [반응형 고려사항]
-- [애니메이션 가이드]
-
-**9) 페이지 교육 효과**
-- [이 설계가 달성하는 교육적 목표]
-- [인지 부하 최적화 방법]
-- [기억과 이해를 돕는 시각적 전략]
-
-### 2. 페이지에 사용될 이미지
-
-각 이미지는 반드시 다음 7가지 요소를 모두 포함하여 300-400자로 상세히 설명해주세요:
-
-**1.png**:
-- 🎨 **주요 시각 요소**: [구체적인 객체들과 배치]
-- 🌈 **색상 구성**: [색상 이름으로만 표현, hex 코드 절대 금지]
-- 🔗 **페이지 내 맥락**: [이 이미지가 페이지의 어느 단계에서 어떤 흐름으로 사용되는지, 앞뒤 콘텐츠와의 연결점]
-- 🎭 **스타일과 질감**: [일러스트 스타일, 선의 굵기, 그라데이션 등]
-- 👥 **학습자 관점**: [이 연령대가 어떻게 인식할지]
-- 🔄 **교육적 기능**: [이 이미지가 달성하는 구체적 학습 목표]
-- ⚡ **시각적 역동성**: [움직임, 흐름, 시선 유도 방식]
-
-**2.png**, **3.png** (필요시): 위와 같은 7가지 형식으로 각각 작성
-
-⚠️ **필수 주의사항**:
-- 색상은 "밝은 파란색", "따뜻한 주황색" 등 자연어로만 표현
-- #000000, rgb() 등 모든 색상 코드 절대 금지
-- AI가 텍스트를 이미지에 포함시키는 오류 방지
-
----
-
-위 형식을 정확히 따라 개발자가 바로 코딩할 수 있을 정도로 구체적이고 정밀한 설계를 제공해주세요. 모호한 표현은 절대 사용하지 말고, 모든 수치와 색상을 정확히 명시하세요.`;
+이제 위의 가이드라인에 맞춰 **가변 높이를 충분히 활용한** 창의적이고 교육적인 페이지 레이아웃을 상세히 서술해주세요. 각 섹션의 목적, 내용, 시각적 처리 방법을 구체적으로 설명해주세요.`;
+    }
   }
 
   private parseEducationalDesign(
@@ -278,105 +314,75 @@ B. [영역명] (예: 메인 비주얼 영역)
     originalResponse?: string,
     layoutValidation?: LayoutValidation
   ): EducationalPageDesign {
-    console.log(`✅ 페이지 ${page.pageNumber} 2단위 구조 처리: 전체설명 + 기본구조`);
+    console.log(`✅ 페이지 ${page.pageNumber} 간소화된 파싱 시작`);
 
-    // Phase 2 단순화: "2개 큰 덩어리" 시스템
-    // 1. 전체 AI 응답 (fullDescription)
-    // 2. 항상 보장되는 기본 구조 (3개 컴포넌트 + 1개 이미지)
-
+    // 새로운 간소화된 접근법: 전체 응답을 fullDescription으로 저장하고 기본 구조만 제공
     return {
       pageId: page.id,
       pageTitle: page.topic,
       pageNumber: page.pageNumber,
 
-      // 📋 덩어리 1: 전체 AI 설계 문서 (모든 정보 보존)
+      // 📋 AI의 전체 창의적 레이아웃 설명 (새 프롬프트 결과)
       fullDescription: response.trim(),
 
-      // 📋 덩어리 2: 기본 보장 구조 (파싱 실패 방지)
-      learningObjectives: [`${page.topic} 기본 개념 이해`, '핵심 원리 파악', '실용적 적용'],
-      educationalStrategy: '단계별 학습 접근법',
+      // 📋 기본 구조 (안정성 보장)
+      learningObjectives: [`${page.topic} 이해`, '핵심 개념 파악', '실용적 적용'],
+      educationalStrategy: '창의적 레이아웃 기반 학습',
 
       layoutStructure: {
         areas: [
           {
-            id: 'main-content',
-            description: '메인 콘텐츠 영역',
-            purpose: '핵심 학습 내용 제시',
-            sizeGuide: '전체 화면의 80%'
-          },
-          {
-            id: 'interaction-area',
-            description: '상호작용 영역',
-            purpose: '학습자 참여 유도',
-            sizeGuide: '전체 화면의 20%'
+            id: 'creative-layout',
+            description: 'AI가 제안한 창의적 레이아웃',
+            purpose: '비주얼 아이덴티티 기반 교육 콘텐츠',
+            sizeGuide: projectData.layoutMode === 'fixed' ? '1600×1000px' : '1600×가변px'
           }
         ]
       },
 
       content: {
         heading: page.topic,
-        bodyText: page.description || `${page.topic}에 대해 체계적으로 학습합니다.`,
-        keyPoints: ['핵심 개념', '주요 원리', '실생활 적용']
+        bodyText: page.description || `${page.topic}에 대한 창의적 교육 콘텐츠`,
+        keyPoints: ['시각적 계층', '창의적 디자인', '교육 효과']
       },
 
-      // 항상 3개 기본 컴포넌트 보장 (파싱 실패 없음)
       components: [
         {
-          id: 'title-component',
-          type: 'heading',
-          position: { area: '상단 영역', priority: 1 },
-          size: { guideline: '전체 너비', responsive: true },
-          content: { primary: page.topic },
-          purpose: '페이지 주제 명시'
-        },
-        {
-          id: 'content-component',
-          type: 'text',
-          position: { area: '메인 영역', priority: 2 },
-          size: { guideline: '메인 영역 80%', responsive: true },
-          content: { primary: page.description || `${page.topic}의 핵심 내용을 다룹니다.` },
-          purpose: '주요 학습 내용 전달'
-        },
-        {
-          id: 'action-component',
-          type: 'interactive',
-          position: { area: '하단 영역', priority: 3 },
-          size: { guideline: '적절한 상호작용 크기', responsive: true },
-          content: { primary: '학습 내용을 확인해보세요!' },
-          purpose: '학습 참여 유도'
+          id: 'creative-design',
+          type: 'layout',
+          position: { area: '전체 영역', priority: 1 },
+          size: { guideline: '전체 캔버스', responsive: false },
+          content: { primary: '비주얼 아이덴티티 기반 창의적 레이아웃' },
+          purpose: 'AI 제안 레이아웃 구현'
         }
       ],
 
       interactions: [
         {
-          id: 'main-interaction',
-          trigger: '컴포넌트 클릭',
-          action: '추가 정보 표시',
-          purpose: '심화 학습',
-          feedback: '시각적 피드백 제공'
+          id: 'layout-interaction',
+          trigger: 'AI 제안 기반',
+          action: '창의적 상호작용',
+          purpose: '교육 효과 극대화',
+          feedback: '비주얼 피드백'
         }
       ],
 
-      // Phase 2 개선: AI 응답에서 실제 이미지들 파싱 시도 + 기본 보장 이미지
+      // 새로운 [IMAGE: filename | prompt] 형식으로 이미지 파싱
       mediaAssets: this.parseAndGenerateImages(response, page, projectData, emotionalContext),
 
-      // 품질 관리 시스템 통합
-      qualityMetrics: this.calculatePageQuality(response, page, projectData),
+      designRationale: '비주얼 아이덴티티 기반 창의적 교육 설계',
+      implementationHints: 'AI 제안 레이아웃을 그대로 구현',
+      uxConsiderations: '자유로운 창의적 사용자 경험',
 
-      designRationale: '안정적이고 효과적인 교육 구조',
-      implementationHints: '사용자 중심의 직관적 인터페이스 구현',
-      uxConsiderations: '접근성과 학습 효과 최우선',
-
-      isComplete: true, // 항상 완료 상태 보장
+      isComplete: true,
       generatedAt: new Date(),
 
-      // 디버그 정보 저장
+      // 디버그 정보 (옵션)
       debugInfo: originalPrompt && originalResponse ? {
         originalPrompt,
         originalResponse,
         parsedSections: { fullContent: response.substring(0, 200) + '...' },
-        layoutValidation,
-        qualityMetrics: this.calculatePageQuality(response, page, projectData)
+        layoutValidation
       } : undefined
     };
   }
@@ -498,111 +504,128 @@ B. [영역명] (예: 메인 비주얼 영역)
   // AI 응답에서 이미지 정보를 파싱하고 기본 이미지들 생성
   private parseAndGenerateImages(response: string, page: any, projectData: ProjectData, emotionalContext: EmotionalContext): any[] {
     console.log(`🖼️ 페이지 ${page.pageNumber} 이미지 파싱 시작`);
+    console.log(`📝 응답 샘플 (처음 200자):`, response.substring(0, 200));
 
-    // 1. AI 응답에서 이미지 정보 추출 시도
-    const parsedImages = this.extractImagesFromResponse(response, page, projectData, emotionalContext);
+    // 다양한 이미지 형식을 지원하는 정규식들
+    const imagePatterns = [
+      // [IMAGE: filename | prompt] 형식
+      /\[IMAGE:\s*([^|]+?)\s*\|\s*([^\]]+?)\]/g,
+      // [IMAGE: filename|prompt] 형식 (공백 없음)
+      /\[IMAGE:\s*([^|]+?)\|\s*([^\]]+?)\]/g,
+      // 이미지: filename | prompt 형식
+      /이미지:\s*([^|]+?)\s*\|\s*([^\n]+)/g,
+      // ![filename](prompt) 마크다운 형식
+      /!\[([^\]]+?)\]\(([^)]+?)\)/g,
+      // 일반적인 이미지 설명 패턴
+      /(?:이미지|그림|사진)\s*[:\-]?\s*([^\n]{10,})/g
+    ];
 
-    // 2. 파싱 성공 시 파싱된 이미지만 사용 (최대 3개)
-    if (parsedImages.length > 0) {
-      const limitedImages = parsedImages.slice(0, 3); // 최대 3개로 제한
-      console.log(`✅ AI 응답에서 ${limitedImages.length}개 이미지 파싱 성공`);
-      return limitedImages;
-    }
-
-    // 3. 파싱 실패 시에만 기본 이미지 사용
-    const fallbackImages = this.generateFallbackImages(page, projectData, emotionalContext);
-    console.log(`🔄 파싱 실패, 기본 이미지 ${fallbackImages.length}개 사용`);
-    return fallbackImages;
-  }
-
-  // AI 응답에서 이미지 정보 추출 (개선된 8가지 메타데이터 파싱)
-  private extractImagesFromResponse(response: string, page: any, projectData: ProjectData, emotionalContext: EmotionalContext): any[] {
     const images: any[] = [];
+    let imageCounter = 1;
 
-    // "### 2. 페이지에 사용될 이미지" 섹션 찾기
-    const imageSection = response.match(/### 2\. 페이지에 사용될 이미지(.*?)(?=\n###|\n---|\n##|$)/s);
-    if (!imageSection) {
-      console.log('❌ 이미지 섹션을 찾을 수 없음');
-      return images;
-    }
+    // 각 패턴으로 순차적으로 시도
+    for (const pattern of imagePatterns) {
+      let match;
+      pattern.lastIndex = 0; // 정규식 상태 초기화
 
-    const imageContent = imageSection[1];
-    console.log('🔍 이미지 섹션 내용:', imageContent.substring(0, 300) + '...');
+      while ((match = pattern.exec(response)) !== null && imageCounter <= 3) {
+        let filename: string;
+        let aiPrompt: string;
 
-    // 개선된 8가지 메타데이터 파싱:
-    // **1.png**:
-    // - 🎨 **주요 시각 요소**: [...]
-    // - 🌈 **색상 구성**: [...]
-    // ...
+        if (pattern.source.includes('\\[IMAGE:')) {
+          // [IMAGE: ...] 형식
+          filename = match[1].trim();
+          aiPrompt = match[2].trim();
+        } else if (pattern.source.includes('이미지:')) {
+          // 이미지: ... 형식
+          filename = `${imageCounter}.png`;
+          aiPrompt = match[2] ? match[2].trim() : match[1].trim();
+        } else if (pattern.source.includes('!\\[')) {
+          // 마크다운 형식
+          filename = match[1].trim().replace(/\s+/g, '_') + '.png';
+          aiPrompt = match[2].trim();
+        } else {
+          // 일반 이미지 설명
+          filename = `${imageCounter}.png`;
+          aiPrompt = match[1].trim();
+        }
 
-    // 이미지 항목들을 찾기 (구조화된 형식)
-    const imageMatches = imageContent.match(/\*\*(\d+)\.png\*\*:[\s\S]*?(?=\*\*\d+\.png\*\*:|$)/g);
+        // 파일명 정리
+        if (!filename.includes('.')) {
+          filename += '.png';
+        }
+        filename = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
 
-    if (!imageMatches) {
-      console.log('❌ 이미지 항목을 찾을 수 없음');
-      return images;
-    }
+        console.log(`✅ 이미지 ${imageCounter} 파싱 성공: ${filename}`);
+        console.log(`🎨 프롬프트: ${aiPrompt.substring(0, 100)}...`);
 
-    console.log(`🔍 발견된 이미지 항목: ${imageMatches.length}개`);
+        images.push({
+          id: `page-${page.pageNumber}-${imageCounter}`,
+          fileName: filename.startsWith('page') ? filename : `page${page.pageNumber}/${filename}`,
+          path: `~/image/page${page.pageNumber}/${filename}`,
+          type: 'image',
+          category: '교육 시각화',
+          purpose: `교육 시각 자료 ${imageCounter}`,
+          description: `${page.topic} 관련 교육 이미지`,
+          sizeGuide: '600×400px',
+          placement: {
+            section: '메인 영역',
+            position: imageCounter === 1 ? '중앙' : `위치${imageCounter}`,
+            size: '600×400px'
+          },
+          accessibility: {
+            altText: `${page.topic} 관련 교육 이미지`,
+            caption: `${page.topic} 시각 자료`
+          },
+          aiPrompt: aiPrompt
+        });
 
-    imageMatches.forEach((match, index) => {
-      console.log(`📝 이미지 항목 ${index + 1} 파싱 시도:`, match.substring(0, 200) + '...');
-
-      // 파일명 추출
-      const fileNameMatch = match.match(/\*\*(\d+)\.png\*\*:/);
-      if (!fileNameMatch) {
-        console.log(`❌ 이미지 ${index + 1} 파일명 추출 실패`);
-        return;
+        imageCounter++;
       }
 
-      const imageNumber = fileNameMatch[1];
-      const imageCounter = parseInt(imageNumber);
+      // 이미지를 찾았으면 다른 패턴은 시도하지 않음
+      if (images.length > 0) {
+        break;
+      }
+    }
 
-      // 8가지 메타데이터 추출
-      const structuredMetadata = this.parseStructuredImageMetadata(match, page.topic);
-
-      // 색상 코드 검증
-      this.validateNoColorCodes(structuredMetadata.colorScheme || '');
-
-      console.log(`✅ 이미지 ${imageCounter} 구조화된 파싱 성공`);
-      console.log(`- 파일명: ${imageNumber}.png`);
-      console.log(`- 시각 요소: ${(structuredMetadata.visualElements || '').substring(0, 50)}...`);
-      console.log(`- 색상 구성: ${(structuredMetadata.colorScheme || '').substring(0, 50)}...`);
-
-      // 설명에서 크기 정보 추출 시도
-      const sizeMatch = match.match(/(\d+)×(\d+)px/);
-      const width = sizeMatch ? parseInt(sizeMatch[1]) : 600;
-      const height = sizeMatch ? parseInt(sizeMatch[2]) : 400;
-
-      // AI 프롬프트 생성 (8가지 요소 종합, 색상은 자연어만)
-      const enhancedAIPrompt = this.generateEnhancedAIPrompt(structuredMetadata, page.topic);
+    // 이미지가 없으면 기본 이미지 1개 생성
+    if (images.length === 0) {
+      console.log(`🔄 모든 패턴으로 이미지 파싱 실패, 기본 이미지 1개 생성`);
+      console.log(`📋 검색된 패턴들:`);
+      imagePatterns.forEach((pattern, index) => {
+        const testMatch = pattern.test(response);
+        console.log(`   ${index + 1}. ${pattern.source}: ${testMatch ? '매치됨' : '매치 안됨'}`);
+        pattern.lastIndex = 0; // 리셋
+      });
 
       images.push({
-        id: `page-${page.pageNumber}-${imageCounter}`,
-        fileName: `${imageCounter}.png`,
-        path: `~/image/page${page.pageNumber}/${imageCounter}.png`,
+        id: `page-${page.pageNumber}-1`,
+        fileName: `1.png`,
+        path: `~/image/page${page.pageNumber}/1.png`,
         type: 'image',
         category: '교육 시각화',
-        purpose: `교육 시각 자료 ${imageCounter}`,
-        description: match.trim(),
-        sizeGuide: `${width}×${height}px`,
+        purpose: '기본 교육 시각 자료',
+        description: `${page.topic} 관련 기본 이미지`,
+        sizeGuide: '600×400px',
         placement: {
           section: '메인 영역',
-          position: imageCounter === 1 ? '중앙' : `위치${imageCounter}`,
-          size: `${width}×${height}px`
+          position: '중앙',
+          size: '600×400px'
         },
         accessibility: {
-          altText: `${page.topic} 관련 교육 이미지`,
+          altText: `${page.topic} 교육용 이미지`,
           caption: `${page.topic} 시각 자료`
         },
-        aiPrompt: enhancedAIPrompt,
-        // 8가지 구조화된 메타데이터 추가
-        structuredMetadata
+        aiPrompt: `Educational illustration for ${page.topic}, clear and easy-to-understand style, main concept visualization`
       });
-    });
+    }
 
+    console.log(`🎉 총 ${images.length}개 이미지 파싱 완료`);
     return images;
   }
+
+  // 더 이상 사용되지 않는 복잡한 이미지 추출 메서드 (새로운 인라인 방식으로 대체됨)
 
   // 이미지 설명에서 AI 프롬프트 추출 또는 생성
   private extractAIPromptFromDescription(description: string, topic: string): string {
@@ -741,6 +764,57 @@ ${specificFocus ? `- Must clearly distinguish this "${specificFocus}" focus from
 **Mood & Tone**: ${emotionalContext.overallTone}, engaging, trustworthy, conducive to learning
 
 Create an image that serves as an effective educational tool, helping learners grasp ${specificFocus ? `the ${specificFocus.toLowerCase()} aspects of` : 'the key concepts of'} ${topic} through clear, intuitive visual communication.`;
+  }
+
+  // 레이아웃 모드 검증 및 처리
+  private validateAndProcessLayoutMode(projectData: ProjectData): {
+    mode: string;
+    dimensions: string;
+    constraints: string;
+    heightBudget: any;
+  } {
+    const { layoutMode } = projectData;
+
+    if (layoutMode === 'fixed') {
+      return {
+        mode: 'Fixed (1600×1000px)',
+        dimensions: '1600×1000px',
+        constraints: '스크롤 없는 고정 레이아웃',
+        heightBudget: {
+          total: 900,
+          title: 80,
+          body: 480,
+          images: 300,
+          cards: 240,
+          margins: 110
+        }
+      };
+    } else {
+      return {
+        mode: 'Scrollable (1600×∞px)',
+        dimensions: '1600×∞px',
+        constraints: '세로 스크롤 가능 레이아웃',
+        heightBudget: {
+          total: '무제한',
+          sections: '자유 설정',
+          spacing: '충분한 여백 권장'
+        }
+      };
+    }
+  }
+
+  // 콘텐츠 모드별 전략 설명
+  private getContentStrategyByMode(contentMode: string): string {
+    switch (contentMode) {
+      case 'enhanced':
+        return 'AI 보강 - 시각적 요소와 설명 추가';
+      case 'restricted':
+        return '그대로 사용 - 기존 콘텐츠만 활용';
+      case 'original':
+        return '원본 보존 - 내용 변경 없이 레이아웃만 최적화';
+      default:
+        return '기본 전략';
+    }
   }
 
   // 유틸리티 메서드들
@@ -1187,6 +1261,120 @@ Create a comprehensive educational image that combines all these elements effect
     const monotonePenalty = (areaCount > 2 && fullwidthCount >= areaCount - 1) ? -30 : 0;
 
     return Math.max(0, Math.min(100, totalScore + diversityBonus + monotonePenalty));
+  }
+
+  // 높이 계산 알고리즘
+  private validateContentHeight(response: string, page: any): {
+    withinBounds: boolean;
+    estimatedHeight: number;
+    breakdown: {
+      title: number;
+      body: number;
+      images: number;
+      cards: number;
+      margins: number;
+    };
+    suggestions: string[];
+  } {
+    // 기본 높이 계산 (텍스트 기반 추정)
+    const titleLines = this.estimateTitleLines(response);
+    const bodyLines = this.estimateBodyLines(response);
+    const imageCount = this.countImages(response);
+    const cardCount = this.countCards(response);
+
+    const breakdown = {
+      title: titleLines * 45,      // 28pt + 여백 = 45px/줄
+      body: bodyLines * 30,        // 18pt + 여백 = 30px/줄
+      images: imageCount * 150,    // 각 이미지 150px
+      cards: cardCount * 80,       // 각 카드/박스 80px
+      margins: 110                 // 기본 여백 및 간격
+    };
+
+    const estimatedHeight = Object.values(breakdown).reduce((sum, height) => sum + height, 0);
+    const withinBounds = estimatedHeight <= 900; // 900px 제한
+
+    const suggestions: string[] = [];
+    if (!withinBounds) {
+      if (bodyLines > 20) suggestions.push('본문 텍스트 줄이기');
+      if (imageCount > 2) suggestions.push('이미지 개수 감소');
+      if (cardCount > 3) suggestions.push('카드/박스 요소 통합');
+    }
+
+    return {
+      withinBounds,
+      estimatedHeight,
+      breakdown,
+      suggestions
+    };
+  }
+
+  // 텍스트에서 제목 줄 수 추정
+  private estimateTitleLines(response: string): number {
+    const titleMatches = response.match(/제목|타이틀|heading|h1|h2/gi);
+    return Math.min(titleMatches ? titleMatches.length * 2 : 2, 4); // 최대 4줄
+  }
+
+  // 텍스트에서 본문 줄 수 추정
+  private estimateBodyLines(response: string): number {
+    const textContent = response.replace(/[^\가-힣a-zA-Z\s]/g, '');
+    const approximateLines = Math.ceil(textContent.length / 60); // 60자/줄 추정
+    return Math.min(approximateLines, 20); // 최대 20줄
+  }
+
+  // 이미지 개수 계산
+  private countImages(response: string): number {
+    const imageMatches = response.match(/\[IMAGE:|이미지|그림/gi);
+    return Math.min(imageMatches ? imageMatches.length : 1, 2); // 최대 2개
+  }
+
+  // 카드/박스 요소 개수 계산
+  private countCards(response: string): number {
+    const cardMatches = response.match(/카드|박스|섹션|영역/gi);
+    return Math.min(cardMatches ? Math.ceil(cardMatches.length / 3) : 2, 3); // 최대 3개
+  }
+
+  // Fixed 모드용 콘텐츠 자동 조정
+  private adjustContentForFixed(response: string, heightCheck: any): string {
+    let adjustedResponse = response;
+
+    // 1단계: 텍스트 줄이기
+    if (heightCheck.breakdown.body > 480) {
+      adjustedResponse = this.reduceTextContent(adjustedResponse);
+    }
+
+    // 2단계: 이미지 크기 조정
+    if (heightCheck.breakdown.images > 300) {
+      adjustedResponse = this.optimizeImages(adjustedResponse);
+    }
+
+    // 3단계: 요소 병합/제거
+    if (heightCheck.breakdown.cards > 240) {
+      adjustedResponse = this.consolidateElements(adjustedResponse);
+    }
+
+    return adjustedResponse + '\n\n⚠️ 자동 조정: Fixed 레이아웃 제약에 맞춰 콘텐츠가 최적화되었습니다.';
+  }
+
+  // 텍스트 내용 줄이기
+  private reduceTextContent(response: string): string {
+    return response.replace(/([.!?])\s+([가-힣a-zA-Z])/g, (match, punct, nextChar, offset, string) => {
+      // 문장 사이의 불필요한 설명 줄이기
+      const sentences = string.split(/[.!?]/).filter(s => s.trim());
+      if (sentences.length > 5) {
+        return `${punct} `;
+      }
+      return match;
+    });
+  }
+
+  // 이미지 최적화
+  private optimizeImages(response: string): string {
+    return response.replace(/150px/g, '120px').replace(/400×300px/g, '320×240px');
+  }
+
+  // 요소 통합
+  private consolidateElements(response: string): string {
+    return response.replace(/(\d+\.\s[^\n]+)\n+(\d+\.\s[^\n]+)/g, '$1, $2');
   }
 
   private createFallbackPageDesign(page: any): EducationalPageDesign {
