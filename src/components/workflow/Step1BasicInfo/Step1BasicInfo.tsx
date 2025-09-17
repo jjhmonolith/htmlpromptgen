@@ -1,6 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ProjectData, PageInfo } from '../../../types/workflow.types';
+import { LearningJourneyGeneratorService } from '../../../services/learning-journey-generator.service';
+import { OpenAIService } from '../../../services/openai.service';
+import { loadApiKey } from '../../../services/storage.service';
+import { ApiKeyManager } from '../../ApiKeyManager/ApiKeyManager';
 
 interface Step1BasicInfoProps {
   initialData?: ProjectData | null;
@@ -25,9 +29,13 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   const [suggestions, setSuggestions] = useState('');
 
   // Learning Journey Designer 상태 추가
+  const [isLearningJourneyExpanded, setIsLearningJourneyExpanded] = useState(false);
   const [emotionalArc, setEmotionalArc] = useState('');
   const [learnerPersona, setLearnerPersona] = useState('');
   const [ahaMoments, setAhaMoments] = useState<string[]>(['']);
+  const [isGeneratingJourney, setIsGeneratingJourney] = useState(false);
+  const [showApiKeyManager, setShowApiKeyManager] = useState(false);
+  const [hasGeneratedJourney, setHasGeneratedJourney] = useState(false);
   
   // 초기 데이터 로딩 (한 번만 실행)
   const hasLoadedInitialData = useRef(false);
@@ -49,6 +57,11 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       );
 
       // Learning Journey 초기 데이터 로드
+      // Learning Journey 데이터가 있으면 확장 상태로 설정하고 생성 완료 표시
+      if (initialData.emotionalArc || initialData.learnerPersona || initialData.ahaMoments) {
+        setIsLearningJourneyExpanded(true);
+        setHasGeneratedJourney(true);
+      }
       if (initialData.emotionalArc) setEmotionalArc(initialData.emotionalArc);
       if (initialData.learnerPersona) setLearnerPersona(initialData.learnerPersona);
       if (initialData.ahaMoments && Array.isArray(initialData.ahaMoments)) {
@@ -118,7 +131,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     }, 500); // 0.5초 디바운스
 
     return () => clearTimeout(timeoutId);
-  }, [projectTitle, targetAudience, pages, layoutMode, contentMode, suggestions, emotionalArc, learnerPersona, ahaMoments, onDataChange]); // isDataLoaded 제거
+  }, [projectTitle, targetAudience, pages, layoutMode, contentMode, suggestions, emotionalArc, learnerPersona, ahaMoments, onDataChange]);
   
   // 테스트 모드용 목업 데이터
   const mockData = {
@@ -188,34 +201,11 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     const el = scrollContainerRef.current;
     if (!el) return;
 
-    // 라인 높이 정확히 계산
-    const getLineHeightPx = (element: HTMLElement) => {
-      const lh = getComputedStyle(element).lineHeight;
-      if (lh.endsWith('px')) return parseFloat(lh);
-      // normal 등 숫자 아님 → 폰트 크기 추정치 사용
-      const fs = parseFloat(getComputedStyle(element).fontSize) || 16;
-      return Math.round(fs * 1.2);
-    };
-
-    // 휠 이벤트를 픽셀 단위로 정규화
-    const normalizeWheelPixels = (e: WheelEvent, element: HTMLElement) => {
-      // 픽셀 단위로 환산
-      if (e.deltaMode === 0) {
-        return { pxX: e.deltaX, pxY: e.deltaY };
-      }
-      if (e.deltaMode === 1) {
-        const linePx = getLineHeightPx(element);   // 환경 맞춘 라인 픽셀
-        return { pxX: e.deltaX * linePx, pxY: e.deltaY * linePx };
-      }
-      // PAGE 단위: 요소 높이 기준
-      return { pxX: e.deltaX * element.clientHeight, pxY: e.deltaY * element.clientHeight };
-    };
-    
     const handleWheel = (e: WheelEvent) => {
-      // 이미 가로 휠이거나 Shift 중이면 네이티브에 맡김
+      // Shift나 이미 가로 휠이면 그대로 둠
       if (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
 
-      // 가로로 스크롤할 여지가 없으면 반환
+      // 가로 스크롤 여지가 없으면 반환
       if (el.scrollWidth <= el.clientWidth) return;
 
       // 끝단에서 반대 방향으로는 상위로 넘겨 세로 스크롤 허용
@@ -223,21 +213,11 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       const atEnd = el.scrollLeft + el.clientWidth >= el.scrollWidth - 1;
       const tryingLeft = e.deltaY < 0;
       const tryingRight = e.deltaY > 0;
-      const blocked = (tryingLeft && atStart) || (tryingRight && atEnd);
-      if (blocked) return;
+      if ((tryingLeft && atStart) || (tryingRight && atEnd)) return;
 
-      // 여기서부터 가로로 전환
+      // 상하 스크롤을 좌우 스크롤로 1:1 변환
       e.preventDefault();
-
-      const { pxY } = normalizeWheelPixels(e, el);
-
-      // 일부 마우스(특히 Windows/Chrome)에서는 픽셀 단위가 작게 들어와
-      // 시프트+휠 대비 느리게 느껴질 수 있어 약간 가속(speed) 계수 적용
-      const speed = 1.0; // 1.2~2.0 사이에서 환경에 맞게 미세조정 (낮을수록 느림)
-      const dx = pxY * speed;
-
-      // 네이티브 감각 유지를 위해 즉시 적용 (smooth 금지)
-      el.scrollBy({ left: dx, top: 0, behavior: 'auto' });
+      el.scrollLeft += e.deltaY;
     };
 
     el.addEventListener('wheel', handleWheel, { passive: false });
@@ -369,6 +349,59 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     setErrors({});
   };
 
+  // AI로 Learning Journey 생성
+  const generateLearningJourney = async () => {
+    if (!projectTitle.trim() || !targetAudience.trim() || pages.filter(p => p.topic.trim()).length === 0) {
+      alert('프로젝트 제목, 대상, 페이지를 먼저 입력해주세요.');
+      return;
+    }
+
+    // API 키 체크
+    const apiKey = loadApiKey();
+    if (!apiKey) {
+      setShowApiKeyManager(true);
+      return;
+    }
+
+    setIsGeneratingJourney(true);
+    try {
+      const openAIService = OpenAIService.getInstance();
+      openAIService.reloadApiKey(); // API 키 재로드
+      const journeyService = new LearningJourneyGeneratorService(openAIService);
+
+      const validPages = pages.filter(p => p.topic.trim());
+      const result = await journeyService.generateLearningJourney(
+        projectTitle,
+        targetAudience,
+        validPages
+      );
+
+      setEmotionalArc(result.emotionalArc);
+      setLearnerPersona(result.learnerPersona);
+      setAhaMoments(result.ahaMoments);
+      setIsLearningJourneyExpanded(true);
+      setHasGeneratedJourney(true);
+    } catch (error) {
+      console.error('Learning Journey 생성 실패:', error);
+      alert('Learning Journey 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
+    } finally {
+      setIsGeneratingJourney(false);
+    }
+  };
+
+  // API 키 매니저 콜백 함수들
+  const handleApiKeyValidated = (key: string) => {
+    setShowApiKeyManager(false);
+    // API 키 설정 후 자동으로 Learning Journey 생성 시도
+    setTimeout(() => {
+      generateLearningJourney();
+    }, 500);
+  };
+
+  const handleApiKeyCancel = () => {
+    setShowApiKeyManager(false);
+  };
+
   const handleSubmit = () => {
     if (!validateForm()) return;
 
@@ -395,40 +428,21 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     onComplete(projectData);
   };
 
+  // API 키 매니저 표시 중이면 해당 컴포넌트만 렌더링
+  if (showApiKeyManager) {
+    return (
+      <ApiKeyManager
+        onKeyValidated={handleApiKeyValidated}
+        onCancel={handleApiKeyCancel}
+      />
+    );
+  }
+
   return (
-    <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
-      {/* 페이지 헤더 */}
-      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-8 pb-6">
-        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
-          <div className="flex items-center mb-6">
-            <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center text-white font-bold text-sm mr-3">
-              1
-            </div>
-            <h1 className="text-3xl font-bold text-gray-900">학습 여정 설계</h1>
-          </div>
-          <p className="text-lg text-gray-600 mb-6">
-            🌆 학습자의 감정적 여정을 매핑하고 의미 있는 학습 경험을 설계합니다.
-          </p>
-          <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-8 rounded-r-lg">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <svg className="h-5 w-5 text-blue-400" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-              </div>
-              <div className="ml-3">
-                <p className="text-sm text-blue-700">
-                  <span className="font-medium">새로운 접근법:</span> 단순한 정보 입력을 넘어서 학습자의 감정적 여정과 '아하!' 순간들을 설계하세요.<br/>
-                  <span className="font-medium">기대 효과:</span> 기술적 명세를 넘어서 감동적이고 기억에 남는 학습 경험 창조
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
+    <div style={{ backgroundColor: '#f5f5f7' }}>
 
       {/* 상단 흰색 영역 - 뷰포트 전체 너비 */}
-      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-6 pb-5">
+      <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-10 pb-5">
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
           {/* 상단 영역: 기본 정보 + 프로젝트 설정 (3등분) */}
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
@@ -656,7 +670,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
             </div>
           </div>
         </div>
-        </div>
       </div>
 
       {/* 페이지 구성 영역 - 뷰포트 전체 너비, 회색 배경 */}
@@ -785,100 +798,149 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
         
         {/* Learning Journey Designer 영역 */}
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-6">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-            {/* 감정적 여정 설계 */}
-            <div className="bg-white rounded-2xl px-6 py-6 shadow-sm">
-              <div className="flex items-center mb-4">
-                <div className="w-6 h-6 bg-purple-100 rounded-full flex items-center justify-center mr-3">
-                  🌆
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">감정적 여정</h3>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">학습자가 경험할 감정의 흐름을 설계하세요</p>
-              <input
-                type="text"
-                value={emotionalArc}
-                onChange={(e) => setEmotionalArc(e.target.value)}
-                placeholder="예: 호기심 → 놀라움 → 이해 → 성취감"
-                className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-gray-900 placeholder-gray-400"
-              />
-            </div>
-
-            {/* 학습자 페르소나 */}
-            <div className="bg-white rounded-2xl px-6 py-6 shadow-sm">
-              <div className="flex items-center mb-4">
-                <div className="w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mr-3">
-                  😊
-                </div>
-                <h3 className="text-lg font-semibold text-gray-900">학습자 페르소나</h3>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">구체적인 학습자의 상황과 성향을 묘사하세요</p>
-              <textarea
-                value={learnerPersona}
-                onChange={(e) => setLearnerPersona(e.target.value)}
-                placeholder="예: 초등학교 3학년 민수와 지영이. 과학을 어려워하지만 실험과 관찰을 좋아하고..."
-                className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all resize-none h-24 text-gray-900 placeholder-gray-400"
-              />
-            </div>
-          </div>
-
-          {/* '아하!' 순간들 */}
-          <div className="bg-white rounded-2xl px-6 py-6 shadow-sm mb-6">
-            <div className="flex items-center mb-4">
-              <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center mr-3">
-                💡
-              </div>
-              <h3 className="text-lg font-semibold text-gray-900">각 페이지별 '아하!' 순간</h3>
-              <span className="text-sm text-gray-600 ml-2">{ahaMoments.filter(moment => moment.trim()).length}개</span>
-            </div>
-            <p className="text-sm text-gray-600 mb-4">학습자가 각 페이지에서 경험할 '깨달음의 순간'들을 매핑하세요</p>
-            <div className="space-y-3">
-              {ahaMoments.map((moment, index) => (
-                <div key={index} className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-yellow-100 rounded-full flex items-center justify-center text-xs font-medium text-yellow-800">
-                    {index + 1}
-                  </div>
-                  <input
-                    type="text"
-                    value={moment}
-                    onChange={(e) => {
-                      const updated = [...ahaMoments];
-                      updated[index] = e.target.value;
-                      setAhaMoments(updated);
-                    }}
-                    placeholder={`페이지 ${index + 1}의 '아하!' 순간을 작성하세요`}
-                    className="flex-1 px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-gray-900 placeholder-gray-400"
-                  />
-                  {ahaMoments.length > 1 && (
-                    <button
-                      onClick={() => {
-                        const updated = ahaMoments.filter((_, i) => i !== index);
-                        setAhaMoments(updated.length > 0 ? updated : ['']);
-                      }}
-                      className="text-red-400 hover:text-red-600 transition-colors p-2"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                      </svg>
-                    </button>
-                  )}
-                </div>
-              ))}
-              {ahaMoments.length < pages.filter(p => p.topic.trim()).length && (
-                <button
-                  onClick={() => setAhaMoments([...ahaMoments, ''])}
-                  className="w-full py-3 border-2 border-dashed border-gray-300 rounded-xl text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-all flex items-center justify-center gap-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          {/* Learning Journey 모드 선택 */}
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 mb-6">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
+                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                   </svg>
-                  '아하!' 순간 추가
-                </button>
-              )}
-            </div>
-          </div>
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-gray-900">Learning Journey Designer</h2>
+                  <p className="text-sm text-gray-600">학습자의 감정적 여정과 페르소나를 설계하여 더욱 효과적인 교육 경험을 만들어보세요.</p>
+                </div>
+              </div>
 
-          {/* 추가 제안사항 */}
+              {/* AI 생성 버튼 */}
+              <button
+                onClick={generateLearningJourney}
+                disabled={isGeneratingJourney || !projectTitle.trim() || !targetAudience.trim() || pages.filter(p => p.topic.trim()).length === 0}
+                className={`px-6 py-3 rounded-xl font-medium transition-all ${
+                  isGeneratingJourney || !projectTitle.trim() || !targetAudience.trim() || pages.filter(p => p.topic.trim()).length === 0
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl'
+                }`}
+              >
+                {isGeneratingJourney ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-current inline" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    생성 중...
+                  </>
+                ) : (
+                  <>
+                    <svg className="w-4 h-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
+                    </svg>
+                    AI로 생성하기
+                  </>
+                )}
+              </button>
+            </div>
+
+            {/* 확장된 상태 - Learning Journey 생성 후 또는 기존 데이터가 있을 때 */}
+            {isLearningJourneyExpanded && (
+              <div className="mt-6 pt-6 border-t border-white/50">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                  {/* 감정적 여정 */}
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4">
+                    <div className="flex items-center mb-3">
+                      <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center mr-2">
+                        🌆
+                      </div>
+                      <h3 className="font-semibold text-gray-900">감정적 여정</h3>
+                    </div>
+                    <input
+                      type="text"
+                      value={emotionalArc}
+                      onChange={(e) => setEmotionalArc(e.target.value)}
+                      placeholder="예: 호기심 → 놀라움 → 이해 → 성취감"
+                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 focus:outline-none focus:border-purple-400 transition-all text-sm"
+                    />
+                  </div>
+
+                  {/* 학습자 페르소나 */}
+                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4">
+                    <div className="flex items-center mb-3">
+                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-2">
+                        😊
+                      </div>
+                      <h3 className="font-semibold text-gray-900">학습자 페르소나</h3>
+                    </div>
+                    <textarea
+                      value={learnerPersona}
+                      onChange={(e) => setLearnerPersona(e.target.value)}
+                      placeholder="예: 초등학교 3학년 민수와 지영이. 과학을 어려워하지만 실험과 관찰을 좋아하고..."
+                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 focus:outline-none focus:border-green-400 transition-all text-sm resize-none h-20"
+                    />
+                  </div>
+                </div>
+
+                {/* 아하! 순간들 */}
+                <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4">
+                  <div className="flex items-center mb-3">
+                    <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mr-2">
+                      💡
+                    </div>
+                    <h3 className="font-semibold text-gray-900">각 페이지별 아하! 순간</h3>
+                    <span className="text-xs text-gray-600 ml-2">({ahaMoments.filter(moment => moment.trim()).length}개)</span>
+                  </div>
+                  <div className="space-y-2">
+                    {ahaMoments.map((moment, index) => (
+                      <div key={index} className="flex items-center gap-2">
+                        <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center text-xs font-medium text-yellow-800">
+                          {index + 1}
+                        </div>
+                        <input
+                          type="text"
+                          value={moment}
+                          onChange={(e) => {
+                            const updated = [...ahaMoments];
+                            updated[index] = e.target.value;
+                            setAhaMoments(updated);
+                          }}
+                          placeholder={`페이지 ${index + 1}의 아하! 순간을 작성하세요`}
+                          className="flex-1 px-3 py-2 rounded-lg bg-white border border-gray-200 focus:outline-none focus:border-yellow-400 transition-all text-sm"
+                        />
+                        {ahaMoments.length > 1 && (
+                          <button
+                            onClick={() => {
+                              const updated = ahaMoments.filter((_, i) => i !== index);
+                              setAhaMoments(updated.length > 0 ? updated : ['']);
+                            }}
+                            className="text-red-400 hover:text-red-600 transition-colors p-1"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                    {ahaMoments.length < pages.filter(p => p.topic.trim()).length && (
+                      <button
+                        onClick={() => setAhaMoments([...ahaMoments, ''])}
+                        className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-all flex items-center justify-center gap-1 text-sm"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        아하! 순간 추가
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 추가 제안사항 */}
+        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
           <div className="bg-white rounded-2xl px-6 py-4 mb-3 shadow-sm">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">추가 제안사항</h3>
             <textarea
@@ -889,36 +951,22 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
             />
           </div>
         </div>
-      </div>
 
-      {/* 하단 버튼 영역 */}
-      <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 pb-6">
-
-        {/* 최하단 버튼 */}
-        <div className="flex justify-between items-center">
-          {onBack && (
+        {/* 네비게이션 버튼들 */}
+        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-8 mb-8">
+          <div className="flex justify-between">
             <button
               onClick={onBack}
-              className="px-6 py-3 bg-white text-gray-700 rounded-full hover:bg-gray-50 transition-all shadow-sm"
+              className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-all font-medium"
             >
-              이전으로
-            </button>
-          )}
-          <div className="flex gap-3 ml-auto">
-            <button
-              onClick={handleTestMode}
-              className="px-6 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all font-medium shadow-sm border border-gray-300"
-            >
-              🧪 테스트 모드
+              ← 이전
             </button>
             <button
               onClick={handleSubmit}
               className="px-8 py-3 text-white rounded-full transition-all font-medium shadow-sm"
               style={{
-                backgroundColor: '#3e88ff'
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               }}
-              onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2c6ae6'}
-              onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3e88ff'}
             >
               다음 단계로 →
             </button>
@@ -926,5 +974,8 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
         </div>
       </div>
     </div>
+  </div>
   );
 };
+
+export default Step1BasicInfo;

@@ -234,21 +234,6 @@ ${projectData.pages.length > 3 ? `├── page4.html          # 네 번째 페
    - 예시: \`https://via.placeholder.com/800x600/cccccc/666666?text=Image+Name\`
    - 형식: \`https://via.placeholder.com/[width]x[height]/[배경색]/[텍스트색]?text=[설명]\`
 
-**CSS 스타일 예시**:
-\`\`\`css
-.content-image {
-    /* 실제 이미지 크기로 고정 */
-    width: [지정된 width]px;
-    height: [지정된 height]px;
-    /* 크기 변경 방지 */
-    min-width: [지정된 width]px;
-    min-height: [지정된 height]px;
-    max-width: [지정된 width]px;
-    max-height: [지정된 height]px;
-    object-fit: cover;
-    display: block;
-}
-\`\`\`
 
 ### 성능 최적화 고려사항
 - **공통 리소스 활용**: styles.css, script.js, images/ 폴더를 모든 페이지가 공유
@@ -309,7 +294,7 @@ ${generateComponentSpecification(pageContent, step4Page)}
 ${generateImageSpecification(pageContent, step4Page)}
 
 ### ⚡ 상호작용 및 애니메이션 명세
-${generateInteractionSpecification(step4Page)}
+${generateInteractionAndAnimationSpecification(step4Page)}
 
 ### 🎓 교육적 기능 명세
 ${generateEducationalFeatureSpecification(step4Page)}
@@ -444,19 +429,46 @@ ${structure.sections.map((section: any, idx: number) => {
     }).join('\n\n');
   };
 
-  // 상호작용 명세 생성
-  const generateInteractionSpecification = (step4Page: any): string => {
-    if (!step4Page?.interactions || step4Page.interactions.length === 0) {
-      return step4Result ? '기본적인 상호작용 기능 (호버, 클릭 등)' : '상호작용 기능이 정의되지 않았습니다.';
+  // 새로운 상호작용 및 애니메이션 명세 생성 (Step4 텍스트 기반)
+  const generateInteractionAndAnimationSpecification = (step4Page: any): string => {
+    if (!step4Page) {
+      return '상호작용 및 애니메이션 설계가 없습니다. 기본적인 호버 효과와 페이드인 애니메이션을 구현하세요.';
     }
 
-    return step4Page.interactions.map((interaction: any, idx: number) => {
-      return `**${idx + 1}. ${interaction.type || interaction.name || 'Interaction'}**
-- 대상: ${interaction.target || interaction.targetElement || '미정'}
-- 트리거: ${interaction.trigger || interaction.event || '기본'}
-- 효과: ${interaction.effect || interaction.animation || '기본 효과'}
-- 지속시간: ${interaction.duration || 300}ms`;
-    }).join('\n\n');
+    let spec = '';
+
+    // Step4의 애니메이션 설명 활용
+    if (step4Page.animationDescription) {
+      spec += `**🎬 애니메이션 구현 지침**
+
+${step4Page.animationDescription}
+
+`;
+    }
+
+    // Step4의 상호작용 설명 활용
+    if (step4Page.interactionDescription) {
+      spec += `**⚡ 상호작용 구현 지침**
+
+${step4Page.interactionDescription}
+
+`;
+    }
+
+    // 애니메이션과 상호작용 설명이 모두 없으면 기본 지침 제공
+    if (!step4Page.animationDescription && !step4Page.interactionDescription) {
+      spec = `**기본 상호작용 구현**
+- 페이지 로드 시 순차적 페이드인 애니메이션
+- 카드 요소에 호버 효과 (transform, box-shadow)
+- 이미지 클릭 시 확대 모달
+- 스크롤 기반 요소 등장 애니메이션
+- 키보드 네비게이션 지원 (Tab, Enter, ESC)
+- 접근성 고려 (prefers-reduced-motion 지원)
+
+구체적인 CSS 애니메이션과 JavaScript 이벤트 핸들러를 구현하세요.`;
+    }
+
+    return spec;
   };
 
   // 교육적 기능 명세 생성
@@ -579,259 +591,70 @@ ${projectData.layoutMode === 'fixed' ? `### ⛔ 스크롤 절대 금지 규칙 (
    - padding은 컨테이너 크기 내에서 계산 (box-sizing: border-box 필수)
    - 콘텐츠가 많으면 그리드나 컬럼을 활용하여 가로로 배치
 
-` : ''}### 전역 스타일 정의
-\`\`\`css
-:root {
-    /* 색상 변수 */
-    --color-primary: ${visualIdentity.colorPalette.primary};
-    --color-secondary: ${visualIdentity.colorPalette.secondary};
-    --color-accent: ${visualIdentity.colorPalette.accent};
-    --color-text: ${visualIdentity.colorPalette.text};
-    --color-background: ${visualIdentity.colorPalette.background};
-
-    /* 폰트 변수 - 최소 18pt 보장 */
-    --font-heading: ${visualIdentity.typography.headingFont};
-    --font-body: ${visualIdentity.typography.bodyFont};
-    --font-size-base: max(18pt, ${visualIdentity.typography.baseSize}); /* 최소 18pt 보장 */
-    --font-size-caption: 18pt; /* 캡션도 최소 18pt */
-    --font-size-subtitle: 22pt; /* 부제목 최소 22pt */
-    --font-size-title: 28pt; /* 제목 최소 28pt */
-
-    /* 간격 변수 */
-    --spacing-xs: ${designTokens.spacing.xs}px;
-    --spacing-sm: ${designTokens.spacing.sm}px;
-    --spacing-md: ${designTokens.spacing.md}px;
-    --spacing-lg: ${designTokens.spacing.lg}px;
-    --spacing-xl: ${designTokens.spacing.xl}px;
-
-    /* 반응형 중단점 */
-    --breakpoint-mobile: 480px;
-    --breakpoint-tablet: 768px;
-    --breakpoint-desktop: 1024px;
-}
-
-/* 기본 리셋 */
-* {
-    margin: 0;
-    padding: 0;
-    box-sizing: border-box;
-}
-
-body {
-    font-family: var(--font-body);
-    font-size: var(--font-size-base);
-    line-height: 1.6;
-    color: var(--color-text);
-    background-color: var(--color-background);
-}
-
-.app-container {
-    ${projectData.layoutMode === 'fixed'
-      ? 'width: 1600px; height: 1000px; overflow: hidden; margin: 0 auto;'
-      : 'width: 1600px; margin: 0 auto; padding: var(--spacing-md);'
-    }
-}
-
-/* 페이지 섹션 스타일 */
-.page-section {
-    ${projectData.layoutMode === 'fixed'
-      ? `width: 1600px;
-    height: 1000px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: relative;`
-      : `width: 100%;
-    margin-bottom: var(--spacing-xl);
-    padding: var(--spacing-lg);
-    min-height: auto;`
-    }
-}
-
-.page-container {
-    ${projectData.layoutMode === 'scrollable'
-      ? 'max-width: 1400px; width: 100%; padding: var(--spacing-lg);'
-      : 'max-width: 1400px; width: 90%; height: 90%; padding: var(--spacing-lg); overflow: auto;'
-    }
-}
-\`\`\`
-
-### 컴포넌트별 스타일
-\`\`\`css
-/* 제목 스타일 */
-.section-heading {
-    font-family: var(--font-heading);
-    color: var(--color-primary);
-    margin-bottom: var(--spacing-md);
-    line-height: 1.2;
-}
-
-.section-heading.title {
-    font-size: 2.5em;
-    text-align: center;
-    margin-bottom: var(--spacing-lg);
-}
-
-.section-heading.content {
-    font-size: 1.8em;
-    margin-top: var(--spacing-lg);
-}
-
-/* 텍스트 스타일 */
-.content-text {
-    margin-bottom: var(--spacing-md);
-    text-align: justify;
-}
-
-.content-text.title {
-    font-size: 1.2em;
-    text-align: center;
-    font-weight: 500;
-}
-
-/* 이미지 스타일 */
-.content-image {
-    max-width: 100%;
-    height: auto;
-    border-radius: var(--spacing-xs);
-    margin: var(--spacing-md) auto;
-    display: block;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-}
-
-.image-caption {
-    text-align: center;
-    font-size: 0.9em;
-    color: var(--color-secondary);
-    font-style: italic;
-    margin-top: var(--spacing-xs);
-}
-
-/* 카드 스타일 */
-.content-card {
-    background: white;
-    border-radius: var(--spacing-sm);
-    padding: var(--spacing-md);
-    margin: var(--spacing-md) 0;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-    border-left: 4px solid var(--color-accent);
-}
-
-/* 반응형 스타일 */
-@media (max-width: 1600px) {
-    .app-container {
-        ${projectData.layoutMode === 'scrollable'
-          ? 'width: 100%; padding: var(--spacing-sm);'
-          : 'transform: scale(0.8); transform-origin: top center;'
-        }
-    }
-
-    .page-section {
-        ${projectData.layoutMode === 'scrollable'
-          ? 'padding: var(--spacing-sm);'
-          : ''
-        }
-    }
-
-    .section-heading.title {
-        font-size: 2em;
-    }
-
-    .section-heading.content {
-        font-size: 1.5em;
-    }
-
-    .page-container {
-        ${projectData.layoutMode === 'scrollable'
-          ? 'padding: var(--spacing-sm);'
-          : ''
-        }
-    }
-}
-
-@media (max-width: 768px) {
-    .app-container {
-        ${projectData.layoutMode === 'fixed'
-          ? 'transform: scale(0.5); transform-origin: top center;'
-          : 'width: 100%; padding: var(--spacing-sm);'
-        }
-    }
-
-    .section-heading.title {
-        font-size: 1.8em;
-    }
-
-    .section-heading.content {
-        font-size: 1.3em;
-    }
-}
-\`\`\``;
+` : ''}`;
   };
 
   // JavaScript 상호작용 명세 생성
   const generateJavaScriptSpecification = (): string => {
-    return `## ⚡ JavaScript 상호작용 명세
+    // Step4의 상세한 애니메이션/상호작용 설명들을 수집
+    const step4AnimationDescriptions: string[] = [];
+    const step4InteractionDescriptions: string[] = [];
+
+    if (step4Result?.pages) {
+      step4Result.pages.forEach(page => {
+        if (page.animationDescription) {
+          step4AnimationDescriptions.push(page.animationDescription);
+        }
+        if (page.interactionDescription) {
+          step4InteractionDescriptions.push(page.interactionDescription);
+        }
+      });
+    }
+
+    let jsSpec = `## ⚡ JavaScript 상호작용 명세
 
 ### ⚠️ 중요 지침
 각 HTML 파일은 독립적으로 작동해야 하며, 페이지 간 네비게이션 기능은 절대 구현하지 마세요.
 
-### 교육적 기능 구현
-\`\`\`javascript
-// 페이지 로드 시 초기화 (각 페이지별로 독립 실행)
-document.addEventListener('DOMContentLoaded', function() {
-    initializeEducationalFeatures();
-    setupInteractiveElements();
-});
+`;
 
-// 교육적 기능 초기화
-function initializeEducationalFeatures() {
-    const elements = document.querySelectorAll('.page-container > *');
-    elements.forEach((element, index) => {
-        element.style.opacity = '0';
-        element.style.transform = 'translateY(20px)';
+    // Step4 애니메이션 설명이 있으면 활용
+    if (step4AnimationDescriptions.length > 0) {
+      jsSpec += `### 🎬 Step4 애니메이션 설계 반영
 
-        setTimeout(() => {
-            element.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
-            element.style.opacity = '1';
-            element.style.transform = 'translateY(0)';
-        }, index * 200);
-    });
-}
+**다음 Step4 애니메이션 설계를 JavaScript와 CSS로 구현하세요:**
 
-// 상호작용 요소 설정
-function setupInteractiveElements() {
-    const images = document.querySelectorAll('.content-image');
-    images.forEach(img => {
-        img.addEventListener('click', () => {
-            showImageModal(img.src, img.alt);
-        });
-    });
+${step4AnimationDescriptions.map((desc, idx) => `**페이지 ${idx + 1} 애니메이션:**
+${desc}`).join('\n\n')}
 
-    const cards = document.querySelectorAll('.content-card');
-    cards.forEach(card => {
-        card.addEventListener('mouseenter', () => {
-            card.style.transform = 'translateY(-2px)';
-            card.style.boxShadow = '0 4px 20px rgba(0,0,0,0.15)';
-        });
-        card.addEventListener('mouseleave', () => {
-            card.style.transform = 'translateY(0)';
-            card.style.boxShadow = '0 2px 12px rgba(0,0,0,0.1)';
-        });
-    });
-}
+`;
+    }
 
-function showImageModal(src, alt) {
-    const modal = document.createElement('div');
-    modal.className = 'image-modal';
-    modal.innerHTML = '<div class="modal-backdrop"><div class="modal-content"><img src="' + src + '" alt="' + alt + '" class="modal-image"><button class="modal-close">×</button></div></div>';
+    // Step4 상호작용 설명이 있으면 활용
+    if (step4InteractionDescriptions.length > 0) {
+      jsSpec += `### ⚡ Step4 상호작용 설계 반영
 
-    document.body.appendChild(modal);
+**다음 Step4 상호작용 설계를 JavaScript 이벤트 핸들러로 구현하세요:**
 
-    modal.querySelector('.modal-close').addEventListener('click', () => {
-        document.body.removeChild(modal);
-    });
-}
-\`\`\``;
+${step4InteractionDescriptions.map((desc, idx) => `**페이지 ${idx + 1} 상호작용:**
+${desc}`).join('\n\n')}
+
+`;
+    }
+
+    // Step4 설계 구현 체크리스트 추가
+    jsSpec += `
+
+### 📋 Step4 설계 구현 체크리스트
+
+${step4AnimationDescriptions.length > 0 ? '✅ Step4 애니메이션 설계를 JavaScript/CSS로 정확히 구현' : '⚠️ Step4 애니메이션 설계가 없으므로 기본 애니메이션 구현'}
+${step4InteractionDescriptions.length > 0 ? '✅ Step4 상호작용 설계를 이벤트 핸들러로 정확히 구현' : '⚠️ Step4 상호작용 설계가 없으므로 기본 상호작용 구현'}
+✅ 접근성 기능 (키보드 네비게이션, reduced-motion) 구현
+✅ 성능 최적화 (transform/opacity 기반 애니메이션)
+✅ 각 페이지의 독립적 동작 보장
+❌ 페이지 간 네비게이션 기능 구현 금지`;
+
+    return jsSpec;
   };
 
   // 이미지 프롬프트 섹션 생성

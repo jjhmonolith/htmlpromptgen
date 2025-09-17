@@ -1,413 +1,109 @@
-import {
-  LayoutSpecification,
-  SectionSpecification,
-  ComponentStyleSpecification,
-  ImagePlacementSpecification,
-  InteractionSpecification,
-  EducationalFeature,
-  FontSpecification
-} from '../../types/step4.types';
-
 /**
- * Step4 라인 기반 파싱 엔진
+ * Step4 텍스트 파싱 엔진
  *
- * AI가 생성한 BEGIN_S4...END_S4 형식의 응답을
- * 구조화된 데이터로 변환합니다. 99%+ 파싱 성공률을 목표로 합니다.
+ * AI가 생성한 상세한 애니메이션/인터랙션 설계 텍스트를 파싱합니다.
+ * 구조화된 마크다운 형식의 응답을 처리
  */
 export class ParsingEngine {
   /**
-   * Step4 AI 응답 파싱
+   * Step4 AI 응답 파싱 (새로운 텍스트 형식)
    * @param content AI 응답 텍스트
-   * @returns 파싱된 페이지 결과
+   * @returns 파싱된 상세 설계 결과
    */
   parseStep4Response(content: string): {
-    layout: LayoutSpecification;
-    componentStyles: ComponentStyleSpecification[];
-    imagePlacements: ImagePlacementSpecification[];
-    interactions: InteractionSpecification[];
-    educationalFeatures: EducationalFeature[];
+    animationDescription: string;
+    interactionDescription: string;
   } {
-    console.log('🔍 Step4 응답 파싱 시작');
+    console.log('🔍 Step4 텍스트 응답 파싱 시작');
 
-    // BEGIN_S4...END_S4 추출
-    const s4Block = this.extractS4Block(content);
-    if (!s4Block) {
-      throw new Error('BEGIN_S4...END_S4 블록을 찾을 수 없습니다');
+    try {
+      // 전체 응답을 그대로 저장
+      const fullResponse = content.trim();
+
+      // "애니메이션" 섹션 추출
+      const animationMatch = fullResponse.match(/\*\*애니메이션\*\*:([\s\S]*?)(?:\*\*상호작용\*\*:|$)/);
+      let animationDescription = '';
+      if (animationMatch) {
+        animationDescription = animationMatch[1].trim();
+      }
+
+      // "상호작용" 섹션 추출
+      const interactionMatch = fullResponse.match(/\*\*상호작용\*\*:([\s\S]*?)$/);
+      let interactionDescription = '';
+      if (interactionMatch) {
+        interactionDescription = interactionMatch[1].trim();
+      }
+
+      // 섹션을 찾지 못한 경우 전체 텍스트를 분할
+      if (!animationDescription && !interactionDescription) {
+        console.warn('⚠️ 구조화된 섹션을 찾을 수 없음, 전체 텍스트를 처리');
+        const midPoint = Math.floor(fullResponse.length / 2);
+        animationDescription = fullResponse.substring(0, midPoint).trim();
+        interactionDescription = fullResponse.substring(midPoint).trim();
+      }
+
+      // 빈 값 처리
+      if (!animationDescription) {
+        animationDescription = this.getFallbackResult().animationDescription;
+      }
+      if (!interactionDescription) {
+        interactionDescription = this.getFallbackResult().interactionDescription;
+      }
+
+      console.log('✅ Step4 텍스트 파싱 성공');
+      console.log('📊 파싱 결과:', {
+        animationLength: animationDescription.length,
+        interactionLength: interactionDescription.length
+      });
+
+      return {
+        animationDescription,
+        interactionDescription
+      };
+
+    } catch (error) {
+      console.error('❌ 텍스트 파싱 실패:', error);
+      return this.getFallbackResult();
     }
+  }
 
-    // 라인별 Key-Value 파싱
-    const keyValuePairs = this.parseKeyValueLines(s4Block);
-    console.log(`📊 파싱된 Key-Value 쌍: ${Object.keys(keyValuePairs).length}개`);
-
-    // 구조화된 데이터로 변환
-    const layout = this.parseLayout(keyValuePairs);
-    const componentStyles = this.parseComponentStyles(keyValuePairs);
-    const imagePlacements = this.parseImagePlacements(keyValuePairs);
-    const interactions = this.parseInteractions(keyValuePairs);
-    const educationalFeatures = this.parseEducationalFeatures(keyValuePairs);
-
-    console.log('✅ Step4 파싱 완료', {
-      layoutSections: layout.sections.length,
-      componentStyles: componentStyles.length,
-      imagePlacements: imagePlacements.length,
-      interactions: interactions.length,
-      educationalFeatures: educationalFeatures.length
-    });
-
+  /**
+   * 파싱 실패 시 기본값 반환
+   */
+  private getFallbackResult(): {
+    animationDescription: string;
+    interactionDescription: string;
+  } {
     return {
-      layout,
-      componentStyles,
-      imagePlacements,
-      interactions,
-      educationalFeatures
+      animationDescription: `### 애니메이션 및 상호작용
+- **애니메이션**: 학습 몰입을 높이는 점진적 정보 공개 설계
+
+**1) 페이지 최초 로드 시퀀스(0-1.5초, ease-out)**
+- 0-300ms: 페이지 배경이 부드럽게 페이드인
+- 200-800ms: 주요 제목이 위에서 16px 내려오며 등장
+- 400-1000ms: 콘텐츠 섹션들이 60ms 간격으로 순차 페이드인
+- 800-1200ms: 이미지와 인터랙티브 요소들이 미세한 스케일 효과와 함께 등장
+
+**2) 콘텐츠 영역별 애니메이션**
+- 텍스트 블록: 스크롤 진입 시 페이드업 효과로 가독성 향상
+- 카드 요소: 0.98에서 1.0 스케일로 부드러운 등장, 학습자 주의 집중
+- 이미지: 마스크 리빌 효과로 시각적 흥미 유발`,
+
+      interactionDescription: `**- **상호작용**: 직관적이고 접근성을 고려한 피드백 설계
+
+**A) 카드 및 버튼 상호작용**
+- Hover: 6px 상승 + 그림자 강화, 시각적 피드백 제공
+- Focus: 3px 파란색 포커스 링, 키보드 네비게이션 지원
+- Click: 0.98 스케일 압축 후 원복, 명확한 클릭 피드백
+
+**B) 텍스트 및 링크 요소**
+- Hover: 밑줄 애니메이션, 색상 변화로 상호작용 가능성 표시
+- 접근성: 최소 44px 터치 타겟, 색상 대비 4.5:1 이상 보장
+
+**C) 접근성 및 성능 최적화**
+- 키보드 네비게이션: Tab 순서 최적화, ESC로 모달 닫기
+- 감속 모드: prefers-reduced-motion 지원으로 움직임 최소화
+- 성능: transform/opacity 기반 애니메이션으로 60fps 보장`
     };
-  }
-
-  /**
-   * BEGIN_S4...END_S4 블록 추출 (markdown 코드 블록 대응)
-   */
-  private extractS4Block(content: string): string | null {
-    // markdown 코드 블록 제거 (```plaintext, ```, etc.)
-    let cleanContent = content
-      .replace(/```[a-zA-Z]*\n?/g, '') // 시작 코드 블록 제거
-      .replace(/```\n?/g, ''); // 끝 코드 블록 제거
-
-    const beginMatch = cleanContent.match(/BEGIN_S4/);
-
-    if (!beginMatch) {
-      console.error('❌ BEGIN_S4 마커를 찾을 수 없습니다');
-      console.log('🔍 원본 내용 (처음 500자):', content.substring(0, 500));
-      console.log('🔍 정제된 내용 (처음 500자):', cleanContent.substring(0, 500));
-      return null;
-    }
-
-    const endMatch = cleanContent.match(/END_S4/);
-    const start = beginMatch.index! + 'BEGIN_S4'.length;
-
-    let extractedBlock: string;
-
-    if (!endMatch) {
-      // END_S4가 없으면 BEGIN_S4 이후 모든 내용 사용 (응답이 잘렸을 가능성)
-      console.warn('⚠️ END_S4 마커를 찾을 수 없습니다. BEGIN_S4 이후 모든 내용을 사용합니다.');
-      extractedBlock = cleanContent.slice(start).trim();
-    } else {
-      // END_S4가 있으면 정상 처리
-      const end = endMatch.index!;
-      extractedBlock = cleanContent.slice(start, end).trim();
-    }
-
-    console.log('✅ Step4 블록 추출 성공, 블록 크기:', extractedBlock.length, '문자');
-    console.log('🔍 추출된 블록 (처음 200자):', extractedBlock.substring(0, 200));
-    return extractedBlock;
-  }
-
-  /**
-   * 라인별 Key=Value 파싱
-   */
-  private parseKeyValueLines(content: string): Record<string, string> {
-    const lines = content.split('\n').map(line => line.trim());
-    const keyValuePairs: Record<string, string> = {};
-
-    for (const line of lines) {
-      // 주석 라인 건너뛰기
-      if (line.startsWith('#') || line === '') continue;
-
-      // Key=Value 형식 파싱
-      const equalIndex = line.indexOf('=');
-      if (equalIndex === -1) continue;
-
-      const key = line.slice(0, equalIndex).trim();
-      const value = line.slice(equalIndex + 1).trim();
-
-      keyValuePairs[key] = value;
-    }
-
-    return keyValuePairs;
-  }
-
-  /**
-   * 레이아웃 명세 파싱
-   */
-  private parseLayout(kv: Record<string, string>): LayoutSpecification {
-    const sections = this.parseSections(kv);
-
-    return {
-      pageWidth: this.parseNumber(kv['LAYOUT_PAGE_WIDTH'], 1600),
-      pageHeight: kv['LAYOUT_PAGE_HEIGHT'] === 'auto' ? 'auto' : this.parseNumber(kv['LAYOUT_PAGE_HEIGHT'], 1000),
-      sections,
-      backgroundColor: kv['LAYOUT_BG_COLOR'] || '#FFFFFF',
-      safeArea: {
-        top: this.parseNumber(kv['LAYOUT_SAFE_TOP'], 80),
-        right: this.parseNumber(kv['LAYOUT_SAFE_RIGHT'], 100),
-        bottom: this.parseNumber(kv['LAYOUT_SAFE_BOTTOM'], 120),
-        left: this.parseNumber(kv['LAYOUT_SAFE_LEFT'], 100)
-      }
-    };
-  }
-
-  /**
-   * 섹션들 파싱
-   */
-  private parseSections(kv: Record<string, string>): SectionSpecification[] {
-    const sections: SectionSpecification[] = [];
-    const sectionIds = this.findSectionIds(kv);
-
-    for (const sectionNum of sectionIds) {
-      const section: SectionSpecification = {
-        id: kv[`SECTION_${sectionNum}_ID`] || `section${sectionNum}`,
-        gridType: kv[`SECTION_${sectionNum}_GRID`] as any || '1-12',
-        position: {
-          x: this.parseNumber(kv[`SECTION_${sectionNum}_X`], 100),
-          y: this.parseNumber(kv[`SECTION_${sectionNum}_Y`], 80)
-        },
-        dimensions: {
-          width: this.parseNumber(kv[`SECTION_${sectionNum}_WIDTH`], 1400),
-          height: kv[`SECTION_${sectionNum}_HEIGHT`] === 'auto' ? 'auto' : this.parseNumber(kv[`SECTION_${sectionNum}_HEIGHT`], 200)
-        },
-        padding: {
-          top: this.parseNumber(kv[`SECTION_${sectionNum}_PADDING_TOP`], 32),
-          right: this.parseNumber(kv[`SECTION_${sectionNum}_PADDING_RIGHT`], 40),
-          bottom: this.parseNumber(kv[`SECTION_${sectionNum}_PADDING_BOTTOM`], 32),
-          left: this.parseNumber(kv[`SECTION_${sectionNum}_PADDING_LEFT`], 40)
-        },
-        backgroundColor: kv[`SECTION_${sectionNum}_BG_COLOR`] || 'transparent',
-        gap: this.parseNumber(kv[`SECTION_${sectionNum}_GAP`], 24),
-        marginBottom: this.parseNumber(kv[`SECTION_${sectionNum}_MARGIN_BOTTOM`], 32)
-      };
-
-      sections.push(section);
-    }
-
-    return sections;
-  }
-
-  /**
-   * 컴포넌트 스타일들 파싱
-   */
-  private parseComponentStyles(kv: Record<string, string>): ComponentStyleSpecification[] {
-    const components: ComponentStyleSpecification[] = [];
-    const componentIds = this.findComponentIds(kv);
-
-    for (const compNum of componentIds) {
-      const component: ComponentStyleSpecification = {
-        id: kv[`COMP_${compNum}_ID`] || `comp${compNum}`,
-        type: kv[`COMP_${compNum}_TYPE`] as any || 'paragraph',
-        section: kv[`COMP_${compNum}_SECTION`] || 'section1',
-        position: {
-          x: this.parseNumber(kv[`COMP_${compNum}_X`], 100),
-          y: this.parseNumber(kv[`COMP_${compNum}_Y`], 80)
-        },
-        dimensions: {
-          width: this.parseNumber(kv[`COMP_${compNum}_WIDTH`], 720),
-          height: kv[`COMP_${compNum}_HEIGHT`] === 'auto' ? 'auto' : this.parseNumber(kv[`COMP_${compNum}_HEIGHT`], 60)
-        },
-        font: this.parseComponentFont(kv, compNum),
-        colors: {
-          text: kv[`COMP_${compNum}_COLOR_TEXT`] || '#1E293B',
-          background: kv[`COMP_${compNum}_COLOR_BG`] || 'transparent',
-          border: kv[`COMP_${compNum}_COLOR_BORDER`] || '#E2E8F0'
-        },
-        visual: {
-          borderRadius: this.parseNumber(kv[`COMP_${compNum}_BORDER_RADIUS`], 8),
-          boxShadow: kv[`COMP_${compNum}_BOX_SHADOW`] || 'none',
-          opacity: 1
-        },
-        zIndex: this.parseNumber(kv[`COMP_${compNum}_Z_INDEX`], 10),
-        display: kv[`COMP_${compNum}_DISPLAY`] as any || 'block'
-      };
-
-      components.push(component);
-    }
-
-    return components;
-  }
-
-  /**
-   * 이미지 배치들 파싱
-   */
-  private parseImagePlacements(kv: Record<string, string>): ImagePlacementSpecification[] {
-    const images: ImagePlacementSpecification[] = [];
-    const imageIds = this.findImageIds(kv);
-
-    for (const imgNum of imageIds) {
-      const image: ImagePlacementSpecification = {
-        id: kv[`IMG_${imgNum}_ID`] || `img${imgNum}`,
-        filename: kv[`IMG_${imgNum}_SRC`] || `${imgNum}.png`,
-        section: kv[`IMG_${imgNum}_SECTION`] || 'section1',
-        objectFit: kv[`IMG_${imgNum}_OBJECT_FIT`] as any || 'cover',
-        loading: kv[`IMG_${imgNum}_LOADING`] as any || 'lazy',
-        priority: kv[`IMG_${imgNum}_PRIORITY`] as any || 'normal',
-        zIndex: this.parseNumber(kv[`IMG_${imgNum}_Z_INDEX`], 10),
-        position: {
-          x: this.parseNumber(kv[`IMG_${imgNum}_X`], 100),
-          y: this.parseNumber(kv[`IMG_${imgNum}_Y`], 200)
-        },
-        dimensions: {
-          width: this.parseNumber(kv[`IMG_${imgNum}_WIDTH`], 520),
-          height: this.parseNumber(kv[`IMG_${imgNum}_HEIGHT`], 320)
-        },
-        alt: kv[`IMG_${imgNum}_ALT`] || '이미지 설명',
-        borderRadius: this.parseNumber(kv[`IMG_${imgNum}_BORDER_RADIUS`], 8),
-        boxShadow: kv[`IMG_${imgNum}_BOX_SHADOW`] || '0 4px 12px rgba(0, 0, 0, 0.15)'
-      };
-
-      images.push(image);
-    }
-
-    return images;
-  }
-
-  /**
-   * 상호작용들 파싱
-   */
-  private parseInteractions(kv: Record<string, string>): InteractionSpecification[] {
-    const interactions: InteractionSpecification[] = [];
-    const interactionIds = this.findInteractionIds(kv);
-
-    for (const intNum of interactionIds) {
-      const interaction: InteractionSpecification = {
-        id: `interaction${intNum}`,
-        target: kv[`INTERACTION_${intNum}_TARGET`] || '',
-        trigger: kv[`INTERACTION_${intNum}_TRIGGER`] as any || 'hover',
-        effect: kv[`INTERACTION_${intNum}_EFFECT`] as any || 'fadeIn',
-        duration: kv[`INTERACTION_${intNum}_DURATION`] || '200ms',
-        parameters: {
-          opacity: 0.8
-        }
-      };
-
-      if (interaction.target) {
-        interactions.push(interaction);
-      }
-    }
-
-    return interactions;
-  }
-
-  /**
-   * 교육적 기능들 파싱
-   */
-  private parseEducationalFeatures(kv: Record<string, string>): EducationalFeature[] {
-    const features: EducationalFeature[] = [];
-    const eduIds = this.findEducationalIds(kv);
-
-    for (const eduNum of eduIds) {
-      const feature: EducationalFeature = {
-        id: `edu${eduNum}`,
-        type: kv[`EDU_${eduNum}_TYPE`] as any || 'progressBar',
-        position: kv[`EDU_${eduNum}_POSITION`] as any || 'top',
-        styling: {
-          primaryColor: kv[`EDU_${eduNum}_PRIMARY_COLOR`] || '#004D99',
-          secondaryColor: kv[`EDU_${eduNum}_SECONDARY_COLOR`] || '#E9F4FF',
-          backgroundColor: kv[`EDU_${eduNum}_BG_COLOR`] || '#FFFFFF',
-          opacity: 1
-        },
-        behavior: {
-          autoUpdate: true,
-          userControl: false,
-          persistence: false
-        }
-      };
-
-      features.push(feature);
-    }
-
-    return features;
-  }
-
-  /**
-   * 컴포넌트 폰트 정보 파싱
-   */
-  private parseComponentFont(kv: Record<string, string>, compNum: string): FontSpecification | undefined {
-    const family = kv[`COMP_${compNum}_FONT_FAMILY`];
-    const size = kv[`COMP_${compNum}_FONT_SIZE`];
-
-    if (!family && !size) return undefined;
-
-    return {
-      family: family || 'SF Pro Text',
-      size: size || '16px',
-      weight: this.parseNumber(kv[`COMP_${compNum}_FONT_WEIGHT`], 400),
-      lineHeight: this.parseNumber(kv[`COMP_${compNum}_LINE_HEIGHT`], 1.5)
-    };
-  }
-
-  /**
-   * 섹션 ID들 찾기
-   */
-  private findSectionIds(kv: Record<string, string>): string[] {
-    const ids = new Set<string>();
-    for (const key of Object.keys(kv)) {
-      const match = key.match(/^SECTION_(\d+)_/);
-      if (match) {
-        ids.add(match[1]);
-      }
-    }
-    return Array.from(ids).sort((a, b) => parseInt(a) - parseInt(b));
-  }
-
-  /**
-   * 컴포넌트 ID들 찾기
-   */
-  private findComponentIds(kv: Record<string, string>): string[] {
-    const ids = new Set<string>();
-    for (const key of Object.keys(kv)) {
-      const match = key.match(/^COMP_(\d+)_/);
-      if (match) {
-        ids.add(match[1]);
-      }
-    }
-    return Array.from(ids).sort((a, b) => parseInt(a) - parseInt(b));
-  }
-
-  /**
-   * 이미지 ID들 찾기
-   */
-  private findImageIds(kv: Record<string, string>): string[] {
-    const ids = new Set<string>();
-    for (const key of Object.keys(kv)) {
-      const match = key.match(/^IMG_(\d+)_/);
-      if (match) {
-        ids.add(match[1]);
-      }
-    }
-    return Array.from(ids).sort((a, b) => parseInt(a) - parseInt(b));
-  }
-
-  /**
-   * 상호작용 ID들 찾기
-   */
-  private findInteractionIds(kv: Record<string, string>): string[] {
-    const ids = new Set<string>();
-    for (const key of Object.keys(kv)) {
-      const match = key.match(/^INTERACTION_(\d+)_/);
-      if (match) {
-        ids.add(match[1]);
-      }
-    }
-    return Array.from(ids).sort((a, b) => parseInt(a) - parseInt(b));
-  }
-
-  /**
-   * 교육적 기능 ID들 찾기
-   */
-  private findEducationalIds(kv: Record<string, string>): string[] {
-    const ids = new Set<string>();
-    for (const key of Object.keys(kv)) {
-      const match = key.match(/^EDU_(\d+)_/);
-      if (match) {
-        ids.add(match[1]);
-      }
-    }
-    return Array.from(ids).sort((a, b) => parseInt(a) - parseInt(b));
-  }
-
-  /**
-   * 안전한 숫자 파싱
-   */
-  private parseNumber(value: string | undefined, defaultValue: number): number {
-    if (!value) return defaultValue;
-    const parsed = parseInt(value);
-    return isNaN(parsed) ? defaultValue : parsed;
   }
 }

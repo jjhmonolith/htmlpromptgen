@@ -243,16 +243,23 @@ export class Step4DesignSpecificationService {
     const startTime = Date.now();
 
     try {
-      // AI 프롬프트 생성
-      const prompt = this.buildPrompt(step3PageData, projectData, visualIdentity);
+      // AI 프롬프트 생성 (contentMode 추가)
+      const contentMode: 'restricted' | 'enhanced' = 'enhanced'; // 기본값 - 추후 UI에서 설정 가능
+      const prompt = this.buildPrompt(step3PageData, projectData, visualIdentity, contentMode);
 
       // AI 호출 (Step2/Step3 방식 참고)
       const response = await this.openAIService.createCompletion({
         model: 'gpt-4o',
-        messages: [{ role: 'user', content: prompt }],
-        temperature: 0.3, // Step4는 정확성이 중요하므로 낮은 temperature
+        messages: [
+          {
+            role: 'system',
+            content: '상세한 애니메이션과 상호작용 설계를 요청받은 대로 정확히 작성해주세요. 요청된 구조와 형식을 정확히 따라 상세한 텍스트로 응답하세요.'
+          },
+          { role: 'user', content: prompt }
+        ],
+        temperature: 0.4, // 창의적 애니메이션 설계를 위해 약간 높임
         top_p: 1,
-        max_tokens: 2000, // 정밀한 명세를 위해 더 많은 토큰
+        max_tokens: 3000, // 상세한 텍스트 응답을 위해 토큰 수 증가
         stop: [] // stop 파라미터는 필수이므로 빈 배열로 설정
       });
 
@@ -264,100 +271,59 @@ export class Step4DesignSpecificationService {
       const rawContent = response.choices[0].message.content;
       console.log(`🔄 Step4 Page${step3PageData.pageNumber} 원시 응답:`, rawContent.substring(0, 200) + '...');
 
-      // 응답 파싱
-      const parsed = this.parseResponse(rawContent, projectData.layoutMode);
+      // 응답 파싱 (새로운 JSON 형식)
+      const parsed = this.parseResponse(rawContent);
 
-      // Phase 2: 레이아웃 정밀화 및 스타일 구체화
+      // Phase 2: 기본 레이아웃 구성 (Step3 데이터 기반)
       const refinedLayout = this.layoutEngine.refineLayout(
         step3PageData.structure?.sections || [],
         projectData.layoutMode
       );
 
-      // 기본 designTokens 생성 (VisualIdentity에 없으므로) - AI 파싱에서 사용 안함
-      const _defaultDesignTokens = {
-        viewport: {
-          width: projectData.layoutMode === 'fixed' ? 1600 : 1600,
-          height: projectData.layoutMode === 'fixed' ? 1000 : undefined
-        },
-        safeArea: {
-          top: 80,
-          right: 100,
-          bottom: 120,
-          left: 100
-        },
-        grid: {
-          columns: 12,
-          gap: 24
-        },
-        spacing: {
-          xs: 8,
-          sm: 16,
-          md: 24,
-          lg: 32,
-          xl: 48
-        },
-        radius: {
-          sm: 4,
-          md: 8,
-          lg: 16
-        },
-        shadow: {
-          sm: '0 2px 4px rgba(0, 0, 0, 0.1)',
-          md: '0 4px 8px rgba(0, 0, 0, 0.12)',
-          lg: '0 8px 16px rgba(0, 0, 0, 0.15)'
-        },
-        elevation: {
-          low: '0 1px 3px rgba(0, 0, 0, 0.12)',
-          medium: '0 4px 6px rgba(0, 0, 0, 0.16)',
-          high: '0 10px 20px rgba(0, 0, 0, 0.19)'
-        },
-        zIndex: {
-          base: 0,
-          image: 10,
-          card: 20,
-          text: 30
-        }
-      };
+      // 기본 컴포넌트 스타일 생성 (Step3 데이터와 비주얼 아이덴티티 기반)
+      const baseComponentStyles = this.generateBaseComponentStyles(step3PageData, visualIdentity);
 
-      // 🎨 AI가 생성한 정확한 컴포넌트 스타일 사용 (StyleEngine 덮어쓰기 방지)
-      // parsed.componentStyles에는 이미 AI가 생성한 다양한 색상과 폰트 정보가 포함됨
-      const refinedComponentStyles = parsed.componentStyles;
-
-      console.log('🎯 AI 생성 컴포넌트 스타일 사용:', {
-        totalComponents: refinedComponentStyles.length,
-        colorsPreserved: refinedComponentStyles.map((c: any) => c.colors.text).slice(0, 3),
-        fontsPreserved: refinedComponentStyles.map((c: any) => c.font?.family).slice(0, 3)
+      console.log('🎯 새로운 JSON 응답 처리:', {
+        animationDescription: parsed.animationDescription.substring(0, 100) + '...',
+        interactionDescription: parsed.interactionDescription.substring(0, 100) + '...'
       });
 
-      // Phase 3: 상호작용 및 교육적 기능 강화 (정밀화된 컴포넌트 사용)
-      const enhancedInteractions = this.enhanceInteractions(
-        parsed.interactions,
-        refinedComponentStyles, // 정밀화된 컴포넌트 스타일 사용
-        projectData.layoutMode,
-        step3PageData.pageNumber,
-        projectData.pages.length
+      console.log('🔍 생성된 컴포넌트 스타일 검증:', {
+        componentCount: baseComponentStyles.length,
+        firstComponent: baseComponentStyles[0],
+        hasPositionX: baseComponentStyles.every(comp => comp.position && typeof comp.position.x === 'number')
+      });
+
+      // Phase 3: 애니메이션 및 상호작용 생성 (AI 응답 기반)
+      const enhancedInteractions = this.createInteractionsFromDescription(
+        parsed.interactionDescription,
+        baseComponentStyles,
+        projectData.layoutMode
       );
 
-      const enhancedEducationalFeatures = this.enhanceEducationalFeatures(
-        parsed.educationalFeatures,
-        refinedComponentStyles, // 정밀화된 컴포넌트 스타일 사용
-        projectData.layoutMode,
-        step3PageData.pageNumber,
-        projectData.pages.length
+      const enhancedEducationalFeatures = this.createAnimationsFromDescription(
+        parsed.animationDescription,
+        baseComponentStyles,
+        projectData.layoutMode
       );
 
-      // 검증 (ValidationEngine 사용) - 정밀화된 데이터 사용
+      // 기본 이미지 배치 생성 (Step3 데이터 기반)
+      const imagePlacements = this.generateImagePlacements(step3PageData);
+
+      // 검증 (ValidationEngine 사용)
       const tempPageResult: Step4PageResult = {
         pageId: step3PageData.pageId,
         pageTitle: step3PageData.pageTitle,
         pageNumber: step3PageData.pageNumber,
-        layout: refinedLayout, // 정밀화된 레이아웃 사용
-        componentStyles: refinedComponentStyles, // 정밀화된 컴포넌트 스타일 사용
-        imagePlacements: parsed.imagePlacements, // AI 파싱 결과 유지 (이미지는 정밀화 없음)
+        layout: refinedLayout,
+        componentStyles: baseComponentStyles,
+        imagePlacements: imagePlacements,
         interactions: enhancedInteractions,
         educationalFeatures: enhancedEducationalFeatures,
         isGenerating: false,
         isComplete: true,
+        animationDescription: parsed.animationDescription, // 새로운 필드 추가
+        interactionDescription: parsed.interactionDescription, // 새로운 필드 추가
         generatedAt: new Date()
       };
       const validationResult = this.validationEngine.validatePage(tempPageResult, projectData.layoutMode);
@@ -369,6 +335,8 @@ export class Step4DesignSpecificationService {
         response: rawContent,
         processingTime,
         validationResults: validationResult,
+        animationDescription: parsed.animationDescription,
+        interactionDescription: parsed.interactionDescription,
         generatedAt: new Date()
       } : undefined;
 
@@ -376,13 +344,15 @@ export class Step4DesignSpecificationService {
         pageId: step3PageData.pageId,
         pageTitle: step3PageData.pageTitle,
         pageNumber: step3PageData.pageNumber,
-        layout: refinedLayout, // 정밀화된 레이아웃 사용
-        componentStyles: refinedComponentStyles, // 정밀화된 컴포넌트 스타일 사용
-        imagePlacements: parsed.imagePlacements, // AI 파싱 결과 유지
+        layout: refinedLayout,
+        componentStyles: baseComponentStyles,
+        imagePlacements: imagePlacements,
         interactions: enhancedInteractions,
         educationalFeatures: enhancedEducationalFeatures,
         isGenerating: false,
         isComplete: true,
+        animationDescription: parsed.animationDescription, // 새로운 필드 추가
+        interactionDescription: parsed.interactionDescription, // 새로운 필드 추가
         debugInfo,
         generatedAt: new Date()
       };
@@ -396,20 +366,29 @@ export class Step4DesignSpecificationService {
   }
 
   /**
-   * AI 프롬프트 생성
+   * AI 프롬프트 생성 (새로운 4-조합 시스템)
    */
   private buildPrompt(
     step3PageData: any,
     projectData: ProjectData,
-    visualIdentity: VisualIdentity
+    visualIdentity: VisualIdentity,
+    contentMode: 'restricted' | 'enhanced' = 'enhanced'
   ): string {
-    return this.promptEngine.generatePagePrompt(step3PageData, projectData, visualIdentity);
+    return this.promptEngine.generatePagePrompt(
+      step3PageData,
+      projectData,
+      visualIdentity,
+      contentMode
+    );
   }
 
   /**
-   * AI 응답 파싱
+   * AI 응답 파싱 (새로운 JSON 형식)
    */
-  private parseResponse(content: string, _layoutMode: 'fixed' | 'scrollable'): any {
+  private parseResponse(content: string): {
+    animationDescription: string;
+    interactionDescription: string;
+  } {
     return this.parsingEngine.parseStep4Response(content);
   }
 
@@ -525,6 +504,8 @@ export class Step4DesignSpecificationService {
       isGenerating: false,
       isComplete: false,
       error: 'Step3에서 아직 완료되지 않음',
+      animationDescription: '',
+      interactionDescription: '',
       generatedAt: new Date()
     };
   }
@@ -551,7 +532,143 @@ export class Step4DesignSpecificationService {
       isGenerating: false,
       isComplete: false,
       error: errorMessage,
+      animationDescription: '',
+      interactionDescription: '',
       generatedAt: new Date()
     };
+  }
+
+  /**
+   * 기본 컴포넌트 스타일 생성 (Step3 데이터와 비주얼 아이덴티티 기반)
+   */
+  private generateBaseComponentStyles(step3PageData: any, visualIdentity: VisualIdentity): any[] {
+    const sections = step3PageData.structure?.sections || [];
+
+    console.log('🔧 generateBaseComponentStyles 입력 데이터:', {
+      step3PageData: JSON.stringify(step3PageData, null, 2),
+      sectionsLength: sections.length,
+      sections: sections
+    });
+
+    return sections.map((section: any, index: number) => ({
+      id: `section-${index}`,
+      type: section.type || 'content',
+      section: `section-${index}`,
+      position: {
+        x: 100,
+        y: 100 + (index * 250)
+      },
+      dimensions: {
+        width: 1400,
+        height: 200
+      },
+      colors: {
+        text: '#1a1a1a',
+        background: '#ffffff',
+        border: visualIdentity.colorPalette.primary || '#2563eb'
+      },
+      font: {
+        family: 'SF Pro Display, system-ui, sans-serif',
+        weight: 400,
+        size: '18px',
+        lineHeight: 1.5
+      },
+      visual: {
+        borderRadius: 8,
+        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+        opacity: 1
+      },
+      zIndex: 10,
+      display: 'block'
+    }));
+  }
+
+  /**
+   * AI 상호작용 설명을 기반으로 상호작용 객체 생성
+   */
+  private createInteractionsFromDescription(
+    interactionDescription: string,
+    components: any[],
+    layoutMode: 'fixed' | 'scrollable'
+  ): any[] {
+    return [{
+      type: 'hover',
+      description: interactionDescription,
+      targets: components.map(c => c.id),
+      properties: {
+        scale: layoutMode === 'fixed' ? 1.02 : 1.01,
+        shadow: 'elevated',
+        duration: 200
+      },
+      accessibility: {
+        focusVisible: true,
+        keyboardNavigation: false
+      }
+    }];
+  }
+
+  /**
+   * AI 애니메이션 설명을 기반으로 교육적 기능 객체 생성
+   */
+  private createAnimationsFromDescription(
+    animationDescription: string,
+    components: any[],
+    layoutMode: 'fixed' | 'scrollable'
+  ): any[] {
+    return [{
+      id: 'animation-entrance',
+      type: 'readingProgress',
+      position: 'top',
+      dimensions: {
+        width: 100,
+        height: 4
+      },
+      styling: {
+        primaryColor: '#2563eb',
+        secondaryColor: '#64748b',
+        backgroundColor: '#f1f5f9',
+        opacity: 0.9
+      },
+      behavior: {
+        autoUpdate: true,
+        userControl: false,
+        persistence: false
+      },
+      description: animationDescription,
+      properties: {
+        trigger: layoutMode === 'scrollable' ? 'inView' : 'pageLoad',
+        animation: 'fadeUp',
+        duration: layoutMode === 'fixed' ? 300 : 400,
+        stagger: layoutMode === 'scrollable' ? 60 : 40
+      }
+    }];
+  }
+
+  /**
+   * Step3 데이터를 기반으로 기본 이미지 배치 생성
+   */
+  private generateImagePlacements(step3PageData: any): any[] {
+    const images = step3PageData.images || [];
+
+    return images.map((image: any, index: number) => ({
+      id: `image-${index}`,
+      filename: image.filename || `placeholder-${index}.jpg`,
+      section: `section-0`,
+      position: {
+        x: 100,
+        y: 200 + (index * 250)
+      },
+      dimensions: {
+        width: 400,
+        height: 200
+      },
+      objectFit: 'cover',
+      borderRadius: 8,
+      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+      loading: 'lazy',
+      priority: 'normal',
+      alt: image.prompt || `이미지 ${index + 1}`,
+      zIndex: 15
+    }));
   }
 }

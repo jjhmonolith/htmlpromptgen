@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { ProjectData, VisualIdentity, Step3IntegratedResult } from '../../../types/workflow.types';
 import { Step4DesignResult, ValidationResult } from '../../../types/step4.types';
 import { Step4DesignSpecificationService } from '../../../services/step4-design-specification.service';
@@ -460,197 +462,61 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
                 </p>
               </div>
             </div>
-          ) : selectedPage.layout && selectedPage.componentStyles ? (
-            <div className="space-y-4">
-              {/* 레이아웃 정보 */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
-                <h4 className="text-md font-semibold text-gray-900 mb-4">📐 레이아웃 정보</h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-700">페이지 크기:</span>
-                    <div className="text-gray-600">
-                      {selectedPage.layout.pageWidth} × {
-                        selectedPage.layout.pageHeight === 'auto'
-                          ? 'auto'
-                          : `${selectedPage.layout.pageHeight}px`
-                      }
+          ) : selectedPage.animationDescription || selectedPage.interactionDescription ? (
+            <div className="space-y-6">
+              {/* 애니메이션 설계 */}
+              {selectedPage.animationDescription && (
+                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                  <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                    <span className="mr-2">🎬</span>
+                    애니메이션 설계
+                  </h4>
+                  <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {selectedPage.animationDescription}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              )}
+
+              {/* 상호작용 설계 */}
+              {selectedPage.interactionDescription && (
+                <div className="bg-white p-6 rounded-lg shadow-sm border">
+                  <h4 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+                    <span className="mr-2">⚡</span>
+                    상호작용 설계
+                  </h4>
+                  <div className="prose prose-sm max-w-none text-gray-700 leading-relaxed">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {selectedPage.interactionDescription}
+                    </ReactMarkdown>
+                  </div>
+                </div>
+              )}
+
+              {/* 요약 정보 (기존 기술적 정보들은 접힌 상태로 제공) */}
+              {debugMode && selectedPage.layout && selectedPage.componentStyles && (
+                <div className="bg-gray-50 p-4 rounded-lg border">
+                  <h4 className="text-md font-semibold text-gray-700 mb-3">🔧 기술적 명세 (Debug Mode)</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div className="bg-white p-3 rounded border">
+                      <span className="font-medium text-gray-700">페이지 크기:</span>
+                      <div className="text-gray-600">
+                        {selectedPage.layout.pageWidth} × {
+                          selectedPage.layout.pageHeight === 'auto'
+                            ? 'auto'
+                            : `${selectedPage.layout.pageHeight}px`
+                        }
+                      </div>
                     </div>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-700">섹션 수:</span>
-                    <div className="text-gray-600">{selectedPage.layout.sections?.length || 0}개</div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 컴포넌트 스타일 */}
-              <div className="bg-white p-6 rounded-lg shadow-sm border">
-                <h4 className="text-md font-semibold text-gray-900 mb-4">🎨 컴포넌트 스타일 ({selectedPage.componentStyles.length}개)</h4>
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-gray-200">
-                        <th className="text-left py-2 px-3 font-medium text-gray-700">ID</th>
-                        <th className="text-left py-2 px-3 font-medium text-gray-700">타입</th>
-                        <th className="text-left py-2 px-3 font-medium text-gray-700">위치</th>
-                        <th className="text-left py-2 px-3 font-medium text-gray-700">크기</th>
-                        <th className="text-left py-2 px-3 font-medium text-gray-700">색상</th>
-                        <th className="text-left py-2 px-3 font-medium text-gray-700">폰트</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {selectedPage.componentStyles.map((comp, compIndex) => (
-                        <tr key={`step4-comp-${comp.id}-${compIndex}`} className="border-b border-gray-100">
-                          <td className="py-2 px-3 text-gray-600 font-mono text-xs">{comp.id}</td>
-                          <td className="py-2 px-3">
-                            <span className={`px-2 py-1 text-xs rounded-md ${
-                              comp.type === 'heading' ? 'bg-blue-100 text-blue-800' :
-                              comp.type === 'image' ? 'bg-green-100 text-green-800' :
-                              comp.type === 'card' ? 'bg-purple-100 text-purple-800' :
-                              'bg-gray-100 text-gray-800'
-                            }`}>
-                              {comp.type}
-                            </span>
-                          </td>
-                          <td className="py-2 px-3 text-gray-600 text-xs">
-                            {comp.position.x}, {comp.position.y}
-                          </td>
-                          <td className="py-2 px-3 text-gray-600 text-xs">
-                            {comp.dimensions.width} × {
-                              comp.dimensions.height === 'auto' ? 'auto' : comp.dimensions.height
-                            }
-                          </td>
-                          <td className="py-2 px-3 text-gray-600 text-xs">
-                            <div className="space-y-1">
-                              {/* 텍스트 색상 */}
-                              {comp.colors.text && comp.colors.text !== 'transparent' && (
-                                <div className="flex items-center space-x-1">
-                                  <div
-                                    className="w-3 h-3 border rounded"
-                                    style={{ backgroundColor: comp.colors.text }}
-                                  ></div>
-                                  <span className="text-xs">T: {comp.colors.text}</span>
-                                </div>
-                              )}
-                              {/* 배경 색상 */}
-                              {comp.colors.background && comp.colors.background !== 'transparent' && (
-                                <div className="flex items-center space-x-1">
-                                  <div
-                                    className="w-3 h-3 border rounded"
-                                    style={{ backgroundColor: comp.colors.background }}
-                                  ></div>
-                                  <span className="text-xs">BG: {comp.colors.background}</span>
-                                </div>
-                              )}
-                              {/* 테두리 색상 */}
-                              {comp.colors.border && comp.colors.border !== 'transparent' && comp.colors.border !== '#E2E8F0' && (
-                                <div className="flex items-center space-x-1">
-                                  <div
-                                    className="w-3 h-3 border-2 rounded"
-                                    style={{ borderColor: comp.colors.border }}
-                                  ></div>
-                                  <span className="text-xs">B: {comp.colors.border}</span>
-                                </div>
-                              )}
-                            </div>
-                          </td>
-                          <td className="py-2 px-3 text-gray-600 text-xs">
-                            {comp.font && (
-                              <div className="space-y-1">
-                                <div className="font-semibold">{comp.font.family}</div>
-                                <div className="text-xs text-gray-500">
-                                  {comp.font.size} / {comp.font.weight} / {comp.font.lineHeight}
-                                </div>
-                              </div>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-
-              {/* 이미지 배치 */}
-              {selectedPage.imagePlacements && selectedPage.imagePlacements.length > 0 && (
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
-                  <h4 className="text-md font-semibold text-gray-900 mb-4">🖼️ 이미지 배치 ({selectedPage.imagePlacements.length}개)</h4>
-                  <div className="grid gap-4">
-                    {selectedPage.imagePlacements.map((img, idx) => (
-                      <div key={`step4-img-${selectedPage.pageId}-${idx}`} className="border border-gray-200 rounded-lg p-4 bg-gray-50">
-                        <div className="flex justify-between items-start">
-                          <div>
-                            <div className="font-medium text-gray-900">{img.filename || `이미지 ${idx + 1}`}</div>
-                            <div className="text-sm text-gray-600 mt-1">{img.alt}</div>
-                            <div className="text-xs text-gray-500 mt-1">
-                              위치: {img.position.x}, {img.position.y} | 크기: {img.dimensions.width} × {img.dimensions.height}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 인터랙션 및 애니메이션 */}
-              {selectedPage.interactions && selectedPage.interactions.length > 0 && (
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
-                  <h4 className="text-md font-semibold text-gray-900 mb-4">⚡ 인터랙션 & 애니메이션 ({selectedPage.interactions.length}개)</h4>
-                  <div className="grid gap-3">
-                    {selectedPage.interactions.map((interaction, idx) => (
-                      <div key={`step4-interaction-${selectedPage.pageId}-${idx}`} className="border border-blue-200 rounded-lg p-3 bg-blue-50">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="font-medium text-blue-900">{interaction.id}</div>
-                            <div className="text-sm text-blue-700 mt-1">
-                              대상: {interaction.target} | 트리거: {interaction.trigger} | 효과: {interaction.effect}
-                            </div>
-                            <div className="text-xs text-blue-600 mt-1">
-                              지속시간: {interaction.duration}
-                              {interaction.delay && ` | 지연: ${interaction.delay}`}
-                              {interaction.easing && ` | 이징: ${interaction.easing}`}
-                            </div>
-                            {interaction.parameters && (
-                              <div className="text-xs text-blue-500 mt-1">
-                                파라미터: {JSON.stringify(interaction.parameters)}
-                              </div>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {/* 교육적 기능 */}
-              {selectedPage.educationalFeatures && selectedPage.educationalFeatures.length > 0 && (
-                <div className="bg-white p-6 rounded-lg shadow-sm border">
-                  <h4 className="text-md font-semibold text-gray-900 mb-4">🎯 교육적 기능 ({selectedPage.educationalFeatures.length}개)</h4>
-                  <div className="grid gap-3">
-                    {selectedPage.educationalFeatures.map((feature, idx) => (
-                      <div key={`step4-edu-${selectedPage.pageId}-${idx}`} className="border border-green-200 rounded-lg p-3 bg-green-50">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <div className="font-medium text-green-900">{feature.id}</div>
-                            <div className="text-sm text-green-700 mt-1">
-                              타입: {feature.type} | 위치: {feature.position}
-                            </div>
-                            {feature.dimensions && (
-                              <div className="text-xs text-green-600 mt-1">
-                                크기: {feature.dimensions.width} × {feature.dimensions.height}
-                              </div>
-                            )}
-                            <div className="text-xs text-green-500 mt-1">
-                              자동업데이트: {feature.behavior.autoUpdate ? '예' : '아니오'} |
-                              사용자제어: {feature.behavior.userControl ? '예' : '아니오'} |
-                              지속성: {feature.behavior.persistence ? '예' : '아니오'}
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                    <div className="bg-white p-3 rounded border">
+                      <span className="font-medium text-gray-700">컴포넌트 수:</span>
+                      <div className="text-gray-600">{selectedPage.componentStyles.length}개</div>
+                    </div>
+                    <div className="bg-white p-3 rounded border">
+                      <span className="font-medium text-gray-700">섹션 수:</span>
+                      <div className="text-gray-600">{selectedPage.layout.sections?.length || 0}개</div>
+                    </div>
                   </div>
                 </div>
               )}

@@ -10,6 +10,7 @@ export interface ProjectData {
   pages: PageData[];
   suggestions?: string[];
   // Learning Journey Designer 필드들
+  learningJourneyMode?: 'skip' | 'manual' | 'ai_generated';
   emotionalArc?: string;
   learnerPersona?: string;
   ahaMoments?: string[];

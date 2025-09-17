@@ -1,324 +1,188 @@
-import { ProjectData, VisualIdentity, ComponentLine, ImageLine } from '../../types/workflow.types';
+import { ProjectData, VisualIdentity } from '../../types/workflow.types';
 
 /**
  * Step4 AI 프롬프트 생성 엔진
  *
- * Step3 결과를 바탕으로 구현 가능한 정밀한 디자인 명세를 위한
- * 최적화된 AI 프롬프트를 생성합니다.
+ * Step3 콘텐츠 영역별 구체적 애니메이션/인터랙션 설계 시스템
+ * 페이지 로드 시퀀스와 영역별 상세 연출 설명 중심
  */
 export class PromptEngine {
   /**
-   * 페이지별 Step4 프롬프트 생성
+   * 페이지별 Step4 프롬프트 생성 (새로운 구체적 설계 방식)
    * @param step3PageData Step3 페이지 데이터
    * @param projectData 프로젝트 기본 정보
    * @param visualIdentity Step2 비주얼 아이덴티티
-   * @returns 최적화된 AI 프롬프트
+   * @param contentMode 콘텐츠 모드 ('restricted' | 'enhanced')
+   * @returns 구체적 애니메이션/인터랙션 설계 프롬프트
    */
   generatePagePrompt(
     step3PageData: any,
     projectData: ProjectData,
-    visualIdentity: VisualIdentity
+    visualIdentity: VisualIdentity,
+    contentMode: 'restricted' | 'enhanced' = 'enhanced'
   ): string {
-    const contextSection = this.buildContextSection(step3PageData, projectData, visualIdentity);
-    const layoutSection = this.buildLayoutConstraints(projectData.layoutMode);
-    const componentSection = this.buildComponentContext(step3PageData.content);
-    const imageSection = this.buildImageContext(step3PageData.content);
-    const outputFormat = this.buildOutputFormat();
-    const qualityGuidelines = this.buildQualityGuidelines(projectData.layoutMode);
+    const variables = this.extractVariables(step3PageData, projectData, visualIdentity);
 
-    return `교육용 HTML 교안을 위한 정밀한 디자인 명세를 생성해주세요.
-
-${contextSection}
-
-${layoutSection}
-
-${componentSection}
-
-${imageSection}
-
-${outputFormat}
-
-${qualityGuidelines}
-
-중요: 모든 수치는 픽셀 단위로 정확하게 명시하고, 실제 구현 가능한 CSS 속성만 사용해주세요.`;
+    return this.generateDetailedAnimationPrompt(variables, projectData.layoutMode, contentMode);
   }
 
   /**
-   * 컨텍스트 섹션 생성
+   * 새로운 구체적 애니메이션 설계 프롬프트
    */
-  private buildContextSection(
+  private generateDetailedAnimationPrompt(
+    variables: any,
+    layoutMode: 'fixed' | 'scrollable',
+    contentMode: 'restricted' | 'enhanced'
+  ): string {
+    const layoutDescription = layoutMode === 'fixed' ? '1600×1000px 고정 화면' : '1600px 너비 스크롤 가능';
+    const modeDescription = contentMode === 'enhanced' ? 'AI 보강 모드 (창의적 연출 허용)' : '원본 유지 모드 (주어진 요소만 활용)';
+
+    return `당신은 최고 수준의 UI/UX 및 학습 경험 디자이너입니다. Step3에서 구성한 교육 콘텐츠 페이지의 각 영역별로 구체적이고 상세한 애니메이션과 상호작용을 설계해주세요.
+
+### 📋 설계 요구사항
+- **레이아웃**: ${layoutDescription}
+- **설계 모드**: ${modeDescription}
+- **접근성**: 모든 텍스트 ≥18pt, 색상 대비 4.5:1 이상, 키보드 네비게이션 지원
+- **성능**: transform/opacity 기반, will-change 최적화, 동시 애니메이션 ≤3개
+
+### ✨ 비주얼 아이덴티티 (반드시 준수)
+- **분위기**: ${variables.moodAndTone}
+- **주요 색상**: ${variables.primaryColor}
+- **컴포넌트 스타일**: ${variables.componentStyle}
+
+### 📍 페이지 정보
+- **프로젝트**: ${variables.projectTitle}
+- **대상 학습자**: ${variables.targetAudience}
+- **현재 페이지**: ${variables.pageNumber}페이지 - ${variables.pageTopic}
+
+### 📝 페이지 구성 요소 (Step3에서 제공된 콘텐츠)
+${variables.structureSummary}
+
+${variables.contentAnalysisSection}
+
+### 🎬 설계 가이드라인
+
+**1. 페이지 최초 로드 시퀀스 (0-2초)**
+- 페이지 진입 시 각 콘텐츠 영역이 등장하는 순서와 타이밍을 구체적으로 명시
+- 시간축별 애니메이션 시퀀스 (예: 0-200ms, 200-600ms, 600-1000ms...)
+- 각 요소의 진입 방향, 지속시간, 이징 함수 포함
+- 학습 흐름에 맞는 시선 유도 효과
+
+**2. 콘텐츠 영역별 상세 애니메이션**
+Step3에서 제공된 각 콘텐츠 영역(섹션, 카드, 이미지, 텍스트 블록 등)에 대해:
+- 진입 애니메이션 (언제, 어떻게 나타나는지)
+- 대기 상태 애니메이션 (필요시 미세한 루프 모션)
+- 강조 애니메이션 (주의 집중이 필요한 시점)
+- 각 애니메이션이 학습에 어떻게 도움이 되는지 간단한 이유 설명
+
+**3. 상호작용 상세 설계**
+각 인터랙티브 요소별로:
+- **Hover**: 마우스 오버 시 반응 (시각적 변화, 애니메이션)
+- **Focus**: 키보드 포커스 시 접근성 표시
+- **Click/Tap**: 클릭 시 피드백 및 상태 변화
+- **Disabled**: 비활성 상태 표현
+- 모든 상호작용에 대한 교육적 목적 설명
+
+**4. 접근성 및 성능 고려사항**
+- prefers-reduced-motion 대응 방안
+- 키보드 네비게이션 순서 및 포커스 표시
+- 스크린 리더 지원 (ARIA 라벨, live region)
+- 성능 최적화 방법
+
+### 🚫 절대 금지사항
+- 다른 페이지로의 네비게이션/링크 언급 금지
+- Step3에서 제공되지 않은 새로운 콘텐츠 추가 금지
+- 텍스트 크기 18pt 미만으로 축소 금지
+- 과도한 루프 애니메이션으로 인한 산만함 금지
+
+### 📤 출력 형식
+다음과 같은 구조의 상세한 텍스트로 작성해주세요:
+
+**### 애니메이션 및 상호작용**
+- **애니메이션**: [전체 애니메이션 설계 개요와 목적]
+
+**1) 페이지 최초 로드 시퀀스(0-[총시간], [이징함수])**
+- [시간대별 상세한 애니메이션 설명]
+- [각 요소별 진입 방식과 이유]
+
+**2) [콘텐츠 영역명] 애니메이션**
+- [해당 영역의 상세한 애니메이션 설명]
+- [교육적 목적과 효과]
+
+**3) [다른 콘텐츠 영역명] 애니메이션**
+- [반복...]
+
+**- **상호작용**: [전체 상호작용 설계 개요]
+
+**A) [요소별] 상호작용**
+- [Hover/Focus/Click 등 상세 반응]
+- [접근성 고려사항]
+
+**B) [다른 요소별] 상호작용**
+- [반복...]
+
+**C) 접근성 및 성능 최적화**
+- [키보드 네비게이션, 감속 모드 등]
+
+모든 애니메이션과 상호작용은 학습 효과를 높이고 사용자 경험을 개선하는 구체적인 목적을 가져야 합니다.`;
+  }
+
+
+  /**
+   * 변수 추출 및 바인딩
+   */
+  private extractVariables(
     step3PageData: any,
     projectData: ProjectData,
     visualIdentity: VisualIdentity
-  ): string {
-    const pageInfo = {
-      pageTitle: step3PageData.pageTitle,
-      pageNumber: step3PageData.pageNumber,
-      sections: step3PageData.structure?.sections?.length || 0,
-      components: step3PageData.content?.components?.length || 0,
-      images: step3PageData.content?.images?.length || 0
-    };
+  ): any {
+    const moodAndTone = Array.isArray(visualIdentity.moodAndTone)
+      ? visualIdentity.moodAndTone.join(', ')
+      : visualIdentity.moodAndTone;
 
-    const visualContext = {
-      moodAndTone: visualIdentity.moodAndTone.join(', '),
-      primaryColor: visualIdentity.colorPalette.primary,
-      secondaryColor: visualIdentity.colorPalette.secondary,
-      accentColor: visualIdentity.colorPalette.accent,
-      baseSize: visualIdentity.typography.baseSize
-    };
+    const primaryColor = visualIdentity.colorPalette?.primary || '#3B82F6';
+    const componentStyle = visualIdentity.componentStyle || '모던하고 깔끔한 스타일';
 
-    return `## 페이지 컨텍스트
-페이지: ${pageInfo.pageTitle} (${pageInfo.pageNumber}/${projectData.pages.length})
-프로젝트: ${projectData.projectTitle}
-대상: ${projectData.targetAudience}
-레이아웃 모드: ${projectData.layoutMode}
+    // Step3 결과에서 구조 요약 생성
+    const structureSummary = step3PageData.fullDescription
+      ? `${step3PageData.fullDescription.substring(0, 300)}...`
+      : `페이지 제목: ${step3PageData.pageTitle || step3PageData.topic}, 교육 콘텐츠 구성`;
 
-## 비주얼 아이덴티티
-무드: ${visualContext.moodAndTone}
-주색상: ${visualContext.primaryColor}
-보조색상: ${visualContext.secondaryColor}
-강조색상: ${visualContext.accentColor}
-기본 폰트 크기: ${visualContext.baseSize}
+    const projectTitle = projectData.projectTitle;
+    const targetAudience = projectData.targetAudience;
+    const pageNumber = step3PageData.pageNumber;
+    const pageTopic = step3PageData.pageTitle || step3PageData.topic;
 
-## 콘텐츠 구성
-섹션 수: ${pageInfo.sections}개
-컴포넌트 수: ${pageInfo.components}개
-이미지 수: ${pageInfo.images}개`;
-  }
+    // contentAnalysis 처리
+    let contentAnalysisSection = '';
+    if (step3PageData.contentAnalysis) {
+      const outlineCsv = step3PageData.contentAnalysis.outline
+        ? step3PageData.contentAnalysis.outline.join(', ')
+        : '기본 구성';
 
-  /**
-   * 레이아웃 제약사항 섹션
-   */
-  private buildLayoutConstraints(layoutMode: 'fixed' | 'scrollable'): string {
-    const constraints = {
-      fixed: {
-        pageWidth: 1600,
-        pageHeight: 1000,
-        maxHeight: '1000px (절대 초과 금지)',
-        safeArea: { top: 80, right: 100, bottom: 120, left: 100 },
-        contentWidth: 1400, // 1600 - 100 - 100
-        considerations: [
-          '높이 제한을 절대 준수해야 함',
-          '스크롤 없이 모든 내용이 보여야 함',
-          '컴포넌트 간격을 최소화하여 공간 효율성 극대화',
-          '폰트 크기와 여백을 보수적으로 설정'
-        ]
-      },
-      scrollable: {
-        pageWidth: 1600,
-        pageHeight: 'auto',
-        maxHeight: '제한 없음',
-        safeArea: { top: 80, right: 100, bottom: 120, left: 100 },
-        contentWidth: 1400,
-        considerations: [
-          '세로 스크롤을 전제로 여유 있는 레이아웃',
-          '컴포넌트 간격을 넉넉하게 설정',
-          '가독성을 위한 충분한 여백',
-          '섹션별 명확한 시각적 구분'
-        ]
-      }
-    };
+      const estimatedSections = step3PageData.contentAnalysis.estimatedSections || 3;
 
-    const config = constraints[layoutMode];
+      const densityScore = step3PageData.contentAnalysis.densityScore || 0.6;
+      const densityLabel = densityScore >= 0.8 ? '높음 (분할 권장)'
+        : densityScore >= 0.6 ? '적정' : '여유';
 
-    return `## 레이아웃 제약사항 (${layoutMode.toUpperCase()} 모드)
-페이지 크기: ${config.pageWidth} × ${config.pageHeight}
-${layoutMode === 'fixed' ? `최대 높이: ${config.maxHeight}` : ''}
-안전 영역: 상${config.safeArea.top}px, 우${config.safeArea.right}px, 하${config.safeArea.bottom}px, 좌${config.safeArea.left}px
-콘텐츠 영역 너비: ${config.contentWidth}px
-
-### ${layoutMode === 'fixed' ? 'Fixed' : 'Scrollable'} 모드 고려사항:
-${config.considerations.map(item => `- ${item}`).join('\n')}`;
-  }
-
-  /**
-   * 컴포넌트 컨텍스트 섹션
-   */
-  private buildComponentContext(content: any): string {
-    if (!content?.components || content.components.length === 0) {
-      return `## 컴포넌트 정보
-컴포넌트가 없습니다.`;
+      contentAnalysisSection = `### 📊 콘텐츠 구성 정보
+- 주요 내용: ${outlineCsv}
+- 섹션 수: ${estimatedSections}개
+- 콘텐츠 밀도: ${densityLabel}`;
     }
 
-    const componentsByType = this.groupComponentsByType(content.components);
-    const componentDetails = content.components.map((comp: ComponentLine, index: number) => {
-      return `${index + 1}. ${comp.id} (${comp.type}${comp.variant ? ` - ${comp.variant}` : ''})
-   섹션: ${comp.section} | 역할: ${comp.role}${comp.gridSpan ? ` | 그리드: ${comp.gridSpan}` : ''}
-   텍스트: ${comp.type !== 'image' ? (comp.text ? `"${comp.text.substring(0, 100)}${comp.text.length > 100 ? '...' : ''}"` : '없음') : 'N/A'}`;
-    }).join('\n');
-
-    return `## 컴포넌트 정보 (총 ${content.components.length}개)
-### 타입별 분포:
-${Object.entries(componentsByType).map(([type, count]) => `- ${type}: ${count}개`).join('\n')}
-
-### 상세 목록:
-${componentDetails}`;
-  }
-
-  /**
-   * 이미지 컨텍스트 섹션
-   */
-  private buildImageContext(content: any): string {
-    if (!content?.images || content.images.length === 0) {
-      return `## 이미지 정보
-이미지가 없습니다.`;
-    }
-
-    const imageDetails = content.images.map((img: ImageLine, index: number) => {
-      return `${index + 1}. ${img.filename} (${img.purpose})
-   크기: ${img.width} × ${img.height}px | 위치: ${img.place} | 스타일: ${img.style}
-   섹션: ${img.section}
-   설명: ${img.description}
-   Alt: ${img.alt}`;
-    }).join('\n');
-
-    return `## 이미지 정보 (총 ${content.images.length}개)
-${imageDetails}`;
-  }
-
-  /**
-   * 출력 포맷 정의
-   */
-  private buildOutputFormat(): string {
-    return `## 출력 형식
-다음 정확한 형식으로 응답해주세요:
-
-BEGIN_S4
-VERSION=design.v1
-LAYOUT_MODE=fixed|scrollable
-
-# 레이아웃 명세
-LAYOUT_PAGE_WIDTH=1600
-LAYOUT_PAGE_HEIGHT=1000|auto
-LAYOUT_BG_COLOR=#FFFFFF
-LAYOUT_SAFE_TOP=80
-LAYOUT_SAFE_RIGHT=100
-LAYOUT_SAFE_BOTTOM=120
-LAYOUT_SAFE_LEFT=100
-
-# 섹션 명세 (섹션 개수만큼 반복)
-SECTION_1_ID=section1
-SECTION_1_GRID=1-12|8+4|2-11|3-10
-SECTION_1_X=100
-SECTION_1_Y=80
-SECTION_1_WIDTH=1400
-SECTION_1_HEIGHT=200|auto
-SECTION_1_PADDING_TOP=32
-SECTION_1_PADDING_RIGHT=40
-SECTION_1_PADDING_BOTTOM=32
-SECTION_1_PADDING_LEFT=40
-SECTION_1_BG_COLOR=transparent|#FAFBFC
-SECTION_1_GAP=24
-SECTION_1_MARGIN_BOTTOM=32
-
-# 컴포넌트 스타일 (컴포넌트 개수만큼 반복)
-COMP_1_ID=h1_intro
-COMP_1_TYPE=heading|paragraph|card|image
-COMP_1_SECTION=section1
-COMP_1_X=100
-COMP_1_Y=80
-COMP_1_WIDTH=720
-COMP_1_HEIGHT=60|auto
-COMP_1_FONT_FAMILY=SF Pro Display|SF Pro Text
-COMP_1_FONT_SIZE=28px
-COMP_1_FONT_WEIGHT=600
-COMP_1_LINE_HEIGHT=1.2
-COMP_1_COLOR_TEXT=#1E293B
-COMP_1_COLOR_BG=transparent
-COMP_1_COLOR_BORDER=#E2E8F0
-COMP_1_BORDER_RADIUS=8
-COMP_1_BOX_SHADOW=0 2px 8px rgba(0, 0, 0, 0.1)|none
-COMP_1_Z_INDEX=10
-COMP_1_DISPLAY=block
-
-# 이미지 배치 (이미지 개수만큼 반복)
-IMG_1_ID=diagram1
-IMG_1_SRC=1.png
-IMG_1_X=100
-IMG_1_Y=200
-IMG_1_WIDTH=520
-IMG_1_HEIGHT=320
-IMG_1_ALT=다이어그램 설명
-IMG_1_BORDER_RADIUS=8
-IMG_1_BOX_SHADOW=0 4px 12px rgba(0, 0, 0, 0.15)
-
-# 상호작용 (선택사항)
-INTERACTION_1_TARGET=comp_id
-INTERACTION_1_TRIGGER=hover|click
-INTERACTION_1_EFFECT=opacity:0.8|transform:scale(1.05)
-INTERACTION_1_DURATION=200ms
-
-# 교육적 기능 (선택사항)
-EDU_1_TYPE=tooltip|highlight|animation
-EDU_1_TARGET=comp_id
-EDU_1_CONTENT=설명 텍스트
-EDU_1_TRIGGER=hover
-EDU_1_PURPOSE=학습 목적 설명
-
-END_S4`;
-  }
-
-  /**
-   * 품질 가이드라인
-   */
-  private buildQualityGuidelines(layoutMode: 'fixed' | 'scrollable'): string {
-    const commonGuidelines = [
-      '모든 위치와 크기는 픽셀 단위로 정확하게 명시',
-      '색상은 HEX 형식 6자리로 통일',
-      '폰트 크기는 12px 이상 72px 이하',
-      '컴포넌트 간 최소 8px 이상 간격 유지',
-      'z-index는 10 단위로 설정 (10, 20, 30...)',
-      '접근성을 고려한 색상 대비 유지',
-      '이미지 alt 텍스트 반드시 포함'
-    ];
-
-    const modeSpecificGuidelines = {
-      fixed: [
-        '🚨 CRITICAL: 전체 페이지 높이가 1000px를 절대 초과 금지 (교육적 효과를 위한 필수 제약)',
-        '📊 공간 효율성: 컴포넌트 수를 5-7개로 엄격히 제한',
-        '🎯 압축 레이아웃: 폰트 크기(14-24px), 여백(16-32px)을 보수적으로 설정',
-        '⚡ 즉시성: 스크롤 없이 모든 핵심 내용이 한눈에 보여야 함',
-        '🔢 정확한 계산: Y좌표 누적 계산으로 높이 제한 준수 검증 필수'
-      ],
-      scrollable: [
-        '📜 자연스러운 흐름: 세로 스크롤 기반 스토리텔링 구조',
-        '🌬️ 여유 있는 호흡: 섹션 간격 48-120px로 설정하여 시각적 휴식 제공',
-        '📖 가독성 우선: 충분한 여백으로 학습 집중도 향상',
-        '🎨 계층적 구조: 각 섹션의 독립적 완결성과 연결성 동시 고려',
-        '⏯️ 단계별 학습: 점진적 정보 공개로 학습 효과 극대화'
-      ]
+    return {
+      moodAndTone,
+      primaryColor,
+      componentStyle,
+      structureSummary,
+      projectTitle,
+      targetAudience,
+      pageNumber,
+      pageTopic,
+      contentAnalysisSection
     };
-
-    return `## 품질 가이드라인
-
-### 공통 요구사항:
-${commonGuidelines.map(item => `- ${item}`).join('\n')}
-
-### ${layoutMode.toUpperCase()} 모드 특수 요구사항:
-${modeSpecificGuidelines[layoutMode].map(item => `- ${item}`).join('\n')}
-
-### 💎 교육 컨텐츠 특화 설계 원칙:
-- 🧠 인지 부하 관리: 한 화면당 핵심 개념 3-5개로 제한
-- 👁️ 시선 흐름 최적화: Z패턴 또는 F패턴 기반 레이아웃 구성
-- 🎯 학습 목표 중심: 각 섹션마다 명확한 학습 의도 반영
-- 🔄 반복 학습 지원: 중요 개념의 시각적 강조와 재등장 구조
-- 📱 다양한 학습자 고려: 접근성과 인클루시브 디자인 필수
-
-### 🔬 99%+ 파싱 성공률 보장:
-- ✅ 모든 키=값 형식을 정확히 준수
-- 📋 누락되는 필드가 없도록 완전한 명세 작성
-- 🎨 유효한 CSS 속성값만 사용
-- 🏷️ 일관된 네이밍 컨벤션 유지
-- 🔍 파싱 엔진 친화적 구조화된 출력`;
   }
 
-  /**
-   * 컴포넌트를 타입별로 그룹화
-   */
-  private groupComponentsByType(components: ComponentLine[]): Record<string, number> {
-    return components.reduce((acc, comp) => {
-      acc[comp.type] = (acc[comp.type] || 0) + 1;
-      return acc;
-    }, {} as Record<string, number>);
-  }
 }

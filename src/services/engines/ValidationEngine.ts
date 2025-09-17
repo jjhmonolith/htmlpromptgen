@@ -226,12 +226,18 @@ export class ValidationEngine {
         }
 
         // 크기 값 검증
-        if (comp.dimensions.width <= 0) {
-          errors.push(`컴포넌트 ${comp.id}: 유효하지 않은 너비 ${comp.dimensions.width}`);
+        if (comp.dimensions && typeof comp.dimensions.width === 'number') {
+          if (comp.dimensions.width <= 0) {
+            errors.push(`컴포넌트 ${comp.id}: 유효하지 않은 너비 ${comp.dimensions.width}`);
+          }
+        } else {
+          errors.push(`컴포넌트 ${comp.id}: dimensions.width 정보가 없거나 잘못되었습니다`);
         }
 
-        if (comp.dimensions.height !== 'auto' && comp.dimensions.height <= 0) {
-          errors.push(`컴포넌트 ${comp.id}: 유효하지 않은 높이 ${comp.dimensions.height}`);
+        if (comp.dimensions && comp.dimensions.height !== 'auto' && typeof comp.dimensions.height === 'number') {
+          if (comp.dimensions.height <= 0) {
+            errors.push(`컴포넌트 ${comp.id}: 유효하지 않은 높이 ${comp.dimensions.height}`);
+          }
         }
 
         // 폰트 크기 검증
@@ -240,8 +246,12 @@ export class ValidationEngine {
         }
 
         // 위치 검증 (음수 불가)
-        if (comp.position.x < 0 || comp.position.y < 0) {
-          errors.push(`컴포넌트 ${comp.id}: 음수 위치 값 (x:${comp.position.x}, y:${comp.position.y})`);
+        if (comp.position && typeof comp.position.x === 'number' && typeof comp.position.y === 'number') {
+          if (comp.position.x < 0 || comp.position.y < 0) {
+            errors.push(`컴포넌트 ${comp.id}: 음수 위치 값 (x:${comp.position.x}, y:${comp.position.y})`);
+          }
+        } else {
+          errors.push(`컴포넌트 ${comp.id}: position 정보가 없거나 잘못되었습니다`);
         }
       });
     });
@@ -389,15 +399,24 @@ export class ValidationEngine {
    * 두 컴포넌트의 겹침 여부 확인
    */
   private isOverlapping(comp1: ComponentStyleSpecification, comp2: ComponentStyleSpecification): boolean {
+    // position이나 dimensions가 없으면 겹침으로 간주하지 않음
+    if (!comp1.position || !comp2.position ||
+        typeof comp1.position.x !== 'number' || typeof comp1.position.y !== 'number' ||
+        typeof comp2.position.x !== 'number' || typeof comp2.position.y !== 'number' ||
+        !comp1.dimensions || !comp2.dimensions ||
+        typeof comp1.dimensions.width !== 'number' || typeof comp2.dimensions.width !== 'number') {
+      return false;
+    }
+
     const x1 = comp1.position.x;
     const y1 = comp1.position.y;
     const w1 = comp1.dimensions.width;
-    const h1 = comp1.dimensions.height === 'auto' ? 50 : comp1.dimensions.height;
+    const h1 = comp1.dimensions.height === 'auto' ? 50 : (typeof comp1.dimensions.height === 'number' ? comp1.dimensions.height : 50);
 
     const x2 = comp2.position.x;
     const y2 = comp2.position.y;
     const w2 = comp2.dimensions.width;
-    const h2 = comp2.dimensions.height === 'auto' ? 50 : comp2.dimensions.height;
+    const h2 = comp2.dimensions.height === 'auto' ? 50 : (typeof comp2.dimensions.height === 'number' ? comp2.dimensions.height : 50);
 
     return !(x1 + w1 <= x2 || x2 + w2 <= x1 || y1 + h1 <= y2 || y2 + h2 <= y1);
   }

@@ -50,6 +50,12 @@ export interface Step4PageResult {
   /** 교육적 기능 명세 */
   educationalFeatures: EducationalFeature[];
 
+  // AI 생성 설명 (새로운 JSON 형식)
+  /** AI가 생성한 애니메이션 설명 */
+  animationDescription: string;
+  /** AI가 생성한 상호작용 설명 */
+  interactionDescription: string;
+
   // 상태 관리 (UI용)
   /** 생성 중 여부 */
   isGenerating?: boolean;
