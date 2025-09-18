@@ -35,7 +35,7 @@ export class LearningJourneyGeneratorService {
       `${index + 1}. ${page.topic}${page.description ? ` - ${page.description}` : ''}`
     ).join('\n');
 
-    return `당신은 교육 심리학 기반 학습 경험 설계자입니다. 아래 정보를 참고해 핵심 결과만 간결하게 작성하세요.
+    return `당신은 교육 심리학 기반 학습 경험 설계자입니다. 아래 정보를 참고해 통찰 중심 결과만 간결하게 작성하세요.
 
 프로젝트 제목: ${projectTitle}
 대상 학습자: ${targetAudience}
@@ -45,7 +45,7 @@ ${pagesText}
 생성 목표:
 - emotionalArc: 학습 감정 3~5단계를 "감정A → 감정B" 형태 하나의 문자열로 작성 (30자 이내)
 - learnerPersona: 대표 학습자 1명을 2문장 이하(총 60자 이내)로 요약
-- ahaMoments: 페이지 수와 동일한 배열, 각 항목 40자 이하 단문
+- ahaMoments: 페이지 수와 동일한 배열, 각 항목 40자 이하 단문으로 학습자가 새롭게 깨달은 구체적 사실을 1인칭으로 서술하고 느낌표로 마무리 (예: "데이터 시각화가 설득력을 높인다는 사실!")
 
 반드시 JSON만 반환하세요. 추가 설명, 코드 블록, 주석, 마크다운은 포함하지 마세요.`;
   }

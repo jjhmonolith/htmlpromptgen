@@ -226,8 +226,18 @@ export class OpenAIService {
       .flatMap((item: any) => item?.content || []);
 
     const textSegments = contentParts
-      .filter((part: any) => part?.type === 'output_text')
-      .map((part: any) => part.text || '')
+      .filter((part: any) => part?.type === 'output_text' || part?.type === 'text')
+      .map((part: any) => {
+        if (typeof part.text === 'string') {
+          return part.text;
+        }
+
+        if (part?.text?.value) {
+          return part.text.value;
+        }
+
+        return '';
+      })
       .join('');
 
     const jsonSegments = contentParts
