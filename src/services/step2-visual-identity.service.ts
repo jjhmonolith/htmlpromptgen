@@ -50,7 +50,7 @@ export class Step2VisualIdentityService {
         
         console.log('🚀 OpenAI API 호출 시작...');
         const response = await this.openAIService.createCompletion({
-          model: 'gpt-4o',
+          model: 'gpt-5',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
           top_p: 1,

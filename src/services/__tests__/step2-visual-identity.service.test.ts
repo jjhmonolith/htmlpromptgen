@@ -338,7 +338,7 @@ END_S2`
 
       // 프롬프트가 올바른 형식으로 생성되었는지 확인
       expect(mockOpenAIService.createCompletion).toHaveBeenCalledWith({
-        model: 'gpt-4o',
+        model: 'gpt-5',
         messages: [{ 
           role: 'user', 
           content: expect.stringContaining('교육용 프로젝트를 위한 비주얼 아이덴티티를 설계해주세요')
@@ -411,7 +411,7 @@ END_S2`
 
       // API 호출 매개변수 확인
       expect(mockOpenAIService.createCompletion).toHaveBeenCalledWith({
-        model: 'gpt-4o',
+        model: 'gpt-5',
         messages: [{
           role: 'user',
           content: expect.any(String)

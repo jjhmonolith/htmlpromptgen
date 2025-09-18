@@ -249,7 +249,7 @@ export class Step4DesignSpecificationService {
 
       // AI 호출 (Step2/Step3 방식 참고)
       const response = await this.openAIService.createCompletion({
-        model: 'gpt-4o',
+        model: 'gpt-5',
         messages: [
           {
             role: 'system',

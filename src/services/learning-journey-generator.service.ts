@@ -17,7 +17,11 @@ export class LearningJourneyGeneratorService {
     console.log('🎯 Learning Journey Generator: 시작');
 
     const prompt = this.createLearningJourneyPrompt(projectTitle, targetAudience, pages);
-    const response = await this.openAIService.generateCompletion(prompt, 'Learning Journey Generation');
+    const response = await this.openAIService.generateCompletion(
+      prompt,
+      'Learning Journey Generation',
+      'gpt-5-mini'
+    );
 
     return this.parseLearningJourneyResponse(response.content, pages.length);
   }
@@ -31,64 +35,35 @@ export class LearningJourneyGeneratorService {
       `${index + 1}. ${page.topic}${page.description ? ` - ${page.description}` : ''}`
     ).join('\n');
 
-    return `당신은 교육 심리학과 학습 경험 설계 전문가입니다. 주어진 프로젝트 정보를 바탕으로 학습자의 감정적 여정, 페르소나, 그리고 각 페이지별 '아하!' 순간을 설계해주세요.
+    return `당신은 교육 심리학 기반 학습 경험 설계자입니다. 아래 정보를 참고해 핵심 결과만 간결하게 작성하세요.
 
-## 📋 프로젝트 정보
-**제목**: ${projectTitle}
-**대상**: ${targetAudience}
-
-## 📖 페이지 구성
+프로젝트 제목: ${projectTitle}
+대상 학습자: ${targetAudience}
+페이지 목록:
 ${pagesText}
 
-## 🎯 요청사항
+생성 목표:
+- emotionalArc: 학습 감정 3~5단계를 "감정A → 감정B" 형태 하나의 문자열로 작성 (30자 이내)
+- learnerPersona: 대표 학습자 1명을 2문장 이하(총 60자 이내)로 요약
+- ahaMoments: 페이지 수와 동일한 배열, 각 항목 40자 이하 단문
 
-다음 3가지 요소를 정확히 생성해주세요:
-
-### 1. 감정적 여정 (Emotional Arc)
-학습자가 전체 학습 과정에서 경험할 감정의 흐름을 화살표(→)로 연결하여 작성하세요.
-예시: "호기심 → 놀라움 → 이해 → 성취감"
-
-### 2. 학습자 페르소나 (Learner Persona)
-${targetAudience}에 해당하는 구체적인 학습자 2-3명의 이름과 상황을 포함한 3-4문장의 페르소나를 작성하세요.
-- 이름, 나이, 성향
-- 현재 지식 수준
-- 학습 스타일과 선호도
-- 이 주제에 대한 사전 경험
-
-### 3. 각 페이지별 '아하!' 순간 (Aha Moments)
-각 페이지에서 학습자가 경험할 구체적인 깨달음의 순간을 배열로 작성하세요.
-- 총 ${pages.length}개의 항목이 필요합니다
-- 각 항목은 학습자의 시점에서 작성
-- "~라는 사실!", "~라는 발견!", "~의 이해!" 형태로 마무리
-
-## 📝 출력 형식
-
-다음 JSON 형식으로 정확히 응답해주세요:
-
-\`\`\`json
-{
-  "emotionalArc": "감정1 → 감정2 → 감정3 → 감정4",
-  "learnerPersona": "구체적인 학습자 페르소나 설명",
-  "ahaMoments": [
-    "페이지 1의 아하 순간",
-    "페이지 2의 아하 순간",
-    ${pages.map((_, i) => `"페이지 ${i + 1}의 아하 순간"`).join(',\n    ')}
-  ]
-}
-\`\`\`
-
-**중요**: JSON 형식을 정확히 지켜주시고, 모든 문자열은 따옴표로 감싸주세요.`;
+반드시 JSON만 반환하세요. 추가 설명, 코드 블록, 주석, 마크다운은 포함하지 마세요.`;
   }
 
   private parseLearningJourneyResponse(response: string, expectedAhaMomentsCount: number): LearningJourneyData {
     try {
       // JSON 블록 추출
       const jsonMatch = response.match(/```json\s*([\s\S]*?)\s*```/);
-      if (!jsonMatch) {
+
+      const jsonSource = jsonMatch
+        ? jsonMatch[1]
+        : this.extractJsonFromResponse(response);
+
+      if (!jsonSource) {
         throw new Error('JSON 블록을 찾을 수 없음');
       }
 
-      const jsonData = JSON.parse(jsonMatch[1]);
+      const jsonData = JSON.parse(jsonSource);
 
       // 데이터 검증 및 정리
       const emotionalArc = typeof jsonData.emotionalArc === 'string'
@@ -125,6 +100,22 @@ ${targetAudience}에 해당하는 구체적인 학습자 2-3명의 이름과 상
       // 폴백 데이터 생성
       return this.generateFallbackData(expectedAhaMomentsCount);
     }
+  }
+
+  private extractJsonFromResponse(response: string): string | null {
+    const trimmed = response.trim();
+    if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
+      return trimmed;
+    }
+
+    const firstBrace = trimmed.indexOf('{');
+    const lastBrace = trimmed.lastIndexOf('}');
+
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+      return trimmed.slice(firstBrace, lastBrace + 1);
+    }
+
+    return null;
   }
 
   private generateFallbackData(pageCount: number): LearningJourneyData {
