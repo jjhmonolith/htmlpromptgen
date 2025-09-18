@@ -861,76 +861,48 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
         </div>
       )}
 
-      {/* 액션 버튼 - 향상된 디자인 */}
-      <div className="bg-gradient-to-r from-blue-50 to-green-50 rounded-xl p-6 mt-8">
-        <div className="flex justify-between items-center">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={onBack}
-              className="px-6 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-all duration-200 border border-gray-200 font-medium shadow-sm flex items-center gap-2"
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-              </svg>
-              이전 단계
-            </button>
-          </div>
-
-          <div className="flex items-center gap-6">
-            {step3Data && (
-              <div className="text-right">
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="flex items-center gap-1">
-                    {step3Data.pages.map((page, index) => (
-                      <div
-                        key={page.pageId}
-                        className={`w-2 h-2 rounded-full ${
-                          page.phase2Complete && !page.parseError
-                            ? 'bg-green-500'
-                            : page.isGenerating
-                            ? 'bg-blue-500 animate-pulse'
-                            : page.parseError
-                            ? 'bg-red-500'
-                            : 'bg-yellow-500'
-                        }`}
-                        title={`페이지 ${page.pageNumber}: ${page.pageTitle}`}
-                      ></div>
-                    ))}
-                  </div>
-                  <span className="text-sm font-medium text-gray-700">
-                    {step3Data.pages.filter(p => p.phase2Complete && !p.parseError).length} / {step3Data.pages.length} 완료
-                  </span>
-                </div>
-                <p className="text-xs text-gray-600">다음: 디자인 시스템 생성</p>
-              </div>
-            )}
-
-            <button
-              onClick={() => onComplete?.(step3Data)}
-              disabled={!step3Data || step3Data.pages.every(page => !page.phase2Complete)}
-              className="px-8 py-3 bg-gradient-to-r from-blue-600 to-green-600 text-white rounded-xl hover:from-blue-700 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 font-medium shadow-lg transform hover:scale-105 flex items-center gap-2"
-              title={
-                !step3Data ? '데이터를 불러오는 중입니다...' :
-                step3Data.pages.every(page => !page.phase2Complete)
-                  ? `다음 페이지를 재생성해주세요: ${step3Data.pages.filter(p => !p.phase2Complete).map(p => `페이지 ${p.pageNumber}(${p.pageTitle})`).join(', ')}`
-                  : '교육 콘텐츠 설계 완료!'
+      {/* 네비게이션 버튼들 - Step1 스타일과 일치 */}
+      <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-8 mb-8">
+        <div className="flex justify-between">
+          <button
+            onClick={onBack}
+            className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-all font-medium"
+          >
+            ← 이전
+          </button>
+          <button
+            onClick={() => onComplete?.(step3Data)}
+            disabled={!step3Data || step3Data.pages.every(page => !page.phase2Complete)}
+            className="px-8 py-3 text-white rounded-full transition-all font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: !step3Data || step3Data.pages.every(page => !page.phase2Complete) ? '#9CA3AF' : '#3e88ff'
+            }}
+            onMouseEnter={(e) => {
+              if (!(!step3Data || step3Data.pages.every(page => !page.phase2Complete))) {
+                (e.target as HTMLButtonElement).style.backgroundColor = '#2c6ae6';
               }
-            >
-              {step3Data?.pages.some(page => page.isGenerating) ? (
-                <>
-                  <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full"></div>
-                  생성 대기 ({step3Data.pages.filter(p => p.isGenerating).length}개)
-                </>
-              ) : (
-                <>
-                  다음 단계
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                  </svg>
-                </>
-              )}
-            </button>
-          </div>
+            }}
+            onMouseLeave={(e) => {
+              if (!(!step3Data || step3Data.pages.every(page => !page.phase2Complete))) {
+                (e.target as HTMLButtonElement).style.backgroundColor = '#3e88ff';
+              }
+            }}
+            title={
+              !step3Data ? '데이터를 불러오는 중입니다...' :
+              step3Data.pages.every(page => !page.phase2Complete)
+                ? `다음 페이지를 재생성해주세요: ${step3Data.pages.filter(p => !p.phase2Complete).map(p => `페이지 ${p.pageNumber}(${p.pageTitle})`).join(', ')}`
+                : '교육 콘텐츠 설계 완료!'
+            }
+          >
+            {step3Data?.pages.some(page => page.isGenerating) ? (
+              <>
+                <div className="animate-spin w-4 h-4 border-2 border-white border-t-transparent rounded-full inline mr-2"></div>
+                생성 대기 ({step3Data.pages.filter(p => p.isGenerating).length}개)
+              </>
+            ) : (
+              '다음 단계로 →'
+            )}
+          </button>
         </div>
       </div>
     </div>

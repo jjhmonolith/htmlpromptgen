@@ -5,6 +5,7 @@ import { Step3IntegratedDesign } from './Step3IntegratedDesign';
 import { Step4DesignSpecification } from './Step4DesignSpecification';
 import { Step5FinalPrompt } from './Step5FinalPrompt';
 import { GNB } from '../common';
+import { loadFromStorage, saveToStorage } from '../../services/storage.service';
 
 interface WorkflowContainerProps {
   projectId: string;
@@ -39,6 +40,10 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
       step5: false
     }
   });
+
+  // 패스트트랙 상태 관리
+  const [isFastTrackMode, setIsFastTrackMode] = useState(false);
+  const [fastTrackData, setFastTrackData] = useState<any>(null);
 
   // 앞선 단계 수정 시 뒷 단계 초기화하는 함수
   const resetLaterSteps = (fromStep: number) => {
@@ -104,6 +109,66 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     
     // 부모에게 워크플로우 데이터 변경 알림
     onWorkflowDataChange?.(newWorkflowData);
+  };
+
+  // 패스트트랙 시작 핸들러
+  const handleFastTrack = async (data: any) => {
+    setIsFastTrackMode(true);
+    setFastTrackData(data);
+
+    // Step1 데이터 저장
+    const newWorkflowData = {
+      ...workflowData,
+      step1: data,
+      currentStep: 2,
+      stepCompletion: {
+        ...workflowData.stepCompletion,
+        step1: true
+      }
+    };
+    setWorkflowData(newWorkflowData);
+    setCurrentStep(2);
+
+    // 패스트트랙 자동 진행 시작
+    await runFastTrackSequence(data);
+  };
+
+  // 패스트트랙 자동 진행 시퀀스
+  const runFastTrackSequence = async (initialData: any) => {
+    try {
+      let currentData = initialData;
+
+      // Step 2: 비주얼 아이덴티티 자동 생성
+      console.log('🚀 Step 2 자동 진행 시작');
+      // TODO: Step2 자동 생성 로직 구현
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 임시 딜레이
+
+      // Step 3: 교육 콘텐츠 설계 자동 생성
+      console.log('🚀 Step 3 자동 진행 시작');
+      setCurrentStep(3);
+      // TODO: Step3 자동 생성 로직 구현
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 임시 딜레이
+
+      // Step 4: 디자인 명세 자동 생성
+      console.log('🚀 Step 4 자동 진행 시작');
+      setCurrentStep(4);
+      // TODO: Step4 자동 생성 로직 구현
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 임시 딜레이
+
+      // Step 5: 최종 프롬프트 자동 생성
+      console.log('🚀 Step 5 자동 진행 시작');
+      setCurrentStep(5);
+      // TODO: Step5 자동 생성 로직 구현
+      await new Promise(resolve => setTimeout(resolve, 2000)); // 임시 딜레이
+
+      console.log('🎉 패스트트랙 완료!');
+      setIsFastTrackMode(false);
+
+    } catch (error) {
+      console.error('❌ 패스트트랙 진행 중 오류:', error);
+      setIsFastTrackMode(false);
+      alert('패스트트랙 진행 중 오류가 발생했습니다. 수동으로 진행해주세요.');
+    }
   };
 
   // Step1 실시간 데이터 변경 처리
@@ -323,6 +388,7 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
             onComplete={handleStep1Complete}
             onBack={onBack}
             onDataChange={handleStep1DataChange}
+            onFastTrack={handleFastTrack}
           />
         );
       
@@ -454,20 +520,24 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
 
   return (
     <>
-      <GNB 
-        onLogoClick={onBack} 
+      <GNB
+        onLogoClick={onBack}
         projectName={projectName || '새 프로젝트'}
         lastSaved={new Date()}
         currentStep={currentStep}
         steps={getWorkflowSteps()}
         onStepClick={(step) => {
+          // 패스트트랙 모드일 때는 스텝 이동 불가
+          if (isFastTrackMode) return;
+
           // 완료된 단계로만 이동 가능 (현재 단계는 이동 불가)
           const targetStepData = workflowData[`step${step}` as keyof typeof workflowData];
           if (targetStepData && step !== currentStep) {
             setCurrentStep(step);
           }
         }}
-        isGenerating={isGenerating}
+        isGenerating={isGenerating || isFastTrackMode}
+        isFastTrackMode={isFastTrackMode}
       />
       <div className="min-h-screen py-6" style={{ 
         backgroundColor: '#f5f5f7'

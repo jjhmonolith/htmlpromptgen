@@ -11,9 +11,10 @@ interface GNBProps {
   steps?: Array<{ num: number; title: string; isCompleted: boolean }>;
   onStepClick?: (stepNum: number) => void;
   isGenerating?: boolean; // 진행 중 상태 표시용
+  isFastTrackMode?: boolean; // 패스트트랙 모드 표시용
 }
 
-export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, currentStep = 1, steps, onStepClick, isGenerating = false }) => {
+export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, currentStep = 1, steps, onStepClick, isGenerating = false, isFastTrackMode = false }) => {
   const [showApiKeyModal, setShowApiKeyModal] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(
     localStorage.getItem('anthropic_api_key')
@@ -52,6 +53,12 @@ export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, c
                 <div className="h-8 w-px bg-gray-300"></div>
                 <div>
                   <h2 className="text-sm font-semibold text-gray-900">{projectName}</h2>
+                  {isFastTrackMode && (
+                    <div className="flex items-center gap-1 mt-1">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full animate-pulse"></div>
+                      <span className="text-xs text-purple-600 font-medium">패스트트랙 진행 중</span>
+                    </div>
+                  )}
                 </div>
               </>
             )}
@@ -64,8 +71,8 @@ export const GNB: React.FC<GNBProps> = ({ onLogoClick, projectName, lastSaved, c
                 {steps.map((step, index) => {
                   const isActive = step.num === currentStep;
                   const isCompleted = step.isCompleted;
-                  // 새로운 정책: 완료된 단계만 클릭 가능 (현재 단계 제외)
-                  const canAccess = isCompleted && !isActive;
+                  // 새로운 정책: 완료된 단계만 클릭 가능 (현재 단계 제외) + 패스트트랙 모드에서는 클릭 불가
+                  const canAccess = isCompleted && !isActive && !isFastTrackMode;
                   
                   // 크기 설정 - 현재 단계는 확대
                   const scale = isActive ? 'scale-125' : 'scale-100';

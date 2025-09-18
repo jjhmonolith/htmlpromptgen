@@ -54,11 +54,16 @@ export class PromptEngine {
 - **프로젝트**: ${variables.projectTitle}
 - **대상 학습자**: ${variables.targetAudience}
 - **현재 페이지**: ${variables.pageNumber}페이지 - ${variables.pageTopic}
+${variables.ahaMomentSection}
 
-### 📝 페이지 구성 요소 (Step3에서 제공된 콘텐츠)
+### 📝 Step3에서 설계된 페이지 레이아웃 (반드시 기반으로 활용)
+**다음은 Step3에서 AI가 창의적으로 설계한 이 페이지의 상세한 레이아웃 설명입니다. 이 구조를 기반으로 애니메이션과 상호작용을 설계하세요:**
+
 ${variables.structureSummary}
 
 ${variables.contentAnalysisSection}
+
+**중요**: 위의 Step3 레이아웃 설명에 포함된 모든 섹션, 컴포넌트, 이미지, 텍스트 영역들을 파악하고, 각각에 대해 구체적인 애니메이션과 상호작용을 설계해주세요.
 
 ### 🎬 설계 가이드라인
 
@@ -69,11 +74,12 @@ ${variables.contentAnalysisSection}
 - 학습 흐름에 맞는 시선 유도 효과
 
 **2. 콘텐츠 영역별 상세 애니메이션**
-Step3에서 제공된 각 콘텐츠 영역(섹션, 카드, 이미지, 텍스트 블록 등)에 대해:
-- 진입 애니메이션 (언제, 어떻게 나타나는지)
-- 대기 상태 애니메이션 (필요시 미세한 루프 모션)
-- 강조 애니메이션 (주의 집중이 필요한 시점)
-- 각 애니메이션이 학습에 어떻게 도움이 되는지 간단한 이유 설명
+**위의 Step3 레이아웃 설명을 분석하여 언급된 각 콘텐츠 영역별로:**
+- **진입 애니메이션**: Step3에서 설명한 각 섹션/컴포넌트의 등장 방식과 타이밍
+- **대기 상태 애니메이션**: 사용자 관심을 유지하는 미세한 모션
+- **강조 애니메이션**: 아하 모먼트와 연결된 핵심 요소 강조
+- **교육적 목적**: 각 애니메이션이 학습 흐름에 기여하는 방식
+- **Step3 구조 연계**: 설명된 레이아웃 구조와 애니메이션의 조화
 
 **3. 상호작용 상세 설계**
 각 인터랙티브 요소별로:
@@ -99,17 +105,19 @@ Step3에서 제공된 각 콘텐츠 영역(섹션, 카드, 이미지, 텍스트 
 다음과 같은 구조의 상세한 텍스트로 작성해주세요:
 
 **### 애니메이션 및 상호작용**
-- **애니메이션**: [전체 애니메이션 설계 개요와 목적]
+- **애니메이션**: [Step3 레이아웃을 기반으로 한 전체 애니메이션 설계 개요와 목적]
 
 **1) 페이지 최초 로드 시퀀스(0-[총시간], [이징함수])**
-- [시간대별 상세한 애니메이션 설명]
-- [각 요소별 진입 방식과 이유]
+- [Step3에서 설명한 구조 순서에 따른 시간대별 상세한 애니메이션 설명]
+- [각 요소별 진입 방식과 교육적 이유]
 
-**2) [콘텐츠 영역명] 애니메이션**
+**2) [Step3에서 언급된 구체적인 콘텐츠 영역명] 애니메이션**
 - [해당 영역의 상세한 애니메이션 설명]
+- [아하 모먼트와의 연계성]
 - [교육적 목적과 효과]
 
-**3) [다른 콘텐츠 영역명] 애니메이션**
+**3) [Step3에서 언급된 다른 구체적인 콘텐츠 영역명] 애니메이션**
+- [Step3 설명에 기반한 애니메이션 설계]
 - [반복...]
 
 **- **상호작용**: [전체 상호작용 설계 개요]
@@ -143,9 +151,9 @@ Step3에서 제공된 각 콘텐츠 영역(섹션, 카드, 이미지, 텍스트 
     const primaryColor = visualIdentity.colorPalette?.primary || '#3B82F6';
     const componentStyle = visualIdentity.componentStyle || '모던하고 깔끔한 스타일';
 
-    // Step3 결과에서 구조 요약 생성
+    // Step3 결과에서 전체 구조 정보 생성 (더 이상 300자로 제한하지 않음)
     const structureSummary = step3PageData.fullDescription
-      ? `${step3PageData.fullDescription.substring(0, 300)}...`
+      ? step3PageData.fullDescription
       : `페이지 제목: ${step3PageData.pageTitle || step3PageData.topic}, 교육 콘텐츠 구성`;
 
     const projectTitle = projectData.projectTitle;
@@ -172,6 +180,14 @@ Step3에서 제공된 각 콘텐츠 영역(섹션, 카드, 이미지, 텍스트 
 - 콘텐츠 밀도: ${densityLabel}`;
     }
 
+    // 아하 모먼트 처리
+    let ahaMomentSection = '';
+    if (projectData.ahaMoments && projectData.ahaMoments[pageNumber - 1]) {
+      const currentAhaMoment = projectData.ahaMoments[pageNumber - 1];
+      ahaMomentSection = `- **💡 이 페이지의 아하 모먼트**: ${currentAhaMoment}
+  (애니메이션과 상호작용 설계 시 이 순간을 극대화하는 방향으로 설계하세요)`;
+    }
+
     return {
       moodAndTone,
       primaryColor,
@@ -181,7 +197,8 @@ Step3에서 제공된 각 콘텐츠 영역(섹션, 카드, 이미지, 텍스트 
       targetAudience,
       pageNumber,
       pageTopic,
-      contentAnalysisSection
+      contentAnalysisSection,
+      ahaMomentSection
     };
   }
 

@@ -645,30 +645,46 @@ export class Step4DesignSpecificationService {
   }
 
   /**
-   * Step3 데이터를 기반으로 기본 이미지 배치 생성
+   * Step3 데이터를 기반으로 기본 이미지 배치 생성 (개선된 구조 지원)
    */
   private generateImagePlacements(step3PageData: any): any[] {
-    const images = step3PageData.images || [];
+    // Step3의 mediaAssets 구조 지원
+    const images = step3PageData.mediaAssets || step3PageData.images || [];
 
-    return images.map((image: any, index: number) => ({
-      id: `image-${index}`,
-      filename: image.filename || `placeholder-${index}.jpg`,
-      section: `section-0`,
-      position: {
-        x: 100,
-        y: 200 + (index * 250)
-      },
-      dimensions: {
-        width: 400,
-        height: 200
-      },
-      objectFit: 'cover',
-      borderRadius: 8,
-      boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-      loading: 'lazy',
-      priority: 'normal',
-      alt: image.prompt || `이미지 ${index + 1}`,
-      zIndex: 15
-    }));
+    console.log(`🖼️ Step4 이미지 처리: ${images.length}개 이미지 발견`);
+
+    return images.map((image: any, index: number) => {
+      // Step3의 새로운 구조 지원
+      const filename = image.fileName || image.filename || `placeholder-${index}.jpg`;
+      const aiPrompt = image.aiPrompt || image.prompt || `이미지 ${index + 1}`;
+
+      console.log(`📸 이미지 ${index + 1}: ${filename} | ${aiPrompt.substring(0, 50)}...`);
+
+      return {
+        id: image.id || `image-${index}`,
+        filename: filename,
+        section: `section-0`,
+        position: {
+          x: 100,
+          y: 200 + (index * 250)
+        },
+        dimensions: {
+          width: 400,
+          height: 200
+        },
+        objectFit: 'cover',
+        borderRadius: 8,
+        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
+        loading: 'lazy',
+        priority: index === 0 ? 'high' : 'normal', // 첫 번째 이미지 우선순위 높임
+        alt: aiPrompt,
+        zIndex: 15,
+        // Step3 메타데이터 보존
+        originalPath: image.path,
+        category: image.category,
+        purpose: image.purpose,
+        aiPrompt: aiPrompt
+      };
+    });
   }
 }

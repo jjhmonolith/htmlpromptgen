@@ -557,31 +557,45 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
         </div>
       )}
 
-      {/* 액션 버튼 */}
-      <div className="flex justify-between pt-6">
-        <button
-          onClick={onBack}
-          className="px-6 py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors"
-        >
-          이전 단계
-        </button>
-
-        <button
-          onClick={() => onComplete?.(step4Data)}
-          disabled={!step4Data || step4Data.pages.every(page => !page.isComplete)}
-          className="px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          title={
-            !step4Data ? '데이터를 불러오는 중입니다...' :
-            step4Data.pages.every(page => !page.isComplete)
-              ? `다음 페이지를 재생성해주세요: ${step4Data.pages.filter(p => !p.isComplete).map(p => `페이지 ${p.pageNumber}(${p.pageTitle})`).join(', ')}`
-              : ''
-          }
-        >
-          {step4Data?.pages.some(page => page.isGenerating)
-            ? `다음 단계 (${step4Data.pages.filter(p => p.isGenerating).length}개 페이지 생성 중)`
-            : '다음 단계'
-          }
-        </button>
+      {/* 네비게이션 버튼들 - Step1 스타일과 일치 */}
+      <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-8 mb-8">
+        <div className="flex justify-between">
+          <button
+            onClick={onBack}
+            className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-all font-medium"
+          >
+            ← 이전
+          </button>
+          <button
+            onClick={() => onComplete?.(step4Data)}
+            disabled={!step4Data || step4Data.pages.every(page => !page.isComplete)}
+            className="px-8 py-3 text-white rounded-full transition-all font-medium shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+            style={{
+              backgroundColor: !step4Data || step4Data.pages.every(page => !page.isComplete) ? '#9CA3AF' : '#3e88ff'
+            }}
+            onMouseEnter={(e) => {
+              if (!(!step4Data || step4Data.pages.every(page => !page.isComplete))) {
+                (e.target as HTMLButtonElement).style.backgroundColor = '#2c6ae6';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!(!step4Data || step4Data.pages.every(page => !page.isComplete))) {
+                (e.target as HTMLButtonElement).style.backgroundColor = '#3e88ff';
+              }
+            }}
+            title={
+              !step4Data ? '데이터를 불러오는 중입니다...' :
+              step4Data.pages.every(page => !page.isComplete)
+                ? `다음 페이지를 재생성해주세요: ${step4Data.pages.filter(p => !p.isComplete).map(p => `페이지 ${p.pageNumber}(${p.pageTitle})`).join(', ')}`
+                : ''
+            }
+          >
+            {step4Data?.pages.some(page => page.isGenerating)
+              ? `생성 중 (${step4Data.pages.filter(p => p.isGenerating).length}개)`
+              : '다음 단계로 →'
+            }
+          </button>
+        </div>
       </div>
     </div>
   );

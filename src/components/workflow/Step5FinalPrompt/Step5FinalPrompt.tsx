@@ -102,26 +102,37 @@ ${projectData.suggestions && projectData.suggestions.length > 0
   ? `**특별 요구사항**: ${projectData.suggestions.join(' ')}`
   : ''}`);
 
-    // 2. 디자인 시스템
-    sections.push(`## 🎨 디자인 시스템
+    // 2. 디자인 시스템 (Step2 구조화된 데이터 정확히 반영)
+    sections.push(`## 🎨 디자인 시스템 (Step2 비주얼 아이덴티티 기반)
 
-### 색상 팔레트
-- **주색상**: ${visualIdentity.colorPalette.primary}
-- **보조색상**: ${visualIdentity.colorPalette.secondary}
-- **강조색상**: ${visualIdentity.colorPalette.accent}
-- **텍스트 색상**: ${visualIdentity.colorPalette.text}
-- **배경색상**: ${visualIdentity.colorPalette.background}
+### 🌈 색상 팔레트 (정확한 HEX 코드)
+다음 5가지 색상을 모든 페이지에서 일관되게 사용하세요:
 
-### 타이포그래피
-- **제목 폰트**: ${visualIdentity.typography.headingFont}
-- **본문 폰트**: ${visualIdentity.typography.bodyFont}
+- **PRIMARY (주색상)**: \`${visualIdentity.colorPalette.primary}\` - 주요 제목, 중요한 버튼, 핵심 강조 요소
+- **SECONDARY (보조색상)**: \`${visualIdentity.colorPalette.secondary}\` - 카드 배경, 섹션 구분, 보조 영역
+- **ACCENT (강조색상)**: \`${visualIdentity.colorPalette.accent}\` - 행동 유도, 하이라이트, 주의 집중 요소
+- **BACKGROUND (배경색상)**: \`${visualIdentity.colorPalette.background}\` - 전체 페이지 배경색
+- **TEXT (텍스트색상)**: \`${visualIdentity.colorPalette.text}\` - 모든 텍스트의 기본 색상
+
+### ✍️ 타이포그래피 시스템
+- **헤딩 폰트**: ${visualIdentity.typography.headingFont} (제목, 섹션 헤더에 사용)
+  - 특성: ${visualIdentity.typography.headingStyle || '견고하면서도 친근한'}
+- **본문 폰트**: ${visualIdentity.typography.bodyFont} (일반 텍스트, 설명문에 사용)
+  - 특성: ${visualIdentity.typography.bodyStyle || '읽기 편안하고 깔끔한'}
 - **기본 크기**: ${visualIdentity.typography.baseSize}
+- **최소 폰트 크기**: 모든 텍스트는 최소 18pt(24px) 이상 필수
 
-### 무드 & 톤
-${visualIdentity.moodAndTone.map(mood => `- ${mood}`).join('\n')}
+### 🎭 무드 & 톤 (4가지 핵심 감성)
+${visualIdentity.moodAndTone.map(mood => `- **${mood}**: 이 감성을 레이아웃의 모든 요소(여백, 정렬, 색상 배치, 컴포넌트 형태)에 반영하세요`).join('\n')}
 
-### 컴포넌트 스타일
-${visualIdentity.componentStyle}`);
+### 🎪 컴포넌트 스타일 가이드
+${visualIdentity.componentStyle}
+
+### 💡 디자인 적용 지침
+1. **색상 일관성**: 위 5가지 색상만 사용하여 통일된 컬러 팔레트 유지
+2. **폰트 일관성**: 지정된 2가지 폰트만 사용하여 타이포그래피 시스템 준수
+3. **감성 반영**: 4가지 무드를 레이아웃의 전체적인 느낌에 녹여내세요
+4. **컴포넌트 가이드 준수**: 위 스타일 가이드에 맞는 UI 요소들로 구성하세요`);
 
     // 3. 페이지별 상세 명세 (새로운 구조)
     sections.push(generatePageByPageSpecification());
@@ -153,15 +164,21 @@ ${projectData.pages.length > 3 ? `├── page4.html          # 네 번째 페
 │   └── style.css       # 폰트, 색상 등 모든 공통 스타일
 ├── js/
 │   └── script.js       # 모든 상호작용 관련 JavaScript
-├── images/
-│   ├── page1/
-│   │   ├── 1.png
-│   │   └── 2.png
-│   ├── page2/
-│   │   └── 1.png
-│   └── ...
+├── image/
+${step3Result ? step3Result.pages.map((page, pageIndex) => {
+  if (page.mediaAssets && page.mediaAssets.length > 0) {
+    const pageImages = page.mediaAssets.map(img => `│   │   ├── ${img.fileName}`).join('\n');
+    return `│   ├── page${pageIndex + 1}/\n${pageImages}`;
+  }
+  return `│   ├── page${pageIndex + 1}/    # 이미지 없음 (HTML/CSS 기반)`;
+}).join('\n') : '│   └── (이미지 폴더는 실제 이미지가 있는 페이지만 생성)'}
 └── README.md           # 프로젝트 설명서 (선택사항)
 \`\`\`
+
+**📝 주요 변경사항:**
+- 이미지 폴더명을 \`images/\`에서 \`image/\`로 변경 (Step3 경로와 일치)
+- 각 페이지별 이미지 폴더는 실제 이미지가 있을 때만 생성
+- HTML/CSS 기반 시각화가 우선이며, 이미지는 보조적 역할
 
 ### 🎨 하이브리드 스타일링 전략
 
@@ -233,10 +250,11 @@ ${projectData.pages.length > 3 ? `├── page4.html          # 네 번째 페
 3. **플레이스홀더 서비스 활용**:
    - 예시: \`https://via.placeholder.com/800x600/cccccc/666666?text=Image+Name\`
    - 형식: \`https://via.placeholder.com/[width]x[height]/[배경색]/[텍스트색]?text=[설명]\`
+4. **Step3 경로 준수**: 이미지 폴더는 \`image/\` (복수형 아님)로 설정하여 Step3 경로와 일치시키세요
 
 
 ### 성능 최적화 고려사항
-- **공통 리소스 활용**: styles.css, script.js, images/ 폴더를 모든 페이지가 공유
+- **공통 리소스 활용**: styles.css, script.js, image/ 폴더를 모든 페이지가 공유
 - **플레이스홀더 최적화**: 실제 이미지 크기를 정확히 반영하여 레이아웃 시프트 방지
 - **폰트 최적화**: 필요한 문자셋만 로드, font-display: swap 사용
 - **CSS/JS 최소화**: 불필요한 코드 제거, 파일 크기 최적화
@@ -250,180 +268,87 @@ ${projectData.pages.length > 3 ? `├── page4.html          # 네 번째 페
     return sections.join('\n\n');
   };
 
-  // 페이지별 상세 명세 생성 (Step4 데이터 통합)
+  // 페이지별 상세 명세 생성 (Step3 fullDescription 중심으로 변경)
   const generatePageByPageSpecification = (): string => {
     if (!step3Result) return '';
-
-    // 디버깅용 로그
-    console.log('🔍 Step4 데이터 구조 분석:', {
-      step4Result: step4Result,
-      pages: step4Result?.pages,
-      firstPage: step4Result?.pages?.[0]
-    });
 
     const pageSpecs = projectData.pages.map((page, index) => {
       const step3Page = step3Result.pages[index];
       const step4Page = step4Result?.pages?.find(p => p.pageNumber === page.pageNumber);
-      const pageContent = step3Page?.content;
-
-      // 페이지별 디버깅 로그
-      console.log(`📄 Page ${index + 1} 데이터:`, {
-        step3Page: step3Page?.structure,
-        step4Page: step4Page,
-        hasLayout: !!step4Page?.layout,
-        hasComponentStyles: !!step4Page?.componentStyles,
-        hasImagePlacements: !!step4Page?.imagePlacements,
-        hasInteractions: !!step4Page?.interactions
-      });
 
       return `## 📄 Page ${index + 1}: ${page.topic}
 
 ### 📝 페이지 정보
-- **파일명**: \`${index + 1}.html\`
+- **파일명**: \`page${index + 1}.html\`
 - **주제**: ${page.topic}
-- **설명**: ${page.description}
-- **교육 목표**: ${page.learningObjectives?.join(', ') || '명시되지 않음'}
+- **설명**: ${page.description || '설명 없음'}
+- **학습 목표**: ${step3Page?.learningObjectives?.join(', ') || '기본 학습 목표'}
 
-### 📐 레이아웃 명세 ${step4Page ? '(Step4 정밀 설계 반영)' : '(Step3 기본 구조)'}
-${generateLayoutSpecification(step3Page, step4Page, index)}
+### 🎨 창의적 레이아웃 설계 (Step3 AI 설계 기반)
+${step3Page?.fullDescription ? `
+**AI 디자이너의 창의적 레이아웃 설명:**
 
-### 🧩 컴포넌트 명세 ${step4Page ? '(정밀 위치/스타일 포함)' : '(기본 구조만)'}
-${generateComponentSpecification(pageContent, step4Page)}
+${step3Page.fullDescription}
 
-### 🖼️ 이미지 배치 명세 ${step4Page ? '(정확한 위치 정보 포함)' : '(기본 정보만)'}
-${generateImageSpecification(pageContent, step4Page)}
+**구현 지침:**
+- 위 설명을 바탕으로 HTML 구조와 CSS 스타일을 작성하세요
+- 모든 시각적 요소와 배치 방식을 충실히 구현하세요
+- 설명된 색상, 타이포그래피, 레이아웃을 정확히 반영하세요
+` : '기본 교육 레이아웃을 구현하세요'}
+
+### 🖼️ 이미지 명세 (정확한 크기와 위치 정보)
+${generateImageSpecification(step3Page, step4Page, index)}
 
 ### ⚡ 상호작용 및 애니메이션 명세
 ${generateInteractionAndAnimationSpecification(step4Page)}
 
-### 🎓 교육적 기능 명세
-${generateEducationalFeatureSpecification(step4Page)}
-
 ---`;
     });
 
-    return `## 🏗️ 페이지별 통합 명세 (Step1-4 데이터 완전 반영)
+    return `## 🏗️ 페이지별 창의적 설계 명세
 
-### ⚠️ 구현 지침
-- **개별 HTML 파일**: 각 페이지를 1.html, 2.html... 형태로 분리 구현
-- **정밀 레이아웃**: Step4의 좌표 및 크기 정보 활용
-- **독립적 동작**: 각 파일은 완전 독립적으로 작동
-- **네비게이션 금지**: 페이지 간 이동 기능 구현 금지
+### ⚠️ 핵심 구현 방식 변경
+- **Step3 AI 설계 중심**: 각 페이지의 fullDescription을 바탕으로 창의적 레이아웃 구현
+- **자유로운 HTML/CSS**: 구조화된 컴포넌트가 아닌 창의적 설계 설명 기반
+- **개별 HTML 파일**: 각 페이지를 page1.html, page2.html... 형태로 분리
+- **완전 독립적 동작**: 페이지 간 네비게이션 절대 금지
 
 ${pageSpecs.join('\n\n')}`;
   };
 
-  // 레이아웃 명세 생성 (Step4 데이터 우선 활용)
-  const generateLayoutSpecification = (step3Page: any, step4Page: any, pageIndex: number): string => {
-    if (step4Page?.layout) {
-      // Step4 정밀 레이아웃 정보 활용
-      const layout = step4Page.layout;
-      const sections = layout.sections || [];
+  // 더 이상 사용하지 않는 구조화된 컴포넌트 함수들
+  // Step3의 fullDescription 중심으로 변경되어 이 함수들은 간소화됨
 
-      return `**레이아웃 모드**: ${projectData.layoutMode} (${layout.pageWidth || 1600}×${layout.pageHeight === 'auto' ? '자동높이' : layout.pageHeight + 'px'})
-
-**섹션 구조**:
-${sections.map((section: any, idx: number) => {
-  // Step4 타입에 맞게 필드명 수정
-  const position = section.position || {};
-  const dimensions = section.dimensions || {};
-  return `${idx + 1}. **${section.id}** (${section.gridType || section.role || 'content'})
-   - 위치: x=${position.x || 0}px, y=${position.y || 0}px
-   - 크기: ${dimensions.width || 'auto'}px × ${dimensions.height || 'auto'}px
-   - 그리드: ${section.gridType || 'auto'}
-   - 여백: 하단 ${section.marginBottom || 0}px`;
-}).join('\n')}
-
-**전체 높이**: ${layout.totalHeight || '자동 계산'}`;
-    } else if (step3Page?.structure) {
-      // Step3 기본 구조 정보 활용
-      const structure = step3Page.structure;
-      return `**레이아웃 모드**: ${projectData.layoutMode}
-**기본 섹션 구조** (Step3):
-${structure.sections.map((section: any, idx: number) => {
-  return `${idx + 1}. **${section.id}** - ${section.role} (그리드: ${section.grid})
-   - 높이: ${section.height}
-   - 여백: 하단 ${section.gapBelow}px
-   - 힌트: ${section.hint}`;
-}).join('\n')}`;
-    } else {
-      return '레이아웃 정보가 없습니다.';
-    }
-  };
-
-  // 컴포넌트 명세 생성 (Step4 정밀 스타일 반영)
-  const generateComponentSpecification = (pageContent: any, step4Page: any): string => {
-    if (!pageContent?.components) {
-      return '컴포넌트 정보가 없습니다.';
-    }
-
-    return pageContent.components.map((comp: any, compIndex: number) => {
-      const step4Component = step4Page?.componentStyles?.find((c: any) =>
-        c.id === comp.slotRef || c.componentId === comp.slotRef || c.type === comp.type
-      );
-
-      let spec = `**${compIndex + 1}. ${comp.type.toUpperCase()}** \`${comp.text || '텍스트 없음'}\``;
-
-      if (step4Component) {
-        // Step4 타입에 맞게 필드명 수정
-        const position = step4Component.position || {};
-        const dimensions = step4Component.dimensions || {};
-        const colors = step4Component.colors || {};
-        const typography = step4Component.typography || {};
-        const spacing = step4Component.spacing || {};
-
-        spec += `
-   - **위치**: x=${position.x || 0}px, y=${position.y || 0}px
-   - **크기**: ${dimensions.width || 'auto'} × ${dimensions.height || 'auto'}
-   - **스타일**:
-     * 폰트: ${typography.fontSize || typography.fontFamily || '기본'}
-     * 색상: 텍스트 ${colors.text || '기본'}, 배경 ${colors.background || '투명'}
-     * 여백: top=${spacing.top || 0}px, right=${spacing.right || 0}px, bottom=${spacing.bottom || 0}px, left=${spacing.left || 0}px
-   - **역할**: ${comp.role || '기본'}`;
-      } else {
-        spec += `
-   - **기본 정보**: ${getComponentDescription(comp)}
-   - **역할**: ${comp.role || '기본'}`;
-      }
-
-      return spec;
-    }).join('\n\n');
-  };
-
-  // 이미지 배치 명세 생성 (Step4 정밀 위치 정보 반영)
-  const generateImageSpecification = (pageContent: any, step4Page: any): string => {
-    if (!pageContent?.images) {
+  // 이미지 배치 명세 생성 (Step3 mediaAssets 기반)
+  const generateImageSpecification = (step3Page: any, step4Page: any, pageIndex: number): string => {
+    if (!step3Page?.mediaAssets || step3Page.mediaAssets.length === 0) {
       return '이미지가 없습니다.';
     }
 
-    return pageContent.images.map((img: any, imgIndex: number) => {
-      const step4Image = step4Page?.imagePlacements?.find((i: any) =>
-        i.imageId === img.filename || i.filename === img.filename || i.id === img.filename
-      );
-
-      let spec = `**${imgIndex + 1}. ${img.filename}**`;
-
-      if (step4Image) {
-        // Step4 타입에 맞게 필드명 수정
-        const position = step4Image.position || {};
-        const dimensions = step4Image.dimensions || {};
-        const margins = step4Image.margins || {};
-
-        spec += `
-   - **정밀 위치**: x=${position.x || 0}px, y=${position.y || 0}px
-   - **정확한 크기**: ${dimensions.width || img.width}×${dimensions.height || img.height}px
-   - **z-index**: ${step4Image.zIndex || 1}
-   - **배치 방식**: ${step4Image.placement || 'static'}
-   - **여백**: top=${margins.top || 0}px, right=${margins.right || 0}px, bottom=${margins.bottom || 0}px, left=${margins.left || 0}px`;
-      } else {
-        spec += `
-   - **기본 크기**: ${img.width}×${img.height}px`;
-      }
+    return step3Page.mediaAssets.map((img: any, imgIndex: number) => {
+      let spec = `**${imgIndex + 1}. ${img.fileName}**`;
 
       spec += `
-   - **용도**: ${img.description}
-   - **AI 프롬프트**: ${img.aiPrompt}
-   - **대체 텍스트**: ${img.alt}`;
+   - **파일 경로**: \`${img.path}\`
+   - **크기**: ${img.sizeGuide}
+   - **배치 위치**: ${img.placement?.position || '메인 영역'}
+   - **용도**: ${img.purpose}
+   - **설명**: ${img.description}
+   - **접근성**: ${img.accessibility?.altText}`;
+
+      if (img.aiPrompt) {
+        spec += `
+   - **AI 생성 프롬프트**: ${img.aiPrompt}`;
+      }
+
+      // 플레이스홀더 구현 지침 추가
+      const dimensions = img.sizeGuide.match(/(\d+)[×x](\d+)/);
+      if (dimensions) {
+        const width = dimensions[1];
+        const height = dimensions[2];
+        spec += `
+   - **플레이스홀더**: \`https://via.placeholder.com/${width}x${height}/cccccc/666666?text=${encodeURIComponent(img.fileName.replace('.png', ''))}\``;
+      }
 
       return spec;
     }).join('\n\n');
@@ -657,31 +582,56 @@ ${step4InteractionDescriptions.length > 0 ? '✅ Step4 상호작용 설계를 �
     return jsSpec;
   };
 
-  // 이미지 프롬프트 섹션 생성
+  // 이미지 프롬프트 섹션 생성 (Step3 mediaAssets 기반)
   const generateImagePromptSection = (): string => {
     if (!step3Result) return '';
 
     const imagePrompts: string[] = [];
 
     step3Result.pages.forEach((page, pageIndex) => {
-      if (page.content && page.content.images) {
-        page.content.images.forEach((image, imageIndex) => {
-          imagePrompts.push(`### 이미지 ${pageIndex + 1}-${imageIndex + 1}: ${image.filename}
+      if (page.mediaAssets && page.mediaAssets.length > 0) {
+        page.mediaAssets.forEach((image, imageIndex) => {
+          imagePrompts.push(`### 이미지 ${pageIndex + 1}-${imageIndex + 1}: ${image.fileName}
 
+**AI 생성 프롬프트:**
 ${image.aiPrompt}
 
-무드: ${visualIdentity.moodAndTone.join(', ')}
-색상 팔레트: 주색상 ${visualIdentity.colorPalette.primary}, 보조색상 ${visualIdentity.colorPalette.secondary}
-스타일: ${image.style}
-용도: ${image.description}
-교육 대상: ${projectData.targetAudience}
-해상도: ${image.width}×${image.height}px
-교육적 목적: 명확하고 이해하기 쉬운 시각적 표현`);
+**디자인 가이드라인:**
+- 무드: ${visualIdentity.moodAndTone.join(', ')}
+- 색상 팔레트: 주색상 ${visualIdentity.colorPalette.primary}, 보조색상 ${visualIdentity.colorPalette.secondary}, 강조색상 ${visualIdentity.colorPalette.accent}
+- 배경색: ${visualIdentity.colorPalette.background}
+- 텍스트색: ${visualIdentity.colorPalette.text}
+- 용도: ${image.purpose}
+- 설명: ${image.description}
+- 교육 대상: ${projectData.targetAudience}
+- 해상도: ${image.sizeGuide}
+- 접근성: ${image.accessibility?.altText}
+- 교육적 목적: ${image.category} - 명확하고 이해하기 쉬운 시각적 표현
+
+**파일 정보:**
+- 저장 경로: ${image.path}
+- 플레이스홀더: ${(() => {
+  const dimensions = image.sizeGuide.match(/(\d+)[×x](\d+)/);
+  if (dimensions) {
+    return `https://via.placeholder.com/${dimensions[1]}x${dimensions[2]}/cccccc/666666?text=${encodeURIComponent(image.fileName.replace('.png', ''))}`;
+  }
+  return '600x400px 기본 크기';
+})()}`);
         });
       }
     });
 
+    if (imagePrompts.length === 0) {
+      return `## 🖼️ 이미지 생성 명세서
+
+이 프로젝트는 HTML/CSS 기반 시각화로 설계되어 별도의 이미지가 필요하지 않습니다.
+모든 시각적 요소는 CSS로 구현되도록 설계되었습니다.`;
+    }
+
     return `## 🖼️ 이미지 생성 명세서
+
+아래의 이미지들을 AI 이미지 생성 도구(DALL-E, Midjourney, Stable Diffusion 등)를 사용하여 생성하고,
+지정된 경로에 저장한 후 HTML에서 참조하세요.
 
 ${imagePrompts.join('\n\n---\n\n')}`;
   };

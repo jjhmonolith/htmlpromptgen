@@ -44,6 +44,8 @@ export interface VisualIdentity {
     headingFont: string;
     bodyFont: string;
     baseSize: string;
+    headingStyle?: string;
+    bodyStyle?: string;
   };
   componentStyle: string;
 }
@@ -54,8 +56,16 @@ export interface Step2RawResponse {
   colorPrimary: string;
   colorSecondary: string;
   colorAccent: string;
+  colorBackground?: string;
+  colorText?: string;
   baseSizePt: number;
   componentStyle: string;
+  headingStyle?: string;
+  bodyStyle?: string;
+  headingFont?: string;
+  bodyFont?: string;
+  headingReason?: string;
+  bodyReason?: string;
 }
 
 export interface DesignTokens {

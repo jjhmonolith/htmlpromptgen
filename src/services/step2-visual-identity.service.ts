@@ -2,8 +2,7 @@ import { OpenAIService } from './openai.service';
 import { ProjectData, Step2RawResponse, VisualIdentity, DesignTokens } from '../types/workflow.types';
 
 const BRAND_LOCKS = {
-  text: "#0F172A",
-  background: "#FFFFFF",
+  // 폰트만 브랜드 락으로 유지 (색상은 AI가 생성)
   headingFont: "Pretendard",
   bodyFont: "Noto Sans KR"
 };
@@ -89,48 +88,55 @@ export class Step2VisualIdentityService {
     const constraintGuide = this.getSpaceConstraintGuide(projectData.layoutMode);
     const audienceContext = this.getAudienceContext(projectData.targetAudience);
 
-    return `🎨 교육용 감성 무드 창작 브리프
+    return `🎨 교육용 비주얼 아이덴티티 생성
 
-당신은 교육 콘텐츠의 감정적 경험을 설계하는 창의적 파트너입니다.
-개발자가 "이런 분위기로 만들어보고 싶다!"고 느낄 수 있는 영감적 무드 가이드를 작성해주세요.
+당신은 교육 콘텐츠의 비주얼 아이덴티티를 디자인하는 전문가입니다.
+다음 프로젝트에 맞는 무드, 색상, 타이포그래피, 컴포넌트 스타일을 정확한 형식으로 제안해주세요.
 
-## 📚 프로젝트 맥락
+## 📚 프로젝트 정보
 **주제**: ${projectData.projectTitle}
 **학습자**: ${projectData.targetAudience}
 ${audienceContext}
 
-## 📐 중요한 공간 제약 (반드시 고려!)
+## 📐 레이아웃 제약사항
 ${constraintGuide}
 
-## 🎭 당신의 임무
-이 교육 프로젝트가 학습자에게 어떤 감정적 경험을 선사할지 상상해보세요.
-단순히 "파란색을 써라"가 아니라 "왜 이 색상이 이 순간의 학습에 도움이 되는가"를 생각해주세요.
+## 🎯 요청사항
+반드시 아래 정확한 형식으로만 응답해주세요:
 
-다음과 같은 서술형 무드 가이드를 자유롭게 작성해주세요:
+**MOOD_ADJECTIVES:**
+정확히 4개의 형용사를 쉼표로 구분하여 작성하세요. (예: 따뜻한, 신뢰할만한, 창의적인, 안정적인)
 
----
+**COLOR_PALETTE:**
+PRIMARY: #HEX코드 | 주요 색상 설명
+SECONDARY: #HEX코드 | 보조 색상 설명
+ACCENT: #HEX코드 | 강조 색상 설명
+BACKGROUND: #HEX코드 | 배경 색상 설명
+TEXT: #HEX코드 | 텍스트 색상 설명
 
-**🌟 이 교안이 전하고 싶은 감정과 분위기**
-(학습자가 느껴야 할 감정의 여정을 2-3문장으로 서술)
+**TYPOGRAPHY:**
+HEADING_FONT: 한글폰트명 | 선택 이유
+BODY_FONT: 한글폰트명 | 선택 이유
+BASE_SIZE: 숫자pt
 
-**🎨 색상 감성 이야기**
-- **주요 색상**: "[감정을 불러일으키는 색상 설명]" (예: "신뢰감을 주는 딥 블루")
-- **보조 색상**: "[분위기를 받쳐주는 색상 설명]"
-- **강조 색상**: "[중요한 순간에 사용할 색상 설명]"
+**COMPONENT_STYLE_GUIDE:**
+이 교육 프로젝트의 UI 컴포넌트 스타일을 마크다운 형식으로 작성하세요.
+다음 항목들을 포함하여 구체적으로 설명하세요:
+- **모서리 처리**: 둥글기 정도와 적용 방식
+- **그림자 효과**: 사용 여부와 강도
+- **색상 활용**: 배경, 테두리, 텍스트 색상 사용법
+- **여백과 간격**: 내부 패딩과 외부 마진 특성
+- **인터랙션**: 호버, 클릭 등 상호작용 스타일
+- **계층 구조**: 카드, 버튼, 입력필드 등의 시각적 위계
 
-**✨ 타이포그래피의 성격**
-- **제목 스타일**: "[어떤 느낌으로 읽혀야 하는지]" (예: "자신감 있으면서도 친근한")
-- **본문 스타일**: "[어떤 느낌으로 읽혀야 하는지]" (예: "편안하게 읽히는")
+최소 6-8문장으로 교육적 효과를 고려한 상세한 가이드를 작성하세요.
 
-**🎪 전체적인 컴포넌트 성격**
-(요소들이 서로 어떻게 조화를 이루면서도 각각의 개성을 살릴 수 있는지 2-3문장으로)
-
-**🎯 개발자를 위한 창의적 방향성**
-"이런 점을 고려하시면 더 좋을 것 같아요..." 식으로 구체적 제안이 아닌 영감을 주는 방향성 제시
-
----
-
-**중요**: HEX 코드나 픽셀 단위는 언급하지 마세요. 감성과 경험 중심으로 서술해주세요.`;
+**중요 사항:**
+1. MOOD_ADJECTIVES는 정확히 4개의 한국어 형용사
+2. COLOR_PALETTE는 5개 색상 모두 #HEX 코드 포함 필수
+3. TYPOGRAPHY는 실제 존재하는 한글 폰트명 (예: Pretendard, Noto Sans KR, 나눔고딕, 맑은고딕 등)
+4. COMPONENT_STYLE_GUIDE는 마크다운 문법 사용하여 구조화된 가이드 작성
+5. 각 섹션 라벨을 정확히 유지할 것`;
   }
 
   private getSpaceConstraintGuide(layoutMode: 'fixed' | 'scrollable'): string {
@@ -163,57 +169,529 @@ ${constraintGuide}
   }
 
   private parseStep2Response(content: string): Step2RawResponse {
-    console.log('🔍 Step2 창의적 브리프 처리 시작');
+    console.log('🔍 Step2 구조화된 파싱 시작');
     console.log('📄 전체 응답 내용:', content.substring(0, 500) + '...');
 
-    // 자연어 응답을 기본 구조로 변환
-    const creativeBrief = this.extractCreativeMood(content);
+    // 구조화된 섹션별 파싱
+    const moodData = this.parseStructuredMood(content);
+    const colorData = this.parseStructuredColors(content);
+    const typographyData = this.parseStructuredTypography(content);
+    const componentStyleData = this.parseStructuredComponentStyle(content);
 
     const result: Step2RawResponse = {
-      version: 'creative.v1',
-      mood: creativeBrief.emotionalKeywords || '친근한,창의적인,교육적인,희망적인',
-      colorPrimary: '#2563EB', // 기본 신뢰감 있는 블루
-      colorSecondary: '#F1F5F9', // 기본 배경색
-      colorAccent: '#F59E0B', // 기본 강조색
-      baseSizePt: 20, // 기본 크기
-      componentStyle: creativeBrief.fullText || '창의적이고 교육적인 디자인'
+      version: 'structured.v2',
+      mood: moodData.adjectives,
+      colorPrimary: colorData.primary,
+      colorSecondary: colorData.secondary,
+      colorAccent: colorData.accent,
+      colorBackground: colorData.background,
+      colorText: colorData.text,
+      baseSizePt: typographyData.baseSize,
+      headingFont: typographyData.headingFont,
+      bodyFont: typographyData.bodyFont,
+      headingReason: typographyData.headingReason,
+      bodyReason: typographyData.bodyReason,
+      componentStyle: componentStyleData || '깔끔하고 교육적인 디자인'
     };
 
-    console.log('✅ 창의적 브리프 처리 완료:', {
+    console.log('✅ 구조화된 파싱 완료:', {
       mood: result.mood,
-      hasFullText: result.componentStyle.length > 50
+      colors: {
+        primary: result.colorPrimary,
+        secondary: result.colorSecondary,
+        accent: result.colorAccent,
+        background: result.colorBackground,
+        text: result.colorText
+      },
+      fonts: {
+        heading: result.headingFont,
+        body: result.bodyFont,
+        baseSize: result.baseSizePt
+      }
     });
 
     return result;
   }
 
-  private extractCreativeMood(content: string): { emotionalKeywords: string; fullText: string } {
-    // 실제로는 자연어 처리하지만 현재는 기본값 반환
-    // 향후 더 정교한 자연어 파싱 또는 AI 기반 키워드 추출 적용 가능
+  private parseStructuredMood(content: string): { adjectives: string } {
+    console.log('🎭 구조화된 무드 파싱 시작');
+    console.log('🔍 파싱할 내용:', content.substring(0, 1000));
 
-    // 감정 키워드 추출 시도
-    let emotionalKeywords = '';
-    const moodPatterns = [
-      /(?:분위기|느낌|감정).*?([가-힣]+(?:적인|한|로운))/g,
-      /(?:색상|컬러).*?([가-힣]+(?:적인|한|로운))/g
+    // 여러 패턴으로 MOOD_ADJECTIVES 매칭 시도
+    const patterns = [
+      /MOOD_ADJECTIVES:\s*([^\n*]+)/i,
+      /MOOD_ADJECTIVES\s*:\s*([^\n*]+)/i,
+      /무드.*?형용사.*?:\s*([^\n*]+)/i,
+      /형용사.*?:\s*([^\n*]+)/i
     ];
 
-    const foundMoods: string[] = [];
-    moodPatterns.forEach(pattern => {
-      let match;
-      while ((match = pattern.exec(content)) !== null) {
-        foundMoods.push(match[1]);
+    for (const pattern of patterns) {
+      const moodMatch = content.match(pattern);
+      if (moodMatch) {
+        const rawMoods = moodMatch[1].trim();
+        console.log('🎯 원시 무드 텍스트:', rawMoods);
+
+        // 쉼표나 다양한 구분자로 분리
+        const adjectives = rawMoods.split(/[,\s]+/)
+          .map(mood => mood.trim())
+          .filter(mood => mood.length > 0 && mood.length < 10) // 너무 긴 텍스트 제외
+          .slice(0, 4); // 정확히 4개만
+
+        if (adjectives.length >= 2) { // 최소 2개 이상일 때만 성공으로 간주
+          const result = adjectives.join(',');
+          console.log('✅ 구조화된 무드 파싱 성공:', adjectives);
+          return { adjectives: result };
+        }
+      }
+    }
+
+    // 폴백: 한국어 형용사 패턴으로 추출 시도
+    const koreanAdjectivePattern = /([가-힣]{2,4}[한적은로운])/g;
+    const found = [];
+    let match;
+    while ((match = koreanAdjectivePattern.exec(content)) !== null && found.length < 4) {
+      const adj = match[1];
+      if (!found.includes(adj)) {
+        found.push(adj);
+      }
+    }
+
+    if (found.length >= 2) {
+      console.log('✅ 패턴 매칭으로 무드 추출 성공:', found);
+      return { adjectives: found.join(',') };
+    }
+
+    console.log('⚠️ 구조화된 무드 파싱 완전 실패, 기본값 사용');
+    return { adjectives: '친근한,창의적인,교육적인,안정적인' };
+  }
+
+  private parseStructuredColors(content: string): {
+    primary: string;
+    secondary: string;
+    accent: string;
+    background: string;
+    text: string;
+  } {
+    console.log('🎨 구조화된 색상 파싱 시작');
+
+    const colors = {
+      primary: '#2563EB',
+      secondary: '#F1F5F9',
+      accent: '#F59E0B',
+      background: '#FFFFFF',
+      text: '#0F172A'
+    };
+
+    // 각 색상 타입별로 파싱
+    const colorTypes = ['PRIMARY', 'SECONDARY', 'ACCENT', 'BACKGROUND', 'TEXT'];
+
+    colorTypes.forEach(type => {
+      const pattern = new RegExp(`${type}:\\s*(#[A-Fa-f0-9]{6}|#[A-Fa-f0-9]{3})`, 'i');
+      const match = content.match(pattern);
+
+      if (match) {
+        const hexCode = match[1];
+        const key = type.toLowerCase() as keyof typeof colors;
+        colors[key] = hexCode;
+        console.log(`🎯 ${type} 색상 발견:`, hexCode);
       }
     });
 
-    if (foundMoods.length >= 4) {
+    console.log('✅ 구조화된 색상 파싱 완료:', colors);
+    return colors;
+  }
+
+  private parseStructuredTypography(content: string): {
+    headingFont: string;
+    bodyFont: string;
+    headingReason: string;
+    bodyReason: string;
+    baseSize: number;
+  } {
+    console.log('✍️ 구조화된 타이포그래피 파싱 시작');
+
+    const typography = {
+      headingFont: 'Pretendard',
+      bodyFont: 'Noto Sans KR',
+      headingReason: '견고하면서도 친근한',
+      bodyReason: '읽기 편안하고 깔끔한',
+      baseSize: 20
+    };
+
+    // 헤딩 폰트 파싱
+    const headingMatch = content.match(/HEADING_FONT:\s*([^|]+)\s*\|\s*(.+)/i);
+    if (headingMatch) {
+      typography.headingFont = headingMatch[1].trim();
+      typography.headingReason = headingMatch[2].trim();
+      console.log('🎯 헤딩 폰트 발견:', typography.headingFont, '|', typography.headingReason);
+    }
+
+    // 본문 폰트 파싱
+    const bodyMatch = content.match(/BODY_FONT:\s*([^|]+)\s*\|\s*(.+)/i);
+    if (bodyMatch) {
+      typography.bodyFont = bodyMatch[1].trim();
+      typography.bodyReason = bodyMatch[2].trim();
+      console.log('📝 본문 폰트 발견:', typography.bodyFont, '|', typography.bodyReason);
+    }
+
+    // 기본 크기 파싱
+    const sizeMatch = content.match(/BASE_SIZE:\s*(\d+)pt/i);
+    if (sizeMatch) {
+      const size = parseInt(sizeMatch[1]);
+      if (size >= 14 && size <= 28) {
+        typography.baseSize = size;
+        console.log('📏 기본 크기 발견:', size + 'pt');
+      }
+    }
+
+    console.log('✅ 구조화된 타이포그래피 파싱 완료:', typography);
+    return typography;
+  }
+
+  private parseStructuredComponentStyle(content: string): string {
+    console.log('🎪 구조화된 컴포넌트 스타일 파싱 시작');
+    console.log('📄 파싱할 전체 내용 미리보기:', content.substring(0, 2000));
+
+    // 다양한 패턴으로 COMPONENT_STYLE_GUIDE 섹션 추출
+    const patterns = [
+      // 기본 패턴 - 줄바꿈까지의 내용이 아닌 전체 섹션 추출
+      /COMPONENT_STYLE_GUIDE:\s*([\s\S]*?)(?=\n\n\*\*|$)/i,
+      /COMPONENT_STYLE_GUIDE\s*:\s*([\s\S]*?)(?=\n\n\*\*|$)/i,
+
+      // 한국어 패턴
+      /컴포넌트\s*스타일\s*가이드\s*:?\s*([\s\S]*?)(?=\n\n\*\*|$)/i,
+
+      // 이모지 포함 패턴
+      /🎪\s*컴포넌트\s*스타일\s*가이드\s*:?\s*([\s\S]*?)(?=\n\n\*\*|$)/i,
+
+      // 더 넓은 패턴 - 마지막까지 모든 내용 포함
+      /COMPONENT_STYLE_GUIDE:\s*([\s\S]*)/i
+    ];
+
+    for (let i = 0; i < patterns.length; i++) {
+      const pattern = patterns[i];
+      const match = content.match(pattern);
+
+      if (match) {
+        console.log(`🎯 패턴 ${i+1}로 매칭 성공:`, match[0].substring(0, 200));
+
+        let styleGuide = match[1].trim();
+
+        // 프롬프트 지시사항만 최소한으로 제거
+        const instructionsToRemove = [
+          /이 교육 프로젝트의 UI 컴포넌트 스타일을 마크다운 형식으로 작성하세요\.\s*/gi,
+          /다음 항목들을 포함하여 구체적으로 설명하세요:\s*/gi,
+          /최소 6-8문장으로 교육적 효과를 고려한 상세한 가이드를 작성하세요\.\s*/gi
+        ];
+
+        instructionsToRemove.forEach(pattern => {
+          styleGuide = styleGuide.replace(pattern, '');
+        });
+
+        // 빈 줄 정리
+        styleGuide = styleGuide.replace(/\n\s*\n\s*\n+/g, '\n\n');
+        styleGuide = styleGuide.trim();
+
+        console.log('🎨 정제된 스타일 가이드:', styleGuide.substring(0, 300));
+
+        if (styleGuide.length > 20) { // 최소 길이 체크 완화
+          console.log('✅ 구조화된 컴포넌트 스타일 파싱 성공! 길이:', styleGuide.length);
+          return styleGuide;
+        } else {
+          console.log('⚠️ 스타일 가이드가 너무 짧음:', styleGuide.length, 'chars');
+        }
+      }
+    }
+
+    // 폴백: 기존 extractComponentStyle 사용
+    console.log('⚠️ 구조화된 컴포넌트 스타일 파싱 완전 실패, 기존 방식으로 폴백');
+    const fallback = this.extractComponentStyle(content);
+    console.log('🔄 폴백 결과:', fallback.substring(0, 200));
+    return fallback;
+  }
+
+  private extractCreativeMood(content: string): { emotionalKeywords: string; fullText: string } {
+    // 감정 키워드 추출 패턴들
+    const moodPatterns = [
+      // 직접적인 감정 표현
+      /([가-힣]+한|[가-힣]+적인|[가-힣]+로운)/g,
+      // 분위기 관련 키워드
+      /(?:분위기|느낌|감정).*?([가-힣]+)/g,
+      // 형용사 패턴
+      /([가-힣]{2,}(?:한|적인|로운|다운))/g
+    ];
+
+    const foundMoods: string[] = [];
+    const seenMoods = new Set<string>();
+
+    moodPatterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        const mood = match[1];
+        if (mood.length >= 2 && !seenMoods.has(mood)) {
+          // 일반적인 감정/분위기 키워드 필터링
+          if (this.isValidMoodKeyword(mood)) {
+            foundMoods.push(mood);
+            seenMoods.add(mood);
+          }
+        }
+      }
+    });
+
+    // 최대 4개까지, 없으면 기본값 사용
+    let emotionalKeywords = '';
+    if (foundMoods.length > 0) {
       emotionalKeywords = foundMoods.slice(0, 4).join(',');
     }
+
+    console.log('🎭 추출된 감정 키워드:', foundMoods.slice(0, 4));
 
     return {
       emotionalKeywords,
       fullText: content.trim()
     };
+  }
+
+  private isValidMoodKeyword(word: string): boolean {
+    // 감정/분위기와 관련된 키워드인지 확인
+    const validMoodWords = [
+      '친근한', '따뜻한', '차분한', '활발한', '신뢰할만한', '창의적인',
+      '교육적인', '희망적인', '안정적인', '역동적인', '현대적인', '깔끔한',
+      '부드러운', '밝은', '편안한', '집중할수있는', '흥미로운', '즐거운',
+      '신선한', '세련된', '우아한', '자연스러운', '포근한', '생동감있는'
+    ];
+
+    return validMoodWords.some(validWord =>
+      word.includes(validWord.replace('한', '').replace('적인', '').replace('로운', '')) ||
+      validWord.includes(word.replace('한', '').replace('적인', '').replace('로운', ''))
+    );
+  }
+
+  private extractColors(content: string): { primary?: string; secondary?: string; accent?: string } {
+    console.log('🎨 색상 추출 시작');
+
+    // 색상 관련 키워드를 HEX 코드로 매핑
+    const colorMap: { [key: string]: string } = {
+      // 블루 계열
+      '파란': '#2563EB',
+      '파랑': '#2563EB',
+      '블루': '#2563EB',
+      '푸른': '#2563EB',
+      '청색': '#2563EB',
+      '딥블루': '#1E3A8A',
+      '진한파랑': '#1E3A8A',
+      '네이비': '#1E3A8A',
+      '하늘색': '#60A5FA',
+      '연한파랑': '#60A5FA',
+      '라이트블루': '#60A5FA',
+
+      // 그린 계열
+      '초록': '#16A34A',
+      '녹색': '#16A34A',
+      '그린': '#16A34A',
+      '풀색': '#16A34A',
+      '연두': '#84CC16',
+      '라이트그린': '#84CC16',
+      '진한초록': '#15803D',
+      '딥그린': '#15803D',
+
+      // 오렌지/옐로우 계열
+      '노란': '#EAB308',
+      '노랑': '#EAB308',
+      '옐로우': '#EAB308',
+      '황색': '#EAB308',
+      '주황': '#EA580C',
+      '오렌지': '#EA580C',
+      '연한노랑': '#FDE047',
+
+      // 레드/핑크 계열
+      '빨간': '#DC2626',
+      '빨강': '#DC2626',
+      '레드': '#DC2626',
+      '적색': '#DC2626',
+      '분홍': '#EC4899',
+      '핑크': '#EC4899',
+      '연한분홍': '#F9A8D4',
+
+      // 퍼플 계열
+      '보라': '#7C3AED',
+      '퍼플': '#7C3AED',
+      '자주': '#7C3AED',
+      '연한보라': '#A78BFA',
+
+      // 그레이 계열
+      '회색': '#6B7280',
+      '그레이': '#6B7280',
+      '은색': '#6B7280',
+      '진한회색': '#374151',
+      '연한회색': '#D1D5DB'
+    };
+
+    const colors: { primary?: string; secondary?: string; accent?: string } = {};
+
+    // 주요 색상 추출
+    const primaryMatch = content.match(/주요?\s*색상[:\s]*([가-힣\s]+)/i);
+    if (primaryMatch) {
+      const colorName = primaryMatch[1].trim();
+      for (const [key, hex] of Object.entries(colorMap)) {
+        if (colorName.includes(key)) {
+          colors.primary = hex;
+          console.log('🎯 주요 색상 발견:', colorName, '→', hex);
+          break;
+        }
+      }
+    }
+
+    // 보조 색상 추출
+    const secondaryMatch = content.match(/보조\s*색상[:\s]*([가-힣\s]+)/i);
+    if (secondaryMatch) {
+      const colorName = secondaryMatch[1].trim();
+      for (const [key, hex] of Object.entries(colorMap)) {
+        if (colorName.includes(key)) {
+          colors.secondary = hex;
+          console.log('🎨 보조 색상 발견:', colorName, '→', hex);
+          break;
+        }
+      }
+    }
+
+    // 강조 색상 추출
+    const accentMatch = content.match(/강조\s*색상[:\s]*([가-힣\s]+)/i);
+    if (accentMatch) {
+      const colorName = accentMatch[1].trim();
+      for (const [key, hex] of Object.entries(colorMap)) {
+        if (colorName.includes(key)) {
+          colors.accent = hex;
+          console.log('✨ 강조 색상 발견:', colorName, '→', hex);
+          break;
+        }
+      }
+    }
+
+    // 일반적인 색상 키워드도 체크
+    if (!colors.primary || !colors.secondary || !colors.accent) {
+      for (const [key, hex] of Object.entries(colorMap)) {
+        if (content.includes(key)) {
+          if (!colors.primary) colors.primary = hex;
+          else if (!colors.secondary) colors.secondary = this.lightenColor(hex);
+          else if (!colors.accent) colors.accent = this.complementaryColor(hex);
+        }
+      }
+    }
+
+    console.log('🎨 최종 추출된 색상:', colors);
+    return colors;
+  }
+
+  private lightenColor(hex: string): string {
+    // 색상을 밝게 만드는 간단한 로직
+    const colorVariants: { [key: string]: string } = {
+      '#2563EB': '#DBEAFE', // 블루 → 라이트 블루
+      '#16A34A': '#DCFCE7', // 그린 → 라이트 그린
+      '#EAB308': '#FEF3C7', // 옐로우 → 라이트 옐로우
+      '#DC2626': '#FEE2E2', // 레드 → 라이트 레드
+      '#7C3AED': '#EDE9FE', // 퍼플 → 라이트 퍼플
+    };
+
+    return colorVariants[hex] || '#F8FAFC';
+  }
+
+  private complementaryColor(hex: string): string {
+    // 보색 또는 대비되는 색상 반환
+    const complementary: { [key: string]: string } = {
+      '#2563EB': '#F59E0B', // 블루 → 오렌지
+      '#16A34A': '#EC4899', // 그린 → 핑크
+      '#EAB308': '#7C3AED', // 옐로우 → 퍼플
+      '#DC2626': '#059669', // 레드 → 그린
+      '#7C3AED': '#EAB308', // 퍼플 → 옐로우
+    };
+
+    return complementary[hex] || '#F59E0B';
+  }
+
+  private extractTypography(content: string): { baseSize: number; headingStyle: string; bodyStyle: string } {
+    console.log('✍️ 타이포그래피 추출 시작');
+
+    // 기본 크기 추출
+    const sizeMatch = content.match(/기본\s*크기[:\s]*(\d+)pt/i);
+    let baseSize = 20; // 기본값
+
+    if (sizeMatch) {
+      const extractedSize = parseInt(sizeMatch[1]);
+      if (extractedSize >= 14 && extractedSize <= 24) {
+        baseSize = extractedSize;
+        console.log('📏 기본 크기 발견:', extractedSize + 'pt');
+      }
+    } else {
+      // 크기 키워드로 추정
+      if (content.includes('큰') || content.includes('대형')) {
+        baseSize = 22;
+      } else if (content.includes('작은') || content.includes('소형')) {
+        baseSize = 16;
+      } else if (content.includes('보통') || content.includes('중간')) {
+        baseSize = 18;
+      }
+    }
+
+    // 헤딩 폰트 특성 추출
+    const headingMatch = content.match(/헤딩\s*폰트[:\s]*([^(]*?)(?:\(|$)/i);
+    let headingStyle = '견고하면서도 친근한';
+    if (headingMatch) {
+      headingStyle = headingMatch[1].trim().replace(/"/g, '');
+      console.log('🎯 헤딩 스타일 발견:', headingStyle);
+    }
+
+    // 본문 폰트 특성 추출
+    const bodyMatch = content.match(/본문\s*폰트[:\s]*([^(]*?)(?:\(|$)/i);
+    let bodyStyle = '읽기 편안하고 깔끔한';
+    if (bodyMatch) {
+      bodyStyle = bodyMatch[1].trim().replace(/"/g, '');
+      console.log('📝 본문 스타일 발견:', bodyStyle);
+    }
+
+    console.log('✍️ 최종 타이포그래피:', { baseSize, headingStyle, bodyStyle });
+    return { baseSize, headingStyle, bodyStyle };
+  }
+
+  private extractComponentStyle(content: string): string {
+    console.log('🎪 기존 방식으로 컴포넌트 스타일 추출 시작');
+
+    // 다양한 패턴으로 컴포넌트 스타일 섹션 찾기
+    const patterns = [
+      /🎪\s*컴포넌트\s*스타일\s*가이드[:\s]*([\s\S]*?)(?=\*\*[^*]|$)/i,
+      /컴포넌트\s*스타일\s*가이드[:\s]*([\s\S]*?)(?=\*\*[^*]|$)/i,
+      /디자인\s*방향성[:\s]*([\s\S]*?)(?=\*\*[^*]|$)/i,
+      /UI\s*컴포넌트.*?스타일[:\s]*([\s\S]*?)(?=\*\*[^*]|$)/i,
+      /스타일\s*가이드[:\s]*([\s\S]*?)(?=\*\*[^*]|$)/i
+    ];
+
+    for (let i = 0; i < patterns.length; i++) {
+      const match = content.match(patterns[i]);
+      if (match) {
+        let styleText = match[1].trim();
+
+        // 지시사항 제거
+        styleText = styleText.replace(/이 교육 프로젝트의.*?하세요[:\.]?\s*/gi, '');
+        styleText = styleText.replace(/다음 항목들을.*?하세요[:\.]?\s*/gi, '');
+        styleText = styleText.replace(/최소.*?문장으로.*?하세요[:\.]?\s*/gi, '');
+
+        if (styleText.length > 10) {
+          console.log(`🎨 패턴 ${i+1}로 컴포넌트 스타일 발견:`, styleText.substring(0, 100) + '...');
+          return styleText;
+        }
+      }
+    }
+
+    console.log('⚠️ 기존 방식으로도 컴포넌트 스타일 추출 실패, 기본 가이드 사용');
+    return `## 기본 컴포넌트 스타일 가이드
+
+**모서리 처리**: 중간 정도의 둥근 모서리(border-radius: 12px)로 친근함과 현대적 감각을 동시에 표현합니다.
+
+**그림자 효과**: 부드러운 그림자를 적용하여 요소들 간의 계층감을 명확히 하고 시각적 깊이감을 제공합니다.
+
+**색상 활용**: 주요 색상을 배경과 강조 요소에 적절히 배치하고, 텍스트 가독성을 최우선으로 고려합니다.
+
+**여백과 간격**: 충분한 내부 패딩으로 콘텐츠의 호흡감을 확보하고, 일관된 외부 마진으로 정돈된 레이아웃을 구성합니다.`;
   }
 
   // 기존의 복잡한 파싱 메서드들 제거됨 - 창의적 브리프 시스템에서는 불필요
@@ -225,13 +703,18 @@ ${constraintGuide}
         primary: rawKV.colorPrimary,
         secondary: rawKV.colorSecondary,
         accent: rawKV.colorAccent,
-        text: BRAND_LOCKS.text,
-        background: BRAND_LOCKS.background
+        // 파싱된 background/text 색상 사용, 없으면 기본값으로 폴백
+        text: rawKV.colorText || '#0F172A',
+        background: rawKV.colorBackground || '#FFFFFF'
       },
       typography: {
-        headingFont: BRAND_LOCKS.headingFont,
-        bodyFont: BRAND_LOCKS.bodyFont,
-        baseSize: `${rawKV.baseSizePt}pt`
+        // 파싱된 폰트 사용, 없으면 브랜드 락으로 폴백
+        headingFont: rawKV.headingFont || BRAND_LOCKS.headingFont,
+        bodyFont: rawKV.bodyFont || BRAND_LOCKS.bodyFont,
+        baseSize: `${rawKV.baseSizePt}pt`,
+        // 선택 이유 저장 (새로운 필드)
+        headingStyle: rawKV.headingReason || rawKV.headingStyle || '견고하면서도 친근한',
+        bodyStyle: rawKV.bodyReason || rawKV.bodyStyle || '읽기 편안하고 깔끔한'
       },
       componentStyle: rawKV.componentStyle
     };
@@ -246,15 +729,17 @@ ${constraintGuide}
       moodAndTone: ['명료', '친근', '탐구', '안정'],
       colorPalette: {
         primary: '#004D99',
-        secondary: '#E9F4FF', 
+        secondary: '#E9F4FF',
         accent: '#FFCC00',
-        text: BRAND_LOCKS.text,
-        background: BRAND_LOCKS.background
+        text: '#0F172A',
+        background: '#FFFFFF'
       },
       typography: {
         headingFont: BRAND_LOCKS.headingFont,
         bodyFont: BRAND_LOCKS.bodyFont,
-        baseSize: '20pt'
+        baseSize: '20pt',
+        headingStyle: '명료하고 신뢰할 수 있는',
+        bodyStyle: '편안하게 읽기 쉬운'
       },
       componentStyle: '라운드 20–28px와 낮은 그림자，정보를 칩으로 층위화하고 본문 가독성을 우선'
     };

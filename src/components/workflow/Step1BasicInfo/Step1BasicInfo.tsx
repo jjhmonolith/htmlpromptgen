@@ -11,13 +11,15 @@ interface Step1BasicInfoProps {
   onComplete: (data: ProjectData) => void;
   onBack?: () => void;
   onDataChange?: (data: Partial<ProjectData>) => void; // 실시간 데이터 변경 알림
+  onFastTrack?: (data: ProjectData) => void; // 패스트트랙 시작
 }
 
-export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({ 
-  initialData, 
+export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
+  initialData,
   onComplete,
   onBack,
-  onDataChange
+  onDataChange,
+  onFastTrack
 }) => {
   const [projectTitle, setProjectTitle] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
@@ -32,10 +34,19 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   const [isLearningJourneyExpanded, setIsLearningJourneyExpanded] = useState(false);
   const [emotionalArc, setEmotionalArc] = useState('');
   const [learnerPersona, setLearnerPersona] = useState('');
-  const [ahaMoments, setAhaMoments] = useState<string[]>(['']);
+  const [ahaMoments, setAhaMoments] = useState<Record<string, string>>({});
   const [isGeneratingJourney, setIsGeneratingJourney] = useState(false);
   const [showApiKeyManager, setShowApiKeyManager] = useState(false);
   const [hasGeneratedJourney, setHasGeneratedJourney] = useState(false);
+
+  // 패스트트랙 상태 관리
+  const [isFastTrackMode, setIsFastTrackMode] = useState(false);
+  const [fastTrackProgress, setFastTrackProgress] = useState({
+    currentStep: 0,
+    steps: ['Step 2: 비주얼 아이덴티티', 'Step 3: 교육 콘텐츠 설계', 'Step 4: 디자인 명세', 'Step 5: 최종 프롬프트'],
+    isCompleted: false,
+    errorMessage: null as string | null
+  });
   
   // 초기 데이터 로딩 (한 번만 실행)
   const hasLoadedInitialData = useRef(false);
@@ -65,7 +76,11 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       if (initialData.emotionalArc) setEmotionalArc(initialData.emotionalArc);
       if (initialData.learnerPersona) setLearnerPersona(initialData.learnerPersona);
       if (initialData.ahaMoments && Array.isArray(initialData.ahaMoments)) {
-        setAhaMoments(initialData.ahaMoments.length > 0 ? initialData.ahaMoments : ['']);
+        const momentsObj: Record<string, string> = {};
+        initialData.ahaMoments.forEach((moment, index) => {
+          momentsObj[index.toString()] = moment;
+        });
+        setAhaMoments(momentsObj);
       }
       
       hasLoadedInitialData.current = true;
@@ -91,7 +106,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     suggestions: suggestions.trim() ? [suggestions.trim()] : undefined,
     emotionalArc: emotionalArc.trim() || undefined,
     learnerPersona: learnerPersona.trim() || undefined,
-    ahaMoments: ahaMoments.filter(moment => moment.trim()).length > 0 ? ahaMoments.filter(moment => moment.trim()) : undefined,
+    ahaMoments: Object.values(ahaMoments).filter(moment => moment.trim()).length > 0 ? Object.values(ahaMoments).filter(moment => moment.trim()) : undefined,
     createdAt: initialData?.createdAt || new Date()
   });
 
@@ -119,7 +134,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
           suggestions: suggestions.trim() || null, // 빈 문자열은 null로 통일
           emotionalArc: emotionalArc.trim() || null,
           learnerPersona: learnerPersona.trim() || null,
-          ahaMoments: ahaMoments.filter(moment => moment.trim())
+          ahaMoments: Object.values(ahaMoments).filter(moment => moment.trim())
         });
         
         // 실제로 변경된 경우에만 알림 및 로그
@@ -345,7 +360,11 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     setSuggestions(mockData.suggestions);
     setEmotionalArc(mockData.emotionalArc);
     setLearnerPersona(mockData.learnerPersona);
-    setAhaMoments(mockData.ahaMoments);
+    const momentsObj: Record<string, string> = {};
+    mockData.ahaMoments.forEach((moment: string, index: number) => {
+      momentsObj[index.toString()] = moment;
+    });
+    setAhaMoments(momentsObj);
     setErrors({});
   };
 
@@ -378,7 +397,11 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
 
       setEmotionalArc(result.emotionalArc);
       setLearnerPersona(result.learnerPersona);
-      setAhaMoments(result.ahaMoments);
+      const momentsObj: Record<string, string> = {};
+      result.ahaMoments.forEach((moment, index) => {
+        momentsObj[index.toString()] = moment;
+      });
+      setAhaMoments(momentsObj);
       setIsLearningJourneyExpanded(true);
       setHasGeneratedJourney(true);
     } catch (error) {
@@ -405,8 +428,14 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   const handleSubmit = () => {
     if (!validateForm()) return;
 
+    const projectData = createProjectData();
+    onComplete(projectData);
+  };
+
+  // 공통 프로젝트 데이터 생성 함수
+  const createProjectData = (): ProjectData => {
     const validPages = pages.filter(p => p.topic.trim());
-    const projectData: ProjectData = {
+    return {
       id: initialData?.id || `project_${Date.now()}`,
       projectTitle: projectTitle.trim(),
       targetAudience: targetAudience.trim(),
@@ -421,11 +450,29 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       suggestions: suggestions.trim() ? [suggestions.trim()] : undefined,
       emotionalArc: emotionalArc.trim() || undefined,
       learnerPersona: learnerPersona.trim() || undefined,
-      ahaMoments: ahaMoments.filter(moment => moment.trim()).length > 0 ? ahaMoments.filter(moment => moment.trim()) : undefined,
+      ahaMoments: Object.values(ahaMoments).filter(moment => moment.trim()).length > 0 ? Object.values(ahaMoments).filter(moment => moment.trim()) : undefined,
       createdAt: initialData?.createdAt || new Date()
     };
+  };
 
-    onComplete(projectData);
+  // 패스트트랙 시작 핸들러
+  const handleFastTrack = async () => {
+    if (!validateForm()) return;
+    if (!onFastTrack) return;
+
+    const projectData = createProjectData();
+
+    // 패스트트랙 모드 시작
+    setIsFastTrackMode(true);
+    setFastTrackProgress({
+      currentStep: 0,
+      steps: ['Step 2: 비주얼 아이덴티티', 'Step 3: 교육 콘텐츠 설계', 'Step 4: 디자인 명세', 'Step 5: 최종 프롬프트'],
+      isCompleted: false,
+      errorMessage: null
+    });
+
+    // 패스트트랙 시작
+    onFastTrack(projectData);
   };
 
   // API 키 매니저 표시 중이면 해당 컴포넌트만 렌더링
@@ -445,7 +492,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       <div className="w-screen relative left-1/2 right-1/2 -mx-[50vw] bg-white shadow-sm pt-10 pb-5">
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
           {/* 상단 영역: 기본 정보 + 프로젝트 설정 (3등분) */}
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-16">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           
           {/* 1/3: 기본 정보 */}
           <div className="pb-2">
@@ -460,9 +507,9 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   value={projectTitle}
                   onChange={(e) => setProjectTitle(e.target.value)}
                   placeholder="예: 초등학교 3학년 과학 - 물의 순환"
-                  className={`w-full px-4 py-3 rounded-xl bg-gray-50 border-2 ${
-                    errors.projectTitle ? 'border-red-400 bg-red-50' : 'border-transparent'
-                  } focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-lg text-gray-900 placeholder-gray-400`}
+                  className={`w-full px-4 py-3 rounded-xl border ${
+                    errors.projectTitle ? 'border-red-400 bg-red-50' : 'border-[#f5f5f7] bg-white hover:border-gray-300'
+                  } focus:outline-none focus:border-[#3e88ff] focus:border-2 transition-all text-lg text-gray-900 placeholder-gray-400`}
                 />
                 {errors.projectTitle && (
                   <p className="text-red-500 text-xs mt-2 ml-1">{errors.projectTitle}</p>
@@ -479,9 +526,9 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   value={targetAudience}
                   onChange={(e) => setTargetAudience(e.target.value)}
                   placeholder="예: 초등학교 3학년, 8-9세"
-                  className={`w-full px-4 py-3 rounded-xl bg-gray-50 border-2 ${
-                    errors.targetAudience ? 'border-red-400 bg-red-50' : 'border-transparent'
-                  } focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-lg text-gray-900 placeholder-gray-400`}
+                  className={`w-full px-4 py-3 rounded-xl border ${
+                    errors.targetAudience ? 'border-red-400 bg-red-50' : 'border-[#f5f5f7] bg-white hover:border-gray-300'
+                  } focus:outline-none focus:border-[#3e88ff] focus:border-2 transition-all text-lg text-gray-900 placeholder-gray-400`}
                 />
                 {errors.targetAudience && (
                   <p className="text-red-500 text-xs mt-2 ml-1">{errors.targetAudience}</p>
@@ -502,17 +549,17 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   onChange={(e) => setLayoutMode(e.target.value as 'scrollable')}
                   className="sr-only"
                 />
-                <div 
+                <div
                   className={`relative overflow-hidden rounded-xl h-48 transition-all duration-300 ${
-                    layoutMode === 'scrollable' 
-                      ? 'ring-4 shadow-lg transform scale-105' 
+                    layoutMode === 'scrollable'
+                      ? 'ring-4 shadow-lg transform scale-105'
                       : 'grayscale hover:grayscale-0 hover:scale-105 hover:shadow-md'
                   }`}
                   style={{
                     backgroundImage: 'url(/scroll.png)',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    ...(layoutMode === 'scrollable' && { 
+                    ...(layoutMode === 'scrollable' && {
                       '--tw-ring-color': '#3e88ff'
                     })
                   }}
@@ -542,17 +589,17 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   onChange={(e) => setLayoutMode(e.target.value as 'fixed')}
                   className="sr-only"
                 />
-                <div 
+                <div
                   className={`relative overflow-hidden rounded-xl h-48 transition-all duration-300 ${
-                    layoutMode === 'fixed' 
-                      ? 'ring-4 shadow-lg transform scale-105' 
+                    layoutMode === 'fixed'
+                      ? 'ring-4 shadow-lg transform scale-105'
                       : 'grayscale hover:grayscale-0 hover:scale-105 hover:shadow-md'
                   }`}
                   style={{
                     backgroundImage: 'url(/fixed.png)',
                     backgroundSize: 'cover',
                     backgroundPosition: 'center',
-                    ...(layoutMode === 'fixed' && { 
+                    ...(layoutMode === 'fixed' && {
                       '--tw-ring-color': '#3e88ff'
                     })
                   }}
@@ -728,8 +775,11 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                   stiffness: 300,
                   damping: 25
                 }}
-                className="bg-white rounded-xl p-6 hover:shadow-lg h-96 flex flex-col w-[480px] flex-shrink-0 shadow-sm"
-                whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
+                className="bg-white rounded-3xl p-6 h-96 flex flex-col w-[480px] flex-shrink-0 transition-all duration-300"
+                whileHover={{ scale: 1.011, transition: { duration: 0.3 } }}
+                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(0, 0, 0, 0.08)'; }}
+                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'; }}
+                style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-lg font-semibold text-gray-700">
@@ -756,7 +806,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                     setPages(updated);
                   }}
                   placeholder="페이지 주제"
-                  className="w-full px-4 py-3 mb-4 rounded-xl bg-gray-50 border-2 border-transparent text-lg focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-2 mb-4 rounded-xl border border-[#f5f5f7] bg-white hover:border-gray-300 text-base focus:outline-none focus:border-[#3e88ff] focus:border-2 transition-all text-gray-900 placeholder-gray-400"
                 />
                 
                 <textarea
@@ -767,7 +817,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                     setPages(updated);
                   }}
                   placeholder="페이지 설명 (선택)"
-                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent text-base focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all resize-none flex-1 text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-3 rounded-xl border border-[#f5f5f7] bg-white hover:border-gray-300 text-base focus:outline-none focus:border-[#3e88ff] focus:border-2 transition-all resize-none flex-1 text-gray-900 placeholder-gray-400"
                 />
               </motion.div>
             ))}
@@ -799,25 +849,21 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
         {/* Learning Journey Designer 영역 */}
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-6">
           {/* Learning Journey 모드 선택 */}
-          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 mb-6">
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-3xl p-6 mb-6 transition-all duration-300 hover:scale-[1.011]"
+               onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(0, 0, 0, 0.08)'; }}
+               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'; }}
+               style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}>
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-lg flex items-center justify-center">
-                  <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-                  </svg>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-gray-900">Learning Journey Designer</h2>
-                  <p className="text-sm text-gray-600">학습자의 감정적 여정과 페르소나를 설계하여 더욱 효과적인 교육 경험을 만들어보세요.</p>
-                </div>
+              <div>
+                <h2 className="text-xl font-bold text-gray-900 mb-3">Learning Journey Designer</h2>
+                <p className="text-sm text-gray-500">학습자의 감정적 여정과 페르소나를 설계하여 더욱 효과적인 교육 경험을 만들어보세요.</p>
               </div>
 
               {/* AI 생성 버튼 */}
               <button
                 onClick={generateLearningJourney}
                 disabled={isGeneratingJourney || !projectTitle.trim() || !targetAudience.trim() || pages.filter(p => p.topic.trim()).length === 0}
-                className={`px-6 py-3 rounded-xl font-medium transition-all ${
+                className={`px-6 py-3 rounded-full font-medium transition-all ${
                   isGeneratingJourney || !projectTitle.trim() || !targetAudience.trim() || pages.filter(p => p.topic.trim()).length === 0
                     ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     : 'bg-gradient-to-r from-purple-500 to-blue-500 text-white hover:from-purple-600 hover:to-blue-600 shadow-lg hover:shadow-xl'
@@ -844,94 +890,57 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
 
             {/* 확장된 상태 - Learning Journey 생성 후 또는 기존 데이터가 있을 때 */}
             {isLearningJourneyExpanded && (
-              <div className="mt-6 pt-6 border-t border-white/50">
+              <div className="mt-6 pt-6">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                   {/* 감정적 여정 */}
-                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4">
-                    <div className="flex items-center mb-3">
-                      <div className="w-5 h-5 bg-purple-100 rounded-full flex items-center justify-center mr-2">
-                        🌆
-                      </div>
-                      <h3 className="font-semibold text-gray-900">감정적 여정</h3>
-                    </div>
-                    <input
-                      type="text"
+                  <div className="bg-white rounded-3xl p-4">
+                    <h3 className="font-semibold text-gray-900 mb-3">감정적 여정</h3>
+                    <textarea
                       value={emotionalArc}
                       onChange={(e) => setEmotionalArc(e.target.value)}
                       placeholder="예: 호기심 → 놀라움 → 이해 → 성취감"
-                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 focus:outline-none focus:border-purple-400 transition-all text-sm"
+                      className="w-full px-4 py-3 rounded-xl border border-[#f5f5f7] bg-white hover:border-gray-300 focus:outline-none focus:border-[#3e88ff] focus:border-2 transition-all resize-none h-20 text-base text-gray-900 placeholder-gray-400"
                     />
                   </div>
 
                   {/* 학습자 페르소나 */}
-                  <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4">
-                    <div className="flex items-center mb-3">
-                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center mr-2">
-                        😊
-                      </div>
-                      <h3 className="font-semibold text-gray-900">학습자 페르소나</h3>
-                    </div>
+                  <div className="bg-white rounded-3xl p-4">
+                    <h3 className="font-semibold text-gray-900 mb-3">학습자 페르소나</h3>
                     <textarea
                       value={learnerPersona}
                       onChange={(e) => setLearnerPersona(e.target.value)}
                       placeholder="예: 초등학교 3학년 민수와 지영이. 과학을 어려워하지만 실험과 관찰을 좋아하고..."
-                      className="w-full px-3 py-2 rounded-lg bg-white border border-gray-200 focus:outline-none focus:border-green-400 transition-all text-sm resize-none h-20"
+                      className="w-full px-4 py-3 rounded-xl border border-[#f5f5f7] bg-white hover:border-gray-300 focus:outline-none focus:border-[#3e88ff] focus:border-2 transition-all resize-none h-20 text-base text-gray-900 placeholder-gray-400"
                     />
                   </div>
                 </div>
 
                 {/* 아하! 순간들 */}
-                <div className="bg-white/60 backdrop-blur-sm rounded-xl p-4">
+                <div className="bg-white rounded-3xl p-6">
                   <div className="flex items-center mb-3">
-                    <div className="w-5 h-5 bg-yellow-100 rounded-full flex items-center justify-center mr-2">
-                      💡
-                    </div>
                     <h3 className="font-semibold text-gray-900">각 페이지별 아하! 순간</h3>
-                    <span className="text-xs text-gray-600 ml-2">({ahaMoments.filter(moment => moment.trim()).length}개)</span>
+                    <span className="text-xs text-gray-600 ml-2">({pages.filter(p => p.topic.trim()).length}개 페이지)</span>
                   </div>
                   <div className="space-y-2">
-                    {ahaMoments.map((moment, index) => (
-                      <div key={index} className="flex items-center gap-2">
-                        <div className="w-6 h-6 bg-yellow-100 rounded-full flex items-center justify-center text-xs font-medium text-yellow-800">
-                          {index + 1}
-                        </div>
+                    {pages.filter(p => p.topic.trim()).map((page, index) => (
+                      <div key={index} className="flex items-center gap-3">
+                        <span className="text-sm font-medium text-gray-700 min-w-[20px]">
+                          {index + 1}.
+                        </span>
                         <input
                           type="text"
-                          value={moment}
+                          value={ahaMoments[index.toString()] || ''}
                           onChange={(e) => {
-                            const updated = [...ahaMoments];
-                            updated[index] = e.target.value;
-                            setAhaMoments(updated);
+                            setAhaMoments(prev => ({
+                              ...prev,
+                              [index.toString()]: e.target.value
+                            }));
                           }}
                           placeholder={`페이지 ${index + 1}의 아하! 순간을 작성하세요`}
-                          className="flex-1 px-3 py-2 rounded-lg bg-white border border-gray-200 focus:outline-none focus:border-yellow-400 transition-all text-sm"
+                          className="flex-1 px-4 py-3 rounded-xl border border-[#f5f5f7] bg-white hover:border-gray-300 focus:outline-none focus:border-[#3e88ff] focus:border-2 transition-all text-base text-gray-900 placeholder-gray-400"
                         />
-                        {ahaMoments.length > 1 && (
-                          <button
-                            onClick={() => {
-                              const updated = ahaMoments.filter((_, i) => i !== index);
-                              setAhaMoments(updated.length > 0 ? updated : ['']);
-                            }}
-                            className="text-red-400 hover:text-red-600 transition-colors p-1"
-                          >
-                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                          </button>
-                        )}
                       </div>
                     ))}
-                    {ahaMoments.length < pages.filter(p => p.topic.trim()).length && (
-                      <button
-                        onClick={() => setAhaMoments([...ahaMoments, ''])}
-                        className="w-full py-2 border border-dashed border-gray-300 rounded-lg text-gray-500 hover:text-gray-700 hover:border-gray-400 transition-all flex items-center justify-center gap-1 text-sm"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                        </svg>
-                        아하! 순간 추가
-                      </button>
-                    )}
                   </div>
                 </div>
               </div>
@@ -941,16 +950,65 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
 
         {/* 추가 제안사항 */}
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12">
-          <div className="bg-white rounded-2xl px-6 py-4 mb-3 shadow-sm">
+          <div className="bg-white rounded-3xl px-6 py-4 mb-3 transition-all duration-300 hover:scale-[1.011]"
+               onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(0, 0, 0, 0.08)'; }}
+               onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'; }}
+               style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}>
             <h3 className="text-lg font-semibold text-gray-900 mb-4">추가 제안사항</h3>
             <textarea
               value={suggestions}
               onChange={(e) => setSuggestions(e.target.value)}
               placeholder="특별한 요구사항이나 스타일 지침을 입력하세요. AI가 콘텐츠를 생성할 때 이를 참고합니다."
-              className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all resize-none h-24 text-gray-900 placeholder-gray-400"
+              className="w-full px-4 py-3 rounded-xl border border-[#f5f5f7] bg-white hover:border-gray-300 focus:outline-none focus:border-[#3e88ff] focus:border-2 transition-all resize-none h-24 text-gray-900 placeholder-gray-400"
             />
           </div>
         </div>
+
+        {/* 패스트트랙 모드 진행 상황 표시 */}
+        {isFastTrackMode && (
+          <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-8">
+            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-200">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-purple-900">🚀 패스트트랙 진행 중</h3>
+                <div className="text-sm text-purple-600">
+                  {fastTrackProgress.currentStep + 1} / {fastTrackProgress.steps.length}
+                </div>
+              </div>
+
+              {/* 진행 바 */}
+              <div className="mb-4">
+                <div className="flex justify-between text-xs text-purple-600 mb-2">
+                  <span>진행률</span>
+                  <span>{Math.round(((fastTrackProgress.currentStep + 1) / fastTrackProgress.steps.length) * 100)}%</span>
+                </div>
+                <div className="w-full bg-purple-100 rounded-full h-2">
+                  <div
+                    className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500"
+                    style={{ width: `${((fastTrackProgress.currentStep + 1) / fastTrackProgress.steps.length) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* 현재 단계 */}
+              <div className="text-center">
+                <div className="text-purple-800 font-medium">
+                  현재 진행: {fastTrackProgress.steps[fastTrackProgress.currentStep]}
+                </div>
+                <div className="flex items-center justify-center mt-2">
+                  <div className="animate-spin w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full mr-2"></div>
+                  <span className="text-sm text-purple-600">자동으로 진행하고 있습니다...</span>
+                </div>
+              </div>
+
+              {/* 에러 메시지 */}
+              {fastTrackProgress.errorMessage && (
+                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
+                  <div className="text-red-800 text-sm">{fastTrackProgress.errorMessage}</div>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* 네비게이션 버튼들 */}
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-8 mb-8">
@@ -958,18 +1016,45 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
             <button
               onClick={onBack}
               className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-all font-medium"
+              disabled={isFastTrackMode}
             >
               ← 이전
             </button>
-            <button
-              onClick={handleSubmit}
-              className="px-8 py-3 text-white rounded-full transition-all font-medium shadow-sm"
-              style={{
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              }}
-            >
-              다음 단계로 →
-            </button>
+
+            <div className="flex gap-3">
+              {/* 패스트트랙 버튼 */}
+              {onFastTrack && !isFastTrackMode && (
+                <button
+                  onClick={handleFastTrack}
+                  className="px-6 py-3 text-white rounded-full transition-all font-medium shadow-sm"
+                  style={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.target.style.background = 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.target.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                  }}
+                >
+                  ⚡ 패스트트랙으로 완주
+                </button>
+              )}
+
+              {/* 일반 다음 버튼 */}
+              <button
+                onClick={handleSubmit}
+                className="px-8 py-3 text-white rounded-full transition-all font-medium shadow-sm"
+                style={{
+                  backgroundColor: '#3e88ff'
+                }}
+                onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2c6ae6'}
+                onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3e88ff'}
+                disabled={isFastTrackMode}
+              >
+                다음 단계로 →
+              </button>
+            </div>
           </div>
         </div>
       </div>

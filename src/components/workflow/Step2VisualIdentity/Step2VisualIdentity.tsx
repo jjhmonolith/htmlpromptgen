@@ -171,164 +171,276 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
         
         {step2Data && (
           <>
-            <div className="space-y-8">
-              {/* 무드와 톤 키워드들 - 직접 그라데이션 배경 */}
-              <div className="bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 rounded-2xl p-8 border border-purple-100/50 backdrop-blur-sm">
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">무드 & 톤</h3>
-                  <p className="text-gray-600 text-sm">프로젝트의 감성과 분위기를 나타내는 키워드</p>
+            {/* 3개 카드 좌우 배치 - Step1 스타일 참고 */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+
+              {/* 1/3: 무드와 톤 카드 */}
+              <div className="relative overflow-hidden rounded-3xl p-6 transition-all duration-300 hover:scale-[1.011] group"
+                   onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(0, 0, 0, 0.08)'; }}
+                   onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'; }}
+                   style={{
+                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                     background: 'linear-gradient(145deg, #0F0F23 0%, #1A1A2E 50%, #16213E 100%)',
+                     border: '1px solid rgba(255, 255, 255, 0.1)',
+                     height: '500px'
+                   }}>
+                {/* 배경 패턴 */}
+                <div className="absolute inset-0 opacity-30"
+                     style={{
+                       backgroundImage: `radial-gradient(circle at 20% 20%, rgba(120, 119, 198, 0.3) 0%, transparent 50%),
+                                        radial-gradient(circle at 80% 80%, rgba(255, 119, 198, 0.2) 0%, transparent 50%),
+                                        radial-gradient(circle at 40% 40%, rgba(120, 219, 255, 0.1) 0%, transparent 50%)`
+                     }}></div>
+
+                <div className="text-left mb-6 relative z-10 pt-2 pl-2">
+                  <p className="text-gray-300 text-sm mb-2">프로젝트의 감성과 분위기</p>
+                  <h3 className="text-3xl font-bold text-white">무드 & 톤</h3>
                 </div>
-                <div className="flex flex-wrap justify-center gap-4">
+                <div className="relative flex-1 grid grid-cols-2 gap-4 p-4 px-8 z-10 mt-8" style={{ minHeight: '200px' }}>
                   {step2Data.visualIdentity.moodAndTone.map((mood, index) => (
-                    <div key={index} className="group relative">
-                      <span className="inline-block px-8 py-4 bg-gradient-to-r from-purple-100 to-pink-100 text-purple-900 rounded-full text-lg font-semibold border border-purple-200/50 transition-all duration-300 hover:scale-105 hover:-translate-y-1">
-                        {mood}
-                      </span>
-                      <div className="absolute -top-2 -right-2 w-6 h-6 bg-gradient-to-r from-yellow-300 to-yellow-400 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all duration-200">
-                        <span className="text-sm">✨</span>
+                    <div
+                      key={index}
+                      className="group/item cursor-pointer aspect-square"
+                    >
+                      <div className="relative w-full h-full rounded-full transition-all duration-300 transform hover:scale-105 flex items-center justify-center"
+                           style={{
+                             backgroundColor: `hsl(${240 + index * 30}, 70%, 65%)`,
+                             boxShadow: `
+                               0 25px 80px -15px hsla(${240 + index * 30}, 70%, 60%, 0.5),
+                               0 15px 40px -10px hsla(${240 + index * 30}, 70%, 60%, 0.4)
+                             `
+                           }}>
+                        <span className="text-white font-semibold text-xl whitespace-nowrap relative z-10 text-center leading-tight px-4"
+                              style={{
+                                textShadow: '0 3px 12px rgba(0, 0, 0, 0.5)',
+                                fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif',
+                                wordBreak: 'keep-all'
+                              }}>
+                          {mood}
+                        </span>
+
+                        {/* 호버 시 빛 효과 */}
+                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-white/25 to-transparent opacity-0 group-hover/item:opacity-100 transition-opacity duration-300"
+                             style={{
+                               background: 'radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.4) 0%, transparent 70%)'
+                             }}></div>
                       </div>
                     </div>
                   ))}
                 </div>
+
               </div>
 
-              {/* 컬러 팔레트 - 직접 배경 */}
-              <div className="bg-gradient-to-br from-gray-50 to-slate-100 rounded-2xl p-8 border border-gray-200/50">
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">컬러 팔레트</h3>
-                  <p className="text-gray-600 text-sm">브랜드를 대표하는 색상 체계</p>
+              {/* 2/3: 컬러 팔레트 카드 */}
+              <div className="relative overflow-hidden rounded-3xl p-6 transition-all duration-300 hover:scale-[1.011] group"
+                   onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(0, 0, 0, 0.08)'; }}
+                   onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'; }}
+                   style={{
+                     boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
+                     backgroundColor: '#F0F8FF',
+                     height: '500px'
+                   }}>
+
+                <div className="text-left mb-4 relative z-10 pt-2 pl-2">
+                  <p className="text-gray-600 text-sm mb-2">프로젝트 구성 색상 체계</p>
+                  <h3 className="text-3xl font-bold text-gray-800">컬러 팔레트</h3>
                 </div>
-                <div className="grid grid-cols-5 gap-6">
-                  <div className="text-center group">
-                    <div
-                      className="w-full h-28 rounded-xl mb-4 transition-all duration-300 group-hover:scale-105"
-                      style={{ backgroundColor: step2Data.visualIdentity.colorPalette.primary }}
-                    ></div>
-                    <p className="text-lg font-bold text-gray-800 mb-2">Primary</p>
-                    <p className="text-sm text-gray-600 font-mono bg-white px-3 py-1 rounded-full">{step2Data.visualIdentity.colorPalette.primary}</p>
-                  </div>
-                  <div className="text-center group">
-                    <div
-                      className="w-full h-28 rounded-xl mb-4 transition-all duration-300 group-hover:scale-105"
-                      style={{ backgroundColor: step2Data.visualIdentity.colorPalette.secondary }}
-                    ></div>
-                    <p className="text-lg font-bold text-gray-800 mb-2">Secondary</p>
-                    <p className="text-sm text-gray-600 font-mono bg-white px-3 py-1 rounded-full">{step2Data.visualIdentity.colorPalette.secondary}</p>
-                  </div>
-                  <div className="text-center group">
-                    <div
-                      className="w-full h-28 rounded-xl mb-4 transition-all duration-300 group-hover:scale-105"
-                      style={{ backgroundColor: step2Data.visualIdentity.colorPalette.accent }}
-                    ></div>
-                    <p className="text-lg font-bold text-gray-800 mb-2">Accent</p>
-                    <p className="text-sm text-gray-600 font-mono bg-white px-3 py-1 rounded-full">{step2Data.visualIdentity.colorPalette.accent}</p>
-                  </div>
-                  <div className="text-center group">
-                    <div
-                      className="w-full h-28 rounded-xl mb-4 transition-all duration-300 group-hover:scale-105"
-                      style={{ backgroundColor: step2Data.visualIdentity.colorPalette.text }}
-                    ></div>
-                    <p className="text-lg font-bold text-gray-800 mb-2">Text</p>
-                    <p className="text-sm text-gray-600 font-mono bg-white px-3 py-1 rounded-full">{step2Data.visualIdentity.colorPalette.text}</p>
-                  </div>
-                  <div className="text-center group">
-                    <div
-                      className="w-full h-28 rounded-xl mb-4 transition-all duration-300 group-hover:scale-105"
-                      style={{ backgroundColor: step2Data.visualIdentity.colorPalette.background }}
-                    ></div>
-                    <p className="text-lg font-bold text-gray-800 mb-2">Background</p>
-                    <p className="text-sm text-gray-600 font-mono bg-white px-3 py-1 rounded-full">{step2Data.visualIdentity.colorPalette.background}</p>
+
+                <div className="relative z-10 flex-1 flex items-center justify-center p-4 mt-1" style={{ minHeight: '200px' }}>
+                  <div className="relative mt-0" style={{ width: '340px', height: '340px' }}>
+                    {Object.entries(step2Data.visualIdentity.colorPalette).map(([key, color], index) => {
+                      const totalItems = Object.entries(step2Data.visualIdentity.colorPalette).length;
+                      const angle = (index * 2 * Math.PI) / totalItems - Math.PI / 2; // -90도부터 시작 (맨 위부터)
+                      const radius = 120; // 원의 반지름을 더 늘림 (100 → 120)
+                      const x = Math.cos(angle) * radius;
+                      const y = Math.sin(angle) * radius;
+
+                      // 색상 키를 짧은 제목으로 매핑
+                      const colorLabels: { [key: string]: string } = {
+                        'primary': '주요',
+                        'secondary': '보조',
+                        'accent': '강조',
+                        'text': '텍스트',
+                        'background': '배경'
+                      };
+
+                      return (
+                        <div
+                          key={key}
+                          className="absolute group/color cursor-pointer"
+                          style={{
+                            left: `calc(50% + ${x}px)`,
+                            top: `calc(50% + ${y}px)`,
+                            transform: 'translate(-50%, -50%)'
+                          }}
+                        >
+                          {/* 물감 붓터치 모양 */}
+                          <div
+                            className="relative w-28 h-20 transition-all duration-300"
+                            style={{
+                              backgroundColor: color,
+                              borderRadius: '60% 40% 70% 30% / 60% 30% 70% 40%',
+                              boxShadow: `
+                                0 12px 35px -5px ${color}50,
+                                inset -10px -10px 20px rgba(0, 0, 0, 0.2),
+                                inset 10px 10px 20px rgba(255, 255, 255, 0.1)
+                              `,
+                              transform: `rotate(${index * 15 - 30}deg)`,
+                              filter: `drop-shadow(0 6px 12px ${color}30)`,
+                              transition: 'all 0.3s ease'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = `rotate(${index * 15 - 30}deg) scale(1.1)`;
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = `rotate(${index * 15 - 30}deg) scale(1)`;
+                            }}
+                          >
+                            {/* 물감 질감 오버레이 */}
+                            <div
+                              className="absolute inset-0 opacity-30"
+                              style={{
+                                borderRadius: '60% 40% 70% 30% / 60% 30% 70% 40%',
+                                background: `
+                                  radial-gradient(circle at 30% 30%, rgba(255, 255, 255, 0.3) 0%, transparent 60%),
+                                  radial-gradient(circle at 70% 70%, rgba(0, 0, 0, 0.2) 0%, transparent 50%),
+                                  linear-gradient(45deg, transparent 30%, rgba(255, 255, 255, 0.1) 50%, transparent 70%)
+                                `
+                              }}
+                            ></div>
+
+                            {/* 붓자국 텍스처 */}
+                            <div
+                              className="absolute inset-0 opacity-20"
+                              style={{
+                                borderRadius: '60% 40% 70% 30% / 60% 30% 70% 40%',
+                                background: `
+                                  repeating-linear-gradient(
+                                    ${45 + index * 20}deg,
+                                    transparent,
+                                    transparent 2px,
+                                    rgba(255, 255, 255, 0.15) 2px,
+                                    rgba(255, 255, 255, 0.15) 3px
+                                  )
+                                `
+                              }}
+                            ></div>
+                          </div>
+
+                          {/* 라벨 */}
+                          <div className="absolute left-1/2 transform -translate-x-1/2 whitespace-nowrap transition-all duration-300 group-hover/color:scale-105"
+                               style={{
+                                 bottom: key === 'primary' ? '-40px' : '-36px' // "메인"만 4px 더 아래로
+                               }}>
+                            <span className="text-gray-800 text-sm font-medium transition-colors duration-300 group-hover/color:text-gray-900 group-hover/color:font-semibold"
+                                  style={{
+                                    fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, sans-serif'
+                                  }}>
+                              {colorLabels[key] || key}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </div>
+
               </div>
 
-              {/* 타이포그래피 정보 - 직접 그라데이션 배경 */}
-              <div className="bg-gradient-to-r from-green-50 via-emerald-50 to-blue-50 rounded-2xl p-8 border border-green-100/50">
-                <div className="text-center mb-8">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">타이포그래피</h3>
-                  <p className="text-gray-600 text-sm">텍스트의 개성과 가독성을 담당하는 폰트 시스템</p>
+              {/* 3/3: 타이포그래피 카드 */}
+              <div className="bg-white rounded-3xl p-6 transition-all duration-300 hover:scale-[1.011]"
+                   style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}
+                   onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(0, 0, 0, 0.08)'; }}
+                   onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'; }}>
+                <div className="text-left mb-6 pt-2 pl-2">
+                  <p className="text-gray-600 text-sm mb-2">폰트 시스템과 크기</p>
+                  <h3 className="text-3xl font-bold text-gray-900">타이포그래피</h3>
                 </div>
-                <div className="grid grid-cols-3 gap-8">
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center border border-white/50 transition-all duration-300 hover:-translate-y-1">
-                    <p className="text-sm text-green-600 font-bold mb-4 uppercase tracking-wide">헤딩 폰트</p>
-                    <p className="text-2xl font-bold text-gray-900 mb-4" style={{ fontFamily: step2Data.visualIdentity.typography.headingFont }}>
+                <div className="space-y-8 px-4 mt-12">
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">헤딩 폰트</p>
+                    <p className="text-3xl font-bold text-gray-900 leading-tight" style={{ fontFamily: step2Data.visualIdentity.typography.headingFont }}>
                       {step2Data.visualIdentity.typography.headingFont}
                     </p>
-                    <p className="text-sm text-gray-600 leading-relaxed">제목과 주요 헤딩에 사용되는 강조 폰트</p>
                   </div>
 
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center border border-white/50 transition-all duration-300 hover:-translate-y-1">
-                    <p className="text-sm text-blue-600 font-bold mb-4 uppercase tracking-wide">본문 폰트</p>
-                    <p className="text-xl font-medium text-gray-900 mb-4" style={{ fontFamily: step2Data.visualIdentity.typography.bodyFont }}>
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">본문 폰트</p>
+                    <p className="text-2xl font-medium text-gray-900 leading-tight" style={{ fontFamily: step2Data.visualIdentity.typography.bodyFont }}>
                       {step2Data.visualIdentity.typography.bodyFont}
                     </p>
-                    <p className="text-sm text-gray-600 leading-relaxed">본문 텍스트와 설명에 사용되는 읽기 편한 폰트</p>
                   </div>
 
-                  <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 text-center border border-white/50 transition-all duration-300 hover:-translate-y-1">
-                    <p className="text-sm text-purple-600 font-bold mb-4 uppercase tracking-wide">기본 크기</p>
-                    <p className="text-3xl font-bold text-gray-900 mb-4">
+                  <div className="text-left">
+                    <p className="text-sm font-semibold text-gray-600 mb-3 uppercase tracking-wide">기본 크기</p>
+                    <p className="font-semibold text-gray-900 leading-tight"
+                       style={{
+                         fontSize: step2Data.visualIdentity.typography.baseSize,
+                         fontFamily: step2Data.visualIdentity.typography.bodyFont
+                       }}>
                       {step2Data.visualIdentity.typography.baseSize}
                     </p>
-                    <p className="text-sm text-gray-600 leading-relaxed">반응형 디자인의 기준이 되는 폰트 사이즈</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* 컴포넌트 스타일 설명 - 직접 배경 */}
-              <div className="bg-gradient-to-br from-slate-50 via-gray-50 to-blue-50 rounded-2xl p-8 border border-slate-200/50">
-                <div className="text-center mb-6">
-                  <h3 className="text-xl font-bold text-gray-800 mb-2">컴포넌트 스타일 가이드</h3>
-                  <p className="text-gray-600 text-sm">UI 컴포넌트의 디자인 철학과 구체적인 스타일링 방향</p>
-                </div>
-                <div className="bg-white/70 backdrop-blur-sm rounded-xl p-6 border border-white/50">
-                  <div className="text-left text-base text-gray-700 leading-relaxed prose prose-lg [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:text-gray-900 [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-semibold [&>h2]:text-gray-800 [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-medium [&>h3]:text-gray-700 [&>h3]:mb-2 [&>p]:mb-4 [&>ul]:mb-4 [&>li]:mb-1 [&>strong]:font-semibold [&>strong]:text-gray-900 [&>hr]:hidden max-w-none">
-                    <ReactMarkdown>
-                      {step2Data.visualIdentity.componentStyle}
-                    </ReactMarkdown>
                   </div>
                 </div>
               </div>
             </div>
 
-          {/* 액션 버튼 */}
-          <div className="bg-gradient-to-r from-gray-50 to-slate-100 rounded-2xl p-8 mt-8 border border-gray-200/50">
-              <div className="flex justify-between items-center">
-                <div className="flex gap-3">
-                  {onBack && (
-                    <button
-                      onClick={onBack}
-                      className="px-6 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-colors shadow-sm border border-gray-200 font-medium"
-                    >
-                      ← 이전 단계
-                    </button>
-                  )}
-                  <button
-                    onClick={handleRegenerate}
-                    disabled={isGenerating}
-                    className="px-6 py-3 bg-white text-gray-700 rounded-xl hover:bg-gray-50 transition-colors border border-gray-200 font-medium flex items-center gap-2"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
-                    다시 생성
-                  </button>
-                </div>
-
-                <div className="flex items-center gap-4">
-                  <div className="text-right">
-                    <p className="text-sm font-medium text-gray-900">감성 가이드 완성</p>
-                    <p className="text-xs text-gray-600">다음: 교육 콘텐츠 설계</p>
-                  </div>
-                  <button
-                    onClick={handleComplete}
-                    className="px-8 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all duration-200 font-medium shadow-lg transform hover:scale-105"
-                  >
-                    다음 단계 →
-                  </button>
+            {/* 컴포넌트 스타일 가이드 - 하단 전체 폭 */}
+            <div className="bg-white rounded-3xl p-6 transition-all duration-300 hover:scale-[1.011]"
+                 onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(0, 0, 0, 0.08)'; }}
+                 onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'; }}
+                 style={{
+                   boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)'
+                 }}>
+              <div className="text-left mb-6 pt-2 pl-2">
+                <p className="text-gray-600 text-sm mb-2">UI 컴포넌트의 디자인 철학과 구체적인 스타일링 방향</p>
+                <h3 className="text-3xl font-bold text-gray-900">컴포넌트 스타일 가이드</h3>
+              </div>
+              <div className="bg-gray-50 rounded-xl p-6">
+                <div className="text-left text-base text-gray-700 leading-relaxed prose prose-lg [&>h1]:text-2xl [&>h1]:font-bold [&>h1]:text-gray-900 [&>h1]:mb-4 [&>h2]:text-xl [&>h2]:font-semibold [&>h2]:text-gray-800 [&>h2]:mb-3 [&>h3]:text-lg [&>h3]:font-medium [&>h3]:text-gray-700 [&>h3]:mb-2 [&>p]:mb-3 [&>ul]:mb-3 [&>li]:mb-1 [&>strong]:font-semibold [&>strong]:text-gray-900 [&>hr]:hidden max-w-none">
+                  <ReactMarkdown>
+                    {step2Data.visualIdentity.componentStyle}
+                  </ReactMarkdown>
                 </div>
               </div>
             </div>
+
+          {/* 네비게이션 버튼들 - Step1 스타일과 일치 */}
+          <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-8 mb-8">
+            <div className="flex justify-between">
+              {onBack && (
+                <button
+                  onClick={onBack}
+                  className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-all font-medium"
+                >
+                  ← 이전
+                </button>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={handleRegenerate}
+                  disabled={isGenerating}
+                  className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-all font-medium flex items-center gap-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  다시 생성
+                </button>
+                <button
+                  onClick={handleComplete}
+                  className="px-8 py-3 text-white rounded-full transition-all font-medium shadow-sm"
+                  style={{
+                    backgroundColor: '#3e88ff'
+                  }}
+                  onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2c6ae6'}
+                  onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3e88ff'}
+                >
+                  다음 단계로 →
+                </button>
+              </div>
+            </div>
+          </div>
           </>
         )}
       </div>

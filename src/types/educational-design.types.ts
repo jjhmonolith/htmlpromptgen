@@ -158,6 +158,7 @@ export interface EmotionalContext {
     body: string;                  // "편안하게 읽히는"
   };
   overallTone: string;            // 전체적인 톤앤매너 설명
+  visualIdentity?: any;           // Step2에서 생성된 전체 VisualIdentity 데이터
 }
 
 // 레이아웃 제약 검증을 위한 타입
