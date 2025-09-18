@@ -85,7 +85,7 @@ export class OpenAIService {
     const targetModel = overrideModel ?? this.model;
     
     const allowsSampling = this.supportsSamplingControls(targetModel);
-    const maxOutputTokens = targetModel?.startsWith('gpt-5-mini') ? 1500 : 4000;
+    const maxOutputTokens = targetModel?.startsWith('gpt-5-mini') ? 1200 : 4000;
     const request: any = {
       model: targetModel,
       input: [
@@ -94,7 +94,8 @@ export class OpenAIService {
           content: prompt
         }
       ],
-      max_output_tokens: maxOutputTokens
+      max_output_tokens: maxOutputTokens,
+      reasoning: targetModel?.startsWith('gpt-5') ? { effort: 'low' } : undefined
     };
 
     if (allowsSampling) {
@@ -144,7 +145,8 @@ export class OpenAIService {
           schema,
           strict: true
         }
-      }
+      },
+      reasoning: this.model?.startsWith('gpt-5') ? { effort: 'low' } : undefined
     };
 
     if (allowsSampling) {
@@ -193,7 +195,8 @@ export class OpenAIService {
     const request: any = {
       model: params.model,
       input: this.mapMessages(params.messages),
-      max_output_tokens: params.max_tokens
+      max_output_tokens: params.max_tokens,
+      reasoning: params.model?.startsWith('gpt-5') ? { effort: 'low' } : undefined
     };
 
     if (allowsSampling) {
@@ -209,7 +212,8 @@ export class OpenAIService {
   private mapMessages(messages: Array<{ role: string; content: string }>) {
     return messages.map((message) => ({
       role: message.role as 'user' | 'assistant' | 'system' | 'developer',
-      content: message.content
+      content: message.content,
+      type: 'message'
     }));
   }
 
@@ -219,7 +223,10 @@ export class OpenAIService {
     }
 
     if (typeof response.output_text === 'string') {
-      return response.output_text;
+      const trimmed = response.output_text.trim();
+      if (trimmed.length > 0 && !this.looksLikeMetaOutput(trimmed)) {
+        return trimmed;
+      }
     }
 
     const contentParts = (response.output || [])
@@ -259,6 +266,11 @@ export class OpenAIService {
       .join('\n');
 
     return combined;
+  }
+
+  private looksLikeMetaOutput(value: string): boolean {
+    const metaPatterns = [/^resp_[a-z0-9]/i, /^rs_[a-z0-9]/i, /^(response|completed|developer|default|auto|disabled)$/i, /^gpt-\d/i];
+    return metaPatterns.some((pattern) => pattern.test(value.trim()));
   }
 
   private extractJson(response: any): any {

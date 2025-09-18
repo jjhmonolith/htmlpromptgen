@@ -31,23 +31,25 @@ export class LearningJourneyGeneratorService {
     targetAudience: string,
     pages: Array<{ topic: string; description?: string }>
   ): string {
-    const pagesText = pages.map((page, index) =>
-      `${index + 1}. ${page.topic}${page.description ? ` - ${page.description}` : ''}`
-    ).join('\n');
+    const pagesText = pages
+      .map((page, index) => `${index + 1}. ${page.topic}${page.description ? ` - ${page.description}` : ''}`)
+      .join('\n');
 
-    return `당신은 교육 심리학 기반 학습 경험 설계자입니다. 아래 정보를 참고해 통찰 중심 결과만 간결하게 작성하세요.
+    return `당신은 교육 심리학 기반 학습 경험 설계자입니다. 아래 정보를 참고해 간결한 학습 여정 요약 JSON을 반환하세요.
 
-프로젝트 제목: ${projectTitle}
+프로젝트: ${projectTitle}
 대상 학습자: ${targetAudience}
-페이지 목록:
+페이지 개요:
 ${pagesText}
 
-생성 목표:
-- emotionalArc: 학습 감정 3~5단계를 "감정A → 감정B" 형태 하나의 문자열로 작성 (30자 이내)
-- learnerPersona: 대표 학습자 1명을 2문장 이하(총 60자 이내)로 요약
-- ahaMoments: 페이지 수와 동일한 배열, 각 항목 40자 이하 단문으로 학습자가 새롭게 깨달은 구체적 사실을 1인칭으로 서술하고 느낌표로 마무리 (예: "데이터 시각화가 설득력을 높인다는 사실!")
+출력 규칙:
+- emotionalArc: 학습 감정 3~4단계를 "감정A → 감정B" 형식 하나의 문자열(30자 이내)
+- learnerPersona: 대표 학습자 1명을 2문장 이하(총 80자 이내)로 묘사
+- ahaMoments: 페이지 수와 동일한 항목 수, 각 항목 1인칭 40자 이하 문장, 느낌표로 끝맺음
+- JSON 외 텍스트, 주석, 코드 블록 금지
 
-반드시 JSON만 반환하세요. 추가 설명, 코드 블록, 주석, 마크다운은 포함하지 마세요.`;
+출력 예시:
+{"emotionalArc":"호기심 → 이해 → 자신감","learnerPersona":"...","ahaMoments":["...!","...!"]}`;
   }
 
   private parseLearningJourneyResponse(response: string, expectedAhaMomentsCount: number): LearningJourneyData {
@@ -102,6 +104,16 @@ ${pagesText}
     }
   }
 
+  private generateFallbackData(pageCount: number): LearningJourneyData {
+    return {
+      emotionalArc: '호기심 → 탐구 → 이해 → 성취감',
+      learnerPersona: '학습에 열정적이고 새로운 지식을 탐구하는 것을 좋아하는 학습자들입니다.',
+      ahaMoments: Array.from({ length: pageCount }, (_, i) =>
+        `페이지 ${i + 1}에서 새로운 개념을 이해하게 되는 순간!`
+      )
+    };
+  }
+
   private extractJsonFromResponse(response: string): string | null {
     const trimmed = response.trim();
     if (trimmed.startsWith('{') && trimmed.endsWith('}')) {
@@ -116,15 +128,5 @@ ${pagesText}
     }
 
     return null;
-  }
-
-  private generateFallbackData(pageCount: number): LearningJourneyData {
-    return {
-      emotionalArc: '호기심 → 탐구 → 이해 → 성취감',
-      learnerPersona: '학습에 열정적이고 새로운 지식을 탐구하는 것을 좋아하는 학습자들입니다.',
-      ahaMoments: Array.from({ length: pageCount }, (_, i) =>
-        `페이지 ${i + 1}에서 새로운 개념을 이해하게 되는 순간!`
-      )
-    };
   }
 }

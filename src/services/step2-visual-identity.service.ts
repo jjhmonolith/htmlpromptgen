@@ -50,21 +50,35 @@ export class Step2VisualIdentityService {
         
         console.log('🚀 OpenAI API 호출 시작...');
         const response = await this.openAIService.createCompletion({
-          model: 'gpt-5',
+          model: 'gpt-5-mini',
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
           top_p: 1,
-          max_tokens: 1000,
+          max_tokens: 1200,
           stop: ["END_S2"]
         });
         console.log('✅ OpenAI API 응답 수신:', response);
+        console.log('🧪 Step2 raw.output snapshot:', response?.raw?.output);
+        try {
+          const rawPreview = JSON.stringify(response?.raw, null, 2);
+          console.log('🧪 Step2 raw preview (first 2k chars):', rawPreview?.substring(0, 2000));
+        } catch (error) {
+          console.warn('⚠️ Step2 raw preview stringify 실패:', error);
+        }
 
-        if (!response?.choices?.[0]?.message?.content) {
+        const messageContent = this.extractCompletionContent(response);
+
+        if (!messageContent) {
           console.error('❌ 응답 구조 오류:', response);
           throw new Error('Step2: 응답이 비어있습니다');
         }
 
-        const rawContent = response.choices[0].message.content;
+        const rawContent = messageContent;
+        const fullLogPayload = rawContent && rawContent.length > 0
+          ? rawContent
+          : this.stringifyRawResponse(response);
+
+        console.log('🧾 Step2 AI 전체 응답:', fullLogPayload);
         console.log('🔄 Step2 원시 응답 수신:', rawContent.substring(0, 200) + '...');
         
         const parsedData = this.parseStep2Response(rawContent);
@@ -82,6 +96,164 @@ export class Step2VisualIdentityService {
         resolve(fallbackResult);
       }
     });
+  }
+
+  private extractCompletionContent(response: any): string {
+    const rawOutputText = response?.raw?.output_text;
+    if (typeof rawOutputText === 'string') {
+      const trimmed = rawOutputText.trim();
+      if (trimmed.length > 0 && !this.looksLikeMetadata(trimmed)) {
+        return trimmed;
+      }
+    }
+
+    const direct = response?.choices?.[0]?.message?.content;
+    if (typeof direct === 'string' && direct.trim().length > 0) {
+      return direct.trim();
+    }
+
+    if (Array.isArray(direct)) {
+      const segmentText = direct
+        .map((segment: any) => {
+          if (typeof segment === 'string') {
+            return segment;
+          }
+          if (typeof segment?.text === 'string') {
+            return segment.text;
+          }
+          if (typeof segment?.text?.value === 'string') {
+            return segment.text.value;
+          }
+          return '';
+        })
+        .filter((segment: string) => segment.trim().length > 0)
+        .join('\n')
+        .trim();
+
+      if (segmentText.length > 0) {
+        return segmentText;
+      }
+    }
+
+    const raw = response?.raw;
+    if (!raw) {
+      return '';
+    }
+
+    if (typeof raw.output_text === 'string') {
+      const trimmed = raw.output_text.trim();
+      if (trimmed.length > 0 && !this.looksLikeMetadata(trimmed)) {
+        return trimmed;
+      }
+    }
+
+    const output = raw.output;
+    if (Array.isArray(output)) {
+      const parts = output
+        .flatMap((item: any) => item?.content || [])
+        .map((part: any) => {
+          const partText = this.normalizePartText(part);
+          if (partText) {
+            return partText;
+          }
+          if (part?.type === 'output_json' && part?.json) {
+            try {
+              return JSON.stringify(part.json);
+            } catch (error) {
+              console.warn('⚠️ Step2 JSON stringify 실패:', error);
+              return '';
+            }
+          }
+          return '';
+        })
+        .filter((segment: string) => typeof segment === 'string' && segment.trim().length > 0);
+
+      if (parts.length > 0) {
+        return parts.join('\n').trim();
+      }
+    }
+
+    const deepText = this.extractDeepText(raw);
+    if (deepText) {
+      return deepText;
+    }
+
+    return '';
+  }
+
+  private normalizePartText(part: any): string {
+    if (typeof part?.text === 'string') {
+      return part.text;
+    }
+
+    if (typeof part?.text?.value === 'string') {
+      return part.text.value;
+    }
+
+    if (typeof part?.value === 'string') {
+      return part.value;
+    }
+
+    if (typeof part?.data === 'string') {
+      return part.data;
+    }
+
+    return '';
+  }
+
+  private stringifyRawResponse(response: any): string {
+    try {
+      if (response?.raw) {
+        return JSON.stringify(response.raw, null, 2);
+      }
+      return JSON.stringify(response, null, 2);
+    } catch (error) {
+      console.warn('⚠️ Step2 응답 직렬화 실패:', error);
+      return String(response);
+    }
+  }
+
+  private extractDeepText(payload: any): string {
+    const collected: string[] = [];
+
+    const visit = (node: any) => {
+      if (typeof node === 'string') {
+        const trimmed = node.trim();
+        if (trimmed.length > 0) {
+          collected.push(trimmed);
+        }
+        return;
+      }
+
+      if (Array.isArray(node)) {
+        node.forEach(visit);
+        return;
+      }
+
+      if (node && typeof node === 'object') {
+        Object.values(node).forEach(visit);
+      }
+    };
+
+    visit(payload);
+
+    const markers = ['MOOD', 'COLOR_', 'TYPOGRAPHY', 'COMPONENT_STYLE'];
+    const prioritized = collected.find((entry) => !this.looksLikeMetadata(entry) && markers.some((marker) => entry.includes(marker)));
+    if (prioritized) {
+      return prioritized;
+    }
+
+    const filtered = collected.filter((entry) => !this.looksLikeMetadata(entry));
+    if (filtered.length > 0) {
+      return filtered.join('\n');
+    }
+
+    return '';
+  }
+
+  private looksLikeMetadata(value: string): boolean {
+    const metaPatterns = [/^resp_[a-z0-9]/i, /^rs_[a-z0-9]/i, /^(response|completed|developer|default|auto|disabled)$/i, /^gpt-\d/i];
+    return metaPatterns.some((pattern) => pattern.test(value.trim()));
   }
 
   private createStep2Prompt(projectData: ProjectData): string {
