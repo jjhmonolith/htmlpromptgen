@@ -85,7 +85,12 @@ export class OpenAIService {
     const targetModel = overrideModel ?? this.model;
     
     const allowsSampling = this.supportsSamplingControls(targetModel);
-    const maxOutputTokens = targetModel?.startsWith('gpt-5-mini') ? 1200 : 4000;
+    let maxOutputTokens = 4000;
+    if (targetModel?.startsWith('gpt-5-mini')) {
+      maxOutputTokens = 1200;
+    } else if (targetModel?.startsWith('gpt-5')) {
+      maxOutputTokens = 8000;
+    }
     const request: any = {
       model: targetModel,
       input: [
@@ -95,7 +100,7 @@ export class OpenAIService {
         }
       ],
       max_output_tokens: maxOutputTokens,
-      reasoning: targetModel?.startsWith('gpt-5') ? { effort: 'low' } : undefined
+      reasoning: targetModel?.startsWith('gpt-5') ? { effort: 'medium' } : undefined
     };
 
     if (allowsSampling) {
@@ -137,7 +142,7 @@ export class OpenAIService {
           content: prompt
         }
       ],
-      max_output_tokens: 4000,
+      max_output_tokens: this.model?.startsWith('gpt-5') ? 8000 : 4000,
       response_format: {
         type: 'json_schema',
         json_schema: {
@@ -196,7 +201,7 @@ export class OpenAIService {
       model: params.model,
       input: this.mapMessages(params.messages),
       max_output_tokens: params.max_tokens,
-      reasoning: params.model?.startsWith('gpt-5') ? { effort: 'low' } : undefined
+      reasoning: params.model?.startsWith('gpt-5') ? { effort: 'medium' } : undefined
     };
 
     if (allowsSampling) {
