@@ -259,7 +259,7 @@ export class Step4DesignSpecificationService {
         ],
         temperature: 0.4, // 창의적 애니메이션 설계를 위해 약간 높임
         top_p: 1,
-        max_tokens: 3000, // 상세한 텍스트 응답을 위해 토큰 수 증가
+        max_tokens: 8000, // 상세한 텍스트 응답을 위해 토큰 수 증가
         stop: [] // stop 파라미터는 필수이므로 빈 배열로 설정
       });
 
