@@ -54,7 +54,7 @@ export class Step2VisualIdentityService {
           messages: [{ role: 'user', content: prompt }],
           temperature: 0.7,
           top_p: 1,
-          max_tokens: 1200,
+          max_tokens: 2000,
           stop: ["END_S2"]
         });
         console.log('✅ OpenAI API 응답 수신:', response);
