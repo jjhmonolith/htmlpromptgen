@@ -2,9 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { ProjectData, VisualIdentity, Step3IntegratedResult } from '../../../types/workflow.types';
-import { Step4DesignResult, ValidationResult } from '../../../types/step4.types';
+import { Step4DesignResult } from '../../../types/step4.types';
 import { Step4DesignSpecificationService } from '../../../services/step4-design-specification.service';
-import { ValidationEngine } from '../../../services/engines/ValidationEngine';
 import { OpenAIService } from '../../../services/openai.service';
 
 interface Step4DesignSpecificationProps {
@@ -37,11 +36,7 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
   const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false);
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [debugMode, setDebugMode] = useState(false);
-  const [autoFixEnabled, setAutoFixEnabled] = useState(true); // 기본값을 true로 변경
-  const [validationResults, setValidationResults] = useState<ValidationResult[]>([]);
-
   const lastStep4HashRef = useRef<string>('');
-  const validationEngine = useRef(new ValidationEngine());
 
   // 생성 상태 변경을 부모로 전달
   useEffect(() => {
@@ -55,8 +50,6 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
       setStep4Data(initialData);
       setIsDataLoaded(true);
 
-      // 검증 실행
-      validateAllPages(initialData);
 
       const initialHash = JSON.stringify(initialData);
       lastStep4HashRef.current = initialHash;
@@ -97,53 +90,7 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
     }
   }, [shouldAutoGenerate, isGenerating, apiKey]);
 
-  // AutoFix 설정 변경 시 재검증
-  useEffect(() => {
-    if (step4Data) {
-      validateAllPages(step4Data);
-    }
-  }, [autoFixEnabled]);
 
-  const validateAllPages = (data: Step4DesignResult) => {
-    // 먼저 높이 초과 여부를 체크
-    let hasHeightOverflow = false;
-    if (data.layoutMode === 'fixed') {
-      data.pages.forEach(page => {
-        // ValidationEngine을 사용한 정확한 높이 계산
-        const totalHeight = validationEngine.current.calculatePageHeight(page);
-
-        if (totalHeight > 1000) {
-          hasHeightOverflow = true;
-          console.log(`📏 페이지 ${page.pageNumber} 높이 초과 감지: ${totalHeight}px > 1000px - AutoFix 자동 활성화`);
-        }
-      });
-    }
-
-    // 높이 초과 시 AutoFix 자동 활성화
-    let shouldUseAutoFix = autoFixEnabled;
-    if (hasHeightOverflow && !autoFixEnabled) {
-      console.log('🔧 높이 초과 감지 - AutoFix 자동 활성화');
-      shouldUseAutoFix = true;
-      setAutoFixEnabled(true); // UI 상태도 업데이트
-    }
-
-    // 전체 결과 검증 (autoFix 옵션 포함)
-    const overallValidation = validationEngine.current.validate(data, shouldUseAutoFix);
-
-    // 페이지별 개별 검증도 유지 (UI 표시용)
-    const results = data.pages.map(page =>
-      validationEngine.current.validatePage(page, data.layoutMode)
-    );
-    setValidationResults(results);
-
-    console.log('📊 검증 완료:', {
-      autoFixEnabled: shouldUseAutoFix,
-      overallValid: overallValidation.isValid,
-      errors: overallValidation.errors.length,
-      warnings: overallValidation.warnings.length,
-      heightOverflow: hasHeightOverflow
-    });
-  };
 
   const generateStep4Data = async () => {
     if (!apiKey || isGenerating) {
@@ -172,7 +119,6 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
       setStep4Data(result);
       setIsDataLoaded(true);
       setShouldAutoGenerate(false);
-      validateAllPages(result);
 
       console.log('✅ Step4: 디자인 명세 생성 완료', result);
 
@@ -217,9 +163,8 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
         step3PageData
       );
 
-      // 결과 업데이트 및 검증
+      // 결과 업데이트
       setStep4Data({ ...updatedStep4 });
-      validateAllPages(updatedStep4);
 
       console.log(`✅ 페이지 ${pageIndex + 1} 재생성 완료`);
 
@@ -278,7 +223,6 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
   }
 
   const selectedPage = step4Data.pages[selectedPageIndex];
-  const selectedValidation = validationResults[selectedPageIndex];
 
   return (
     <div className="space-y-6">
@@ -292,17 +236,6 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
             </p>
           </div>
           <div className="flex items-center space-x-3">
-            <button
-              onClick={() => setAutoFixEnabled(!autoFixEnabled)}
-              className={`px-3 py-1 text-sm rounded-md transition-colors ${
-                autoFixEnabled
-                  ? 'bg-green-100 text-green-800 border border-green-300'
-                  : 'bg-gray-100 text-gray-600 border border-gray-300'
-              }`}
-              title="높이 초과 오류 자동 수정"
-            >
-              {autoFixEnabled ? '🔧 AutoFix ON' : '🔧 AutoFix OFF'}
-            </button>
             <button
               onClick={() => setDebugMode(!debugMode)}
               className={`px-3 py-1 text-sm rounded-md transition-colors ${
@@ -371,31 +304,6 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
                   생성 시간: {selectedPage.generatedAt?.toLocaleString() || 'N/A'}
                 </div>
 
-                {/* 검증 결과 표시 */}
-                {selectedValidation && (
-                  <div className="flex items-center space-x-4 mt-2">
-                    <div className={`px-2 py-1 text-xs rounded-md ${
-                      selectedValidation.isValid
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-red-100 text-red-800'
-                    }`}>
-                      {selectedValidation.isValid ? '✅ 검증 통과' : '❌ 검증 실패'}
-                      {selectedValidation.score !== undefined && ` (${selectedValidation.score}점)`}
-                    </div>
-
-                    {selectedValidation.errors.length > 0 && (
-                      <span className="text-xs text-red-600">
-                        오류 {selectedValidation.errors.length}개
-                      </span>
-                    )}
-
-                    {selectedValidation.warnings.length > 0 && (
-                      <span className="text-xs text-yellow-600">
-                        경고 {selectedValidation.warnings.length}개
-                      </span>
-                    )}
-                  </div>
-                )}
 
                 {selectedPage.isGenerating && (
                   <div className="text-sm text-purple-600 mt-1 flex items-center">
@@ -416,28 +324,6 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
               </button>
             </div>
 
-            {/* 검증 세부 정보 */}
-            {selectedValidation && (selectedValidation.errors.length > 0 || selectedValidation.warnings.length > 0) && (
-              <div className="mt-3 space-y-2">
-                {selectedValidation.errors.length > 0 && (
-                  <div className="p-3 bg-red-50 border border-red-200 rounded-md">
-                    <div className="text-sm text-red-800 font-medium">오류:</div>
-                    {selectedValidation.errors.map((error, idx) => (
-                      <div key={idx} className="text-sm text-red-700">• {error}</div>
-                    ))}
-                  </div>
-                )}
-
-                {selectedValidation.warnings.length > 0 && (
-                  <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <div className="text-sm text-yellow-800 font-medium">경고:</div>
-                    {selectedValidation.warnings.map((warning, idx) => (
-                      <div key={idx} className="text-sm text-yellow-700">• {warning}</div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            )}
 
             {/* 상태 표시 */}
             {selectedPage.error && (

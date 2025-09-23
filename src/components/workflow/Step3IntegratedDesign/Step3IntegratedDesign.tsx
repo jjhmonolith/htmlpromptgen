@@ -459,21 +459,6 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
                 </p>
               </div>
             </div>
-            <div className="bg-green-50 border-l-4 border-green-400 p-4 rounded-r-lg mb-6">
-              <div className="flex">
-                <div className="flex-shrink-0">
-                  <svg className="h-5 w-5 text-green-400" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm text-green-700">
-                    <span className="font-medium">AI가 제공:</span> 구체적 레이아웃, 실제 콘텐츠, 명확한 상호작용 로직<br/>
-                    <span className="font-medium">개발자가 창의적 구현:</span> 시각적 완성도, UX 세부사항, 애니메이션
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
           <div className="flex items-center space-x-3">
             <button

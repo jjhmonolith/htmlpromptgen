@@ -351,8 +351,6 @@ export interface Step4DebugInfo {
   response: string;
   /** 처리 시간 (ms) */
   processingTime: number;
-  /** 검증 결과 */
-  validationResults: ValidationResult;
   /** 생성 시각 */
   generatedAt: Date;
   /** 오류 로그 */
@@ -361,24 +359,6 @@ export interface Step4DebugInfo {
   warnings?: string[];
 }
 
-/** 검증 결과 */
-export interface ValidationResult {
-  /** 검증 통과 여부 */
-  isValid: boolean;
-  /** 오류 목록 */
-  errors: string[];
-  /** 경고 목록 */
-  warnings: string[];
-  /** 품질 점수 (0-100) */
-  score: number;
-  /** 항목별 검증 결과 */
-  checks: {
-    layoutConstraints: boolean;
-    cssProperties: boolean;
-    implementability: boolean;
-    accessibility: boolean;
-  };
-}
 
 // =============================================================================
 // 에러 타입

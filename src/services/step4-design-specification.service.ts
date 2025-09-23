@@ -6,17 +6,109 @@ import {
 } from '../types/workflow.types';
 import {
   Step4DesignResult,
-  Step4PageResult,
-  Step4GenerationError,
-  Step4ValidationError
+  Step4PageResult
 } from '../types/step4.types';
-import { PromptEngine } from './engines/PromptEngine';
-import { ParsingEngine } from './engines/ParsingEngine';
-import { LayoutRefinementEngine } from './engines/LayoutRefinementEngine';
-import { StyleSpecificationEngine } from './engines/StyleSpecificationEngine';
-import { ValidationEngine } from './engines/ValidationEngine';
-import { InteractionDesignEngine } from './engines/InteractionDesignEngine';
-import { EducationalFeatureEngine } from './engines/EducationalFeatureEngine';
+import { createStepErrorHandler, FallbackProvider } from './common-error-handler.service';
+
+class Step4FallbackProvider implements FallbackProvider<Step4PageResult> {
+  constructor(
+    private pageId: string,
+    private pageTitle: string,
+    private pageNumber: number,
+    private layoutMode: 'fixed' | 'scrollable'
+  ) {}
+
+  createFallback(): Step4PageResult {
+    return {
+      pageId: this.pageId,
+      pageTitle: this.pageTitle,
+      pageNumber: this.pageNumber,
+      layout: {
+        pageWidth: 1600,
+        pageHeight: this.layoutMode === 'fixed' ? 1000 : 'auto',
+        sections: [{
+          id: 'main',
+          gridType: '1-12',
+          position: { x: 0, y: 0 },
+          dimensions: { width: 1600, height: 'auto' },
+          padding: { top: 32, right: 32, bottom: 32, left: 32 },
+          backgroundColor: '#FFFFFF',
+          gap: 24,
+          marginBottom: 24
+        }],
+        backgroundColor: '#FFFFFF',
+        safeArea: { top: 80, right: 100, bottom: 120, left: 100 }
+      },
+      componentStyles: [{
+        id: 'comp1',
+        type: 'paragraph',
+        section: 'main',
+        position: { x: 100, y: 100 },
+        dimensions: { width: 300, height: 'auto' },
+        font: {
+          family: 'Noto Sans KR',
+          weight: 400,
+          size: '18px',
+          lineHeight: 1.6
+        },
+        colors: {
+          text: '#1F2937',
+          background: 'transparent'
+        },
+        visual: {
+          borderRadius: 8,
+          opacity: 1
+        },
+        zIndex: 1,
+        display: 'block'
+      }],
+      imagePlacements: [{
+        id: 'img1',
+        filename: '1.png',
+        section: 'main',
+        position: { x: 400, y: 100 },
+        dimensions: { width: 200, height: 150 },
+        objectFit: 'cover',
+        borderRadius: 8,
+        loading: 'lazy',
+        priority: 'normal',
+        alt: '기본 이미지',
+        zIndex: 10
+      }],
+      interactions: [{
+        id: 'basic',
+        target: '*',
+        trigger: 'hover',
+        effect: 'scale',
+        duration: '200ms',
+        delay: '0ms',
+        easing: 'ease-in-out'
+      }],
+      educationalFeatures: [{
+        id: 'basic',
+        type: 'scrollIndicator',
+        position: 'bottom',
+        dimensions: { width: 100, height: 4 },
+        styling: {
+          primaryColor: '#3B82F6',
+          secondaryColor: '#E5E7EB',
+          backgroundColor: 'transparent',
+          opacity: 0.8
+        },
+        behavior: {
+          autoUpdate: true,
+          userControl: false,
+          persistence: false
+        }
+      }],
+      isGenerating: false,
+      isComplete: true,
+      animationDescription: '기본 애니메이션: 요소들이 부드럽게 나타납니다.',
+      interactionDescription: '기본 인터랙션: 호버 시 요소들이 반응합니다.',
+      generatedAt: new Date()
+    };
+  }
+}
 
 /**
  * Step4 디자인 명세 생성 서비스
@@ -25,23 +117,8 @@ import { EducationalFeatureEngine } from './engines/EducationalFeatureEngine';
  * 교육용 HTML 교안의 최종 구체화 단계를 담당합니다.
  */
 export class Step4DesignSpecificationService {
-  private promptEngine: PromptEngine;
-  private parsingEngine: ParsingEngine;
-  private layoutEngine: LayoutRefinementEngine;
-  private _styleEngine: StyleSpecificationEngine; // AI 대신 사용하므로 private으로 변경
-  private validationEngine: ValidationEngine;
-  private interactionEngine: InteractionDesignEngine;
-  private educationalEngine: EducationalFeatureEngine;
-
-  constructor(private openAIService: OpenAIService) {
-    this.promptEngine = new PromptEngine();
-    this.parsingEngine = new ParsingEngine();
-    this.layoutEngine = new LayoutRefinementEngine();
-    this._styleEngine = new StyleSpecificationEngine();
-    this.validationEngine = new ValidationEngine();
-    this.interactionEngine = new InteractionDesignEngine();
-    this.educationalEngine = new EducationalFeatureEngine();
-  }
+  private errorHandler = createStepErrorHandler('Step4');
+  constructor(private openAIService: OpenAIService) {}
 
   /**
    * Step3 결과를 받아 정밀한 디자인 명세 생성
@@ -56,54 +133,30 @@ export class Step4DesignSpecificationService {
     visualIdentity: VisualIdentity,
     step3Result: Step3IntegratedResult
   ): Promise<Step4DesignResult> {
-    try {
-      console.log('🎯 Step4: 디자인 명세 생성 시작');
-      console.log('📊 입력 데이터:', {
-        layoutMode: projectData.layoutMode,
-        pagesCount: step3Result.pages.length,
-        completedPages: step3Result.pages.filter(p => p.phase2Complete).length
-      });
+    console.log('🎯 Step4: 디자인 명세 생성 시작');
 
-      // 입력 검증
-      this.validateInputs(projectData, visualIdentity, step3Result);
+    // 입력 검증
+    this.validateInputs(projectData, visualIdentity, step3Result);
 
-      // 페이지별 순차 처리 (정밀도 우선)
-      const processedPages = await this.processAllPages(step3Result.pages, projectData, visualIdentity);
+    // 페이지별 순차 처리
+    const processedPages = await this.processAllPages(step3Result.pages, projectData, visualIdentity);
 
-      // 글로벌 기능 생성
-      const globalFeatures = this.generateGlobalFeatures(projectData.layoutMode);
+    // 글로벌 기능 생성
+    const globalFeatures = this.generateGlobalFeatures(projectData.layoutMode);
 
-      const result: Step4DesignResult = {
-        layoutMode: projectData.layoutMode,
-        pages: processedPages,
-        globalFeatures,
-        generatedAt: new Date()
-      };
+    const result: Step4DesignResult = {
+      layoutMode: projectData.layoutMode,
+      pages: processedPages,
+      globalFeatures,
+      generatedAt: new Date()
+    };
 
-      console.log('✅ Step4: 디자인 명세 생성 완료');
-      console.log('📈 결과 요약:', {
-        totalPages: result.pages.length,
-        successPages: result.pages.filter(p => p.isComplete).length,
-        globalFeatures: result.globalFeatures.length
-      });
-
-      return result;
-
-    } catch (error) {
-      console.error('❌ Step4 생성 실패:', error);
-      throw new Step4GenerationError(
-        '디자인 명세 생성 실패',
-        error instanceof Error ? error : new Error(String(error))
-      );
-    }
+    console.log('✅ Step4: 디자인 명세 생성 완료');
+    return result;
   }
 
   /**
    * 개별 페이지 재생성
-   * @param result Step4 결과 객체
-   * @param pageIndex 재생성할 페이지 인덱스
-   * @param projectData 프로젝트 데이터
-   * @param visualIdentity 비주얼 아이덴티티
    */
   async regeneratePage(
     result: Step4DesignResult,
@@ -149,326 +202,367 @@ export class Step4DesignSpecificationService {
     visualIdentity: VisualIdentity,
     step3Result: Step3IntegratedResult
   ): void {
-    if (!projectData?.pages?.length) {
-      throw new Step4ValidationError('프로젝트 페이지 데이터가 없습니다', 'projectData.pages', projectData.pages);
-    }
-
-    if (!visualIdentity?.colorPalette) {
-      throw new Step4ValidationError('비주얼 아이덴티티가 없습니다', 'visualIdentity', visualIdentity);
-    }
-
-    if (!step3Result?.pages?.length) {
-      throw new Step4ValidationError('Step3 결과 데이터가 없습니다', 'step3Result.pages', step3Result.pages);
-    }
+    this.errorHandler.validateInput('projectData.pages', projectData?.pages, (pages) => Array.isArray(pages) && pages.length > 0);
+    this.errorHandler.validateInput('visualIdentity.colorPalette', visualIdentity?.colorPalette, (palette) => palette && typeof palette === 'object');
+    this.errorHandler.validateInput('step3Result.pages', step3Result?.pages, (pages) => Array.isArray(pages) && pages.length > 0);
 
     const completedPages = step3Result.pages.filter(p => p.phase2Complete);
-    if (completedPages.length === 0) {
-      throw new Step4ValidationError('완료된 Step3 페이지가 없습니다', 'step3Result.pages', completedPages.length);
-    }
+    this.errorHandler.validateInput('completedPages', completedPages, (pages) => pages.length > 0);
 
     console.log('✅ Step4: 입력 데이터 검증 완료');
   }
 
   /**
-   * 모든 페이지 병렬 처리 (Step3 방식 참고)
+   * 모든 페이지 처리
    */
   private async processAllPages(
     step3Pages: any[],
     projectData: ProjectData,
     visualIdentity: VisualIdentity
   ): Promise<Step4PageResult[]> {
-    console.log(`⚡ Step4: ${step3Pages.length}개 페이지 병렬 처리 시작`);
+    console.log(`⚡ Step4: ${step3Pages.length}개 페이지 처리 시작`);
 
-    // 빈 결과 배열 초기화
-    const results: Step4PageResult[] = step3Pages.map(page => this.createEmptyPageResult(page));
+    const results: Step4PageResult[] = [];
 
-    // Phase2가 완료된 페이지들만 병렬 처리
-    const pagePromises = step3Pages.map(async (page, index) => {
+    for (let i = 0; i < step3Pages.length; i++) {
+      const page = step3Pages[i];
+
       try {
-        // Phase2가 완료된 페이지만 처리
         if (!page.phase2Complete) {
           console.log(`⏭️ 페이지 ${page.pageNumber}: Step3 Phase2 미완료로 건너뜀`);
-          return {
-            pageIndex: index,
-            success: false,
-            error: 'Step3에서 아직 완료되지 않음'
-          };
+          results.push(this.createEmptyPageResult(page));
+          continue;
         }
 
-        console.log(`🔄 페이지 ${page.pageNumber} 병렬 처리 시작`);
+        console.log(`🔄 페이지 ${page.pageNumber} 처리 시작`);
         const result = await this.processPage(page, projectData, visualIdentity);
-
-        return {
-          pageIndex: index,
-          success: true,
-          result
-        };
+        results.push(result);
+        console.log(`✅ 페이지 ${page.pageNumber} 처리 완료`);
 
       } catch (error) {
         console.error(`❌ 페이지 ${page.pageNumber} 처리 실패:`, error);
-        return {
-          pageIndex: index,
-          success: false,
-          error: error instanceof Error ? error.message : String(error)
-        };
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        results.push(this.createErrorPageResult(page, errorMessage));
       }
-    });
+    }
 
-    console.log(`⏰ Step4: ${pagePromises.length}개 페이지 병렬 처리 대기 중...`);
-    const pageResults = await Promise.all(pagePromises);
-
-    // 결과를 results 배열에 반영
-    pageResults.forEach((pageResult) => {
-      if (pageResult.success && pageResult.result) {
-        results[pageResult.pageIndex] = pageResult.result;
-      } else {
-        // 에러 페이지 결과 생성
-        const step3Page = step3Pages[pageResult.pageIndex];
-        results[pageResult.pageIndex] = this.createErrorPageResult(step3Page, pageResult.error || '알 수 없는 오류');
-      }
-    });
-
-    console.log(`✅ Step4: ${step3Pages.length}개 페이지 병렬 처리 완료`);
+    console.log(`✅ Step4: ${step3Pages.length}개 페이지 처리 완료`);
     return results;
   }
 
   /**
-   * 개별 페이지 처리 (실제 AI 호출 및 파싱)
+   * 개별 페이지 처리 (JSON 스키마 기반)
    */
   private async processPage(
     step3PageData: any,
     projectData: ProjectData,
     visualIdentity: VisualIdentity
   ): Promise<Step4PageResult> {
-    const startTime = Date.now();
+    // 입력 검증
+    this.errorHandler.validateInput('step3PageData', step3PageData, (data) => data && typeof data === 'object');
+    this.errorHandler.validateInput('projectData', projectData, (data) => data && typeof data === 'object');
+    this.errorHandler.validateInput('visualIdentity', visualIdentity, (vi) => vi && typeof vi === 'object');
 
-    try {
-      // AI 프롬프트 생성 (contentMode 추가)
-      const contentMode: 'restricted' | 'enhanced' = 'enhanced'; // 기본값 - 추후 UI에서 설정 가능
-      const prompt = this.buildPrompt(step3PageData, projectData, visualIdentity, contentMode);
+    const fallbackProvider = new Step4FallbackProvider(
+      step3PageData.pageId || 'fallback',
+      step3PageData.pageTitle || '기본 페이지',
+      step3PageData.pageNumber || 1,
+      projectData.layoutMode
+    );
 
-      // AI 호출 (Step2/Step3 방식 참고)
-      const response = await this.openAIService.createCompletion({
-        model: 'gpt-5',
-        messages: [
-          {
-            role: 'system',
-            content: '상세한 애니메이션과 상호작용 설계를 요청받은 대로 정확히 작성해주세요. 요청된 구조와 형식을 정확히 따라 상세한 텍스트로 응답하세요.'
-          },
-          { role: 'user', content: prompt }
-        ],
-        temperature: 0.4, // 창의적 애니메이션 설계를 위해 약간 높임
-        top_p: 1,
-        max_tokens: 8000, // 상세한 텍스트 응답을 위해 토큰 수 증가
-        stop: [] // stop 파라미터는 필수이므로 빈 배열로 설정
-      });
+    return this.errorHandler.handle(
+      async () => {
+        console.log('🎯 텍스트 기반 Step4 페이지 생성 시작');
 
-      // 응답 검증
-      if (!response?.choices?.[0]?.message?.content) {
-        throw new Error(`페이지 ${step3PageData.pageNumber}: AI 응답이 비어있습니다`);
-      }
+        // AI 프롬프트 생성
+        const prompt = this.createStep4Prompt(step3PageData, projectData, visualIdentity);
 
-      const rawContent = response.choices[0].message.content;
-      console.log(`🔄 Step4 Page${step3PageData.pageNumber} 원시 응답:`, rawContent.substring(0, 200) + '...');
+        // AI 호출 (텍스트 기반 응답)
+        const response = await this.openAIService.generateCompletion(
+          prompt,
+          `Step4 Page ${step3PageData.pageNumber}`,
+          'gpt-5'
+        );
 
-      // 응답 파싱 (새로운 JSON 형식)
-      const parsed = this.parseResponse(rawContent);
+        // API 응답 검증
+        this.errorHandler.validateApiResponse(response);
 
-      // Phase 2: 기본 레이아웃 구성 (Step3 데이터 기반)
-      const refinedLayout = this.layoutEngine.refineLayout(
-        step3PageData.structure?.sections || [],
-        projectData.layoutMode
-      );
+        const parsedData = this.parseJsonResponse(response.content);
+        console.log('✅ Step4 파싱 완료:', parsedData);
 
-      // 기본 컴포넌트 스타일 생성 (Step3 데이터와 비주얼 아이덴티티 기반)
-      const baseComponentStyles = this.generateBaseComponentStyles(step3PageData, visualIdentity);
+        // 결과 어셈블리
+        const result = this.assembleStep4FromJson(parsedData, step3PageData, projectData.layoutMode);
+        console.log('🎯 Step4 최종 결과 조립 완료');
 
-      console.log('🎯 새로운 JSON 응답 처리:', {
-        animationDescription: parsed.animationDescription.substring(0, 100) + '...',
-        interactionDescription: parsed.interactionDescription.substring(0, 100) + '...'
-      });
+        return result;
+      },
+      fallbackProvider,
+      { strategy: 'fallback', logLevel: 'error' }
+    );
+  }
 
-      console.log('🔍 생성된 컴포넌트 스타일 검증:', {
-        componentCount: baseComponentStyles.length,
-        firstComponent: baseComponentStyles[0],
-        hasPositionX: baseComponentStyles.every(comp => comp.position && typeof comp.position.x === 'number')
-      });
 
-      // Phase 3: 애니메이션 및 상호작용 생성 (AI 응답 기반)
-      const enhancedInteractions = this.createInteractionsFromDescription(
-        parsed.interactionDescription,
-        baseComponentStyles,
-        projectData.layoutMode
-      );
+  private createStep4Prompt(
+    step3PageData: any,
+    projectData: ProjectData,
+    visualIdentity: VisualIdentity
+  ): string {
+    const moodAndTone = Array.isArray(visualIdentity.moodAndTone)
+      ? visualIdentity.moodAndTone.join(', ')
+      : visualIdentity.moodAndTone;
 
-      const enhancedEducationalFeatures = this.createAnimationsFromDescription(
-        parsed.animationDescription,
-        baseComponentStyles,
-        projectData.layoutMode
-      );
+    // 전체 프로젝트 구성
+    const allPages = projectData.pages.map((p, index) =>
+      `페이지 ${p.pageNumber} (${p.topic}${p.description ? ` - ${p.description}` : ''}): ${step3PageData.pageNumber === p.pageNumber ? step3PageData.structure?.sections?.[0]?.hint || '현재 페이지' : '...'}`
+    ).join('\n');
 
-      // 기본 이미지 배치 생성 (Step3 데이터 기반)
-      const imagePlacements = this.generateImagePlacements(step3PageData);
+    // 페이지 구성안 설명
+    const pageContent = this.buildPageContentSummary(step3PageData);
 
-      // 검증 (ValidationEngine 사용)
-      const tempPageResult: Step4PageResult = {
-        pageId: step3PageData.pageId,
-        pageTitle: step3PageData.pageTitle,
-        pageNumber: step3PageData.pageNumber,
-        layout: refinedLayout,
-        componentStyles: baseComponentStyles,
-        imagePlacements: imagePlacements,
-        interactions: enhancedInteractions,
-        educationalFeatures: enhancedEducationalFeatures,
-        isGenerating: false,
-        isComplete: true,
-        animationDescription: parsed.animationDescription, // 새로운 필드 추가
-        interactionDescription: parsed.interactionDescription, // 새로운 필드 추가
-        generatedAt: new Date()
-      };
-      const validationResult = this.validationEngine.validatePage(tempPageResult, projectData.layoutMode);
+    // 레이아웃 모드에 따른 프롬프트 분기
+    if (projectData.layoutMode === 'fixed') {
+      // 스크롤 금지 + 내용 제한 모드
+      return `당신은 최고 수준의 UI/UX 디자이너입니다. 주어진 페이지 구성안과 '비주얼 아이덴티티'를 바탕으로, 학습자의 몰입도를 높이는 동적 효과를 제안해주세요.
 
-      // 디버그 정보 수집
-      const processingTime = Date.now() - startTime;
-      const debugInfo = process.env.NODE_ENV === 'development' ? {
-        prompt,
-        response: rawContent,
-        processingTime,
-        validationResults: validationResult,
-        animationDescription: parsed.animationDescription,
-        interactionDescription: parsed.interactionDescription,
-        generatedAt: new Date()
-      } : undefined;
+### ⚠️ 원본 유지 모드
+이 프로젝트는 사용자가 제공한 내용만을 사용합니다. 하지만 애니메이션과 상호작용은 반드시 제안해야 합니다! 기존 내용을 효과적으로 전달하기 위한 애니메이션과 인터랙션을 상세히 설명하세요. 추가 콘텐츠 생성은 제한되지만, 시각적 효과와 상호작용은 풍부하게 제안하세요.
 
-      return {
-        pageId: step3PageData.pageId,
-        pageTitle: step3PageData.pageTitle,
-        pageNumber: step3PageData.pageNumber,
-        layout: refinedLayout,
-        componentStyles: baseComponentStyles,
-        imagePlacements: imagePlacements,
-        interactions: enhancedInteractions,
-        educationalFeatures: enhancedEducationalFeatures,
-        isGenerating: false,
-        isComplete: true,
-        animationDescription: parsed.animationDescription, // 새로운 필드 추가
-        interactionDescription: parsed.interactionDescription, // 새로운 필드 추가
-        debugInfo,
-        generatedAt: new Date()
-      };
+### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${moodAndTone}
+- **색상**: Primary-${visualIdentity.colorPalette?.primary || '#3B82F6'}
+- **컴포넌트 스타일**: ${visualIdentity.componentStyle}
+- **핵심 디자인 원칙**: 효율적인 공간을 활용하고, 빈 공간이 많다면 이를 채울 아이디어를 적극적으로 제안하라
 
-    } catch (error) {
-      throw new Step4GenerationError(
-        `페이지 ${step3PageData.pageNumber} 처리 실패`,
-        error instanceof Error ? error : new Error(String(error))
-      );
+### 📍 전체 페이지 구성 개요
+${allPages}
+
+### 📝 프로젝트 정보
+- 프로젝트: ${projectData.projectTitle}
+- 대상: ${projectData.targetAudience}
+- 전체적인 분위기 및 스타일 제안: ${projectData.additionalRequirements || '기본적인 교육용 디자인'}
+- 현재 페이지 ${step3PageData.pageNumber}: ${step3PageData.pageTitle}
+
+### 페이지 구성안:
+${pageContent}
+
+### 제안 가이드라인
+- **목적 지향적 제안**: "애니메이션을 추가하라"가 아니라, "콘텐츠의 스토리를 강화하고, 사용자의 이해를 돕는 점진적 정보 공개(Progressive Disclosure)를 위한 애니메이션을 제안하라."
+- **미세 상호작용**: 버튼 호버 효과와 같은 미세 상호작용(Micro-interaction)으로 페이지에 생동감을 불어넣는 아이디어를 포함하세요.
+- **분위기 일관성**: 제안하는 모든 효과는 정의된 '분위기'(${moodAndTone})와 일치해야 합니다.
+- **전체 일관성**: 다른 페이지들과 일관된 애니메이션 스타일을 유지하되, 각 페이지의 특색을 살려주세요.
+
+### 🚫 절대 금지 사항 (매우 중요!)
+- **네비게이션 금지**: 페이지 간 이동을 위한 버튼, 링크, 화살표, 네비게이션 바 등을 절대 만들지 마세요.
+- **페이지 연결 금지**: "다음 페이지로", "이전으로 돌아가기" 같은 상호작용을 절대 제안하지 마세요.
+- **독립적 페이지**: 각 페이지는 완전히 독립적인 HTML 파일로, 다른 페이지와 연결되지 않습니다.
+- **최소 폰트 크기 강제**: 모든 텍스트 애니메이션과 효과에서도 18pt 이상 유지를 명시하세요.
+
+### 제안 항목 (JSON 형식으로 출력)
+반드시 다음 JSON 형식으로 응답해주세요:
+{
+    "animationDescription": "페이지 로드 시 제목이 위에서 부드럽게 내려오고, 콘텐츠 요소들이 순차적으로 페이드인되는 효과를 적용합니다.",
+    "interactionDescription": "카드에 호버하면 살짝 확대되고 그림자가 진해지며, 클릭 가능한 요소들은 호버 시 색상이 밝아집니다."
+}`;
+
+    } else {
+      // 스크롤 허용 + AI 내용 보강 모드
+      return `당신은 최고 수준의 UI/UX 디자이너입니다. 주어진 페이지 구성안과 '비주얼 아이덴티티'를 바탕으로, 학습자의 몰입도를 높이는 동적 효과를 제안해주세요.
+
+### ✨ AI 보강 모드
+창의적인 애니메이션과 상호작용을 자유롭게 제안하세요. 학습 효과를 높이는 추가적인 시각 효과나 인터랙션을 적극적으로 제안할 수 있습니다.
+
+### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${moodAndTone}
+- **색상**: Primary-${visualIdentity.colorPalette?.primary || '#3B82F6'}
+- **컴포넌트 스타일**: ${visualIdentity.componentStyle}
+- **핵심 디자인 원칙**: 효율적인 공간을 활용하고, 빈 공간이 많다면 이를 채울 아이디어를 적극적으로 제안하라
+
+### 📍 전체 페이지 구성 개요
+${allPages}
+
+### 📝 프로젝트 정보
+- 프로젝트: ${projectData.projectTitle}
+- 대상: ${projectData.targetAudience}
+- 전체적인 분위기 및 스타일 제안: ${projectData.additionalRequirements || '기본적인 교육용 디자인'}
+- 현재 페이지 ${step3PageData.pageNumber}: ${step3PageData.pageTitle}
+
+### 페이지 구성안:
+${pageContent}
+
+### 제안 가이드라인
+- **목적 지향적 제안**: "애니메이션을 추가하라"가 아니라, "콘텐츠의 스토리를 강화하고, 사용자의 이해를 돕는 점진적 정보 공개(Progressive Disclosure)를 위한 애니메이션을 제안하라."
+- **미세 상호작용**: 버튼 호버 효과와 같은 미세 상호작용(Micro-interaction)으로 페이지에 생동감을 불어넣는 아이디어를 포함하세요.
+- **분위기 일관성**: 제안하는 모든 효과는 정의된 '분위기'(${moodAndTone})와 일치해야 합니다.
+- **전체 일관성**: 다른 페이지들과 일관된 애니메이션 스타일을 유지하되, 각 페이지의 특색을 살려주세요.
+
+### 🚫 절대 금지 사항 (매우 중요!)
+- **네비게이션 금지**: 페이지 간 이동을 위한 버튼, 링크, 화살표, 네비게이션 바 등을 절대 만들지 마세요.
+- **페이지 연결 금지**: "다음 페이지로", "이전으로 돌아가기" 같은 상호작용을 절대 제안하지 마세요.
+- **독립적 페이지**: 각 페이지는 완전히 독립적인 HTML 파일로, 다른 페이지와 연결되지 않습니다.
+- **최소 폰트 크기 강제**: 모든 텍스트 애니메이션과 효과에서도 18pt 이상 유지를 명시하세요.
+
+### 제안 항목 (JSON 형식으로 출력)
+반드시 다음 JSON 형식으로 응답해주세요:
+{
+    "animationDescription": "페이지 로드 시 제목이 위에서 부드럽게 내려오고, 콘텐츠 요소들이 순차적으로 페이드인되는 효과를 적용합니다.",
+    "interactionDescription": "카드에 호버하면 살짝 확대되고 그림자가 진해지며, 클릭 가능한 요소들은 호버 시 색상이 밝아집니다."
+}`;
     }
   }
 
-  /**
-   * AI 프롬프트 생성 (새로운 4-조합 시스템)
-   */
-  private buildPrompt(
-    step3PageData: any,
-    projectData: ProjectData,
-    visualIdentity: VisualIdentity,
-    contentMode: 'restricted' | 'enhanced' = 'enhanced'
-  ): string {
-    return this.promptEngine.generatePagePrompt(
-      step3PageData,
-      projectData,
-      visualIdentity,
-      contentMode
-    );
+
+
+  private buildPageContentSummary(step3PageData: any): string {
+    // Step3 구조 정보를 요약
+    const sections = step3PageData.structure?.sections || [];
+    const components = step3PageData.content?.components || [];
+    const images = step3PageData.content?.images || [];
+
+    let summary = `**페이지 구조:**\n`;
+    sections.forEach((section: any) => {
+      summary += `- ${section.id}: ${section.hint} (${section.grid})\n`;
+    });
+
+    summary += `\n**컴포넌트 (${components.length}개):**\n`;
+    components.slice(0, 5).forEach((comp: any) => {
+      summary += `- ${comp.id}: ${comp.type} - "${comp.text || '내용 없음'}"\n`;
+    });
+
+    summary += `\n**이미지 (${images.length}개):**\n`;
+    images.forEach((img: any) => {
+      summary += `- ${img.id}: ${img.desc} (${img.secRef})\n`;
+    });
+
+    return summary;
   }
 
-  /**
-   * AI 응답 파싱 (새로운 JSON 형식)
-   */
-  private parseResponse(content: string): {
-    animationDescription: string;
-    interactionDescription: string;
-  } {
-    return this.parsingEngine.parseStep4Response(content);
+  private parseJsonResponse(textContent: string): any {
+    try {
+      // JSON 부분만 추출
+      const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+
+      // 전체를 JSON으로 파싱 시도
+      return JSON.parse(textContent.trim());
+    } catch (error) {
+      console.error('JSON 파싱 실패:', error);
+      // 기본 JSON 구조 반환
+      return {
+        animationDescription: '기본 애니메이션: 요소들이 부드럽게 나타납니다.',
+        interactionDescription: '기본 인터랙션: 호버 시 요소들이 반응합니다.'
+      };
+    }
   }
 
-
-  /**
-   * Phase 3: 상호작용 강화
-   */
-  private enhanceInteractions(
-    baseInteractions: any[],
-    components: any[],
-    layoutMode: 'fixed' | 'scrollable',
-    pageNumber: number,
-    totalPages: number
-  ): any[] {
-    // 기본 AI 생성 인터랙션에 Phase 3 엔진으로 강화
-    const generatedInteractions = this.interactionEngine.generateInteractions(components, layoutMode);
-
-    // 진행 상태 인터랙션 추가
-    const progressInteractions = this.interactionEngine.generateProgressInteractions(totalPages, pageNumber);
-
-    // 접근성 인터랙션 추가
-    const a11yInteractions = this.interactionEngine.generateA11yInteractions();
-
-    // 모든 인터랙션 결합 및 최적화
-    const allInteractions = [
-      ...baseInteractions,
-      ...generatedInteractions,
-      ...progressInteractions,
-      ...a11yInteractions
-    ];
-
-    return this.interactionEngine.optimizeForLayoutMode(allInteractions, layoutMode);
+  private assembleStep4FromJson(parsedData: any, step3PageData: any, layoutMode: 'fixed' | 'scrollable'): Step4PageResult {
+    return {
+      pageId: step3PageData.pageId,
+      pageTitle: step3PageData.pageTitle,
+      pageNumber: step3PageData.pageNumber,
+      layout: {
+        pageWidth: 1600,
+        pageHeight: layoutMode === 'fixed' ? 1000 : 'auto',
+        sections: step3PageData.structure?.sections?.map((section: any, index: number) => ({
+          id: section.id || `section_${index}`,
+          gridType: (section.grid as '1-12' | '8+4' | '2-11' | '3-10') || '1-12',
+          position: { x: 0, y: index * 200 },
+          dimensions: { width: 1600, height: section.height || 'auto' },
+          padding: { top: 32, right: 32, bottom: 32, left: 32 },
+          backgroundColor: section.background || '#FFFFFF',
+          gap: 24,
+          marginBottom: 24
+        })) || [{
+          id: 'main',
+          gridType: '1-12',
+          position: { x: 0, y: 0 },
+          dimensions: { width: 1600, height: 'auto' },
+          padding: { top: 32, right: 32, bottom: 32, left: 32 },
+          backgroundColor: '#FFFFFF',
+          gap: 24,
+          marginBottom: 24
+        }],
+        backgroundColor: '#FFFFFF',
+        safeArea: { top: 80, right: 100, bottom: 120, left: 100 }
+      },
+      componentStyles: step3PageData.content?.components?.map((comp: any, index: number) => ({
+        id: comp.id,
+        type: comp.type === 'text' ? 'paragraph' : (comp.type as 'heading' | 'paragraph' | 'card' | 'image'),
+        section: 'main',
+        position: { x: 100 + (index % 2) * 300, y: 100 + Math.floor(index / 2) * 100 },
+        dimensions: { width: 300, height: 'auto' },
+        font: {
+          family: 'Noto Sans KR',
+          weight: 400,
+          size: '18px',
+          lineHeight: 1.6
+        },
+        colors: {
+          text: '#1F2937',
+          background: 'transparent'
+        },
+        visual: {
+          borderRadius: 8,
+          opacity: 1
+        },
+        zIndex: 1,
+        display: 'block'
+      })) || [],
+      imagePlacements: step3PageData.content?.images?.map((img: any, index: number) => ({
+        id: img.id,
+        filename: img.filename || `${index + 1}.png`,
+        section: 'main',
+        position: { x: 400 + (index % 2) * 300, y: 100 + Math.floor(index / 2) * 200 },
+        dimensions: { width: 200, height: 150 },
+        objectFit: 'cover' as const,
+        borderRadius: 8,
+        loading: 'lazy' as const,
+        priority: 'normal' as const,
+        alt: img.desc || '이미지',
+        zIndex: 10
+      })) || [],
+      interactions: [{
+        id: 'hover_effect',
+        target: '.interactive',
+        trigger: 'hover',
+        effect: 'scale',
+        duration: '200ms',
+        delay: '0ms',
+        easing: 'ease-in-out'
+      }],
+      educationalFeatures: [{
+        id: 'scroll_reveal',
+        type: 'scrollIndicator',
+        position: 'bottom',
+        dimensions: { width: 100, height: 4 },
+        styling: {
+          primaryColor: '#3B82F6',
+          secondaryColor: '#E5E7EB',
+          backgroundColor: 'transparent',
+          opacity: 0.8
+        },
+        behavior: {
+          autoUpdate: true,
+          userControl: false,
+          persistence: false
+        }
+      }],
+      isGenerating: false,
+      isComplete: true,
+      animationDescription: parsedData.animationDescription || '기본 애니메이션: 요소들이 부드럽게 나타납니다.',
+      interactionDescription: parsedData.interactionDescription || '기본 인터랙션: 호버 시 요소들이 반응합니다.',
+      generatedAt: new Date()
+    };
   }
 
-  /**
-   * Phase 3: 교육적 기능 강화
-   */
-  private enhanceEducationalFeatures(
-    baseFeatures: any[],
-    components: any[],
-    layoutMode: 'fixed' | 'scrollable',
-    pageNumber: number,
-    totalPages: number
-  ): any[] {
-    // 기본 AI 생성 교육 기능에 Phase 3 엔진으로 강화
-    const generatedFeatures = this.educationalEngine.generateEducationalFeatures(
-      pageNumber,
-      totalPages,
-      layoutMode,
-      components
-    );
-
-    // 접근성 기능 추가
-    const a11yFeatures = this.educationalEngine.generateAccessibilityFeatures(components, layoutMode);
-
-    // 학습 분석 기능 추가
-    const analyticsFeatures = this.educationalEngine.generateAnalyticsFeatures();
-
-    // 모든 교육 기능 결합 및 최적화
-    const allFeatures = [
-      ...baseFeatures,
-      ...generatedFeatures,
-      ...a11yFeatures,
-      ...analyticsFeatures
-    ];
-
-    return this.educationalEngine.optimizeForLayoutMode(allFeatures, layoutMode);
-  }
-
-  /**
-   * 간소화된 글로벌 기능 생성
-   */
   private generateGlobalFeatures(layoutMode: 'fixed' | 'scrollable'): any[] {
-    // 복잡성을 줄이고 기본 기능만 제공
     return [
       {
         type: 'accessibility',
         specifications: {
           focusVisible: true,
-          keyboardNav: false // 복잡성 제거
+          keyboardNav: false
         },
         enabled: true
       },
@@ -482,9 +576,6 @@ export class Step4DesignSpecificationService {
     ];
   }
 
-  /**
-   * 빈 페이지 결과 생성 (미완료 페이지용)
-   */
   private createEmptyPageResult(step3PageData: any): Step4PageResult {
     return {
       pageId: step3PageData.pageId,
@@ -510,9 +601,6 @@ export class Step4DesignSpecificationService {
     };
   }
 
-  /**
-   * 에러 페이지 결과 생성
-   */
   private createErrorPageResult(step3PageData: any, errorMessage: string): Step4PageResult {
     return {
       pageId: step3PageData.pageId,
@@ -538,153 +626,5 @@ export class Step4DesignSpecificationService {
     };
   }
 
-  /**
-   * 기본 컴포넌트 스타일 생성 (Step3 데이터와 비주얼 아이덴티티 기반)
-   */
-  private generateBaseComponentStyles(step3PageData: any, visualIdentity: VisualIdentity): any[] {
-    const sections = step3PageData.structure?.sections || [];
-
-    console.log('🔧 generateBaseComponentStyles 입력 데이터:', {
-      step3PageData: JSON.stringify(step3PageData, null, 2),
-      sectionsLength: sections.length,
-      sections: sections
-    });
-
-    return sections.map((section: any, index: number) => ({
-      id: `section-${index}`,
-      type: section.type || 'content',
-      section: `section-${index}`,
-      position: {
-        x: 100,
-        y: 100 + (index * 250)
-      },
-      dimensions: {
-        width: 1400,
-        height: 200
-      },
-      colors: {
-        text: '#1a1a1a',
-        background: '#ffffff',
-        border: visualIdentity.colorPalette.primary || '#2563eb'
-      },
-      font: {
-        family: 'SF Pro Display, system-ui, sans-serif',
-        weight: 400,
-        size: '18px',
-        lineHeight: 1.5
-      },
-      visual: {
-        borderRadius: 8,
-        boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
-        opacity: 1
-      },
-      zIndex: 10,
-      display: 'block'
-    }));
-  }
-
-  /**
-   * AI 상호작용 설명을 기반으로 상호작용 객체 생성
-   */
-  private createInteractionsFromDescription(
-    interactionDescription: string,
-    components: any[],
-    layoutMode: 'fixed' | 'scrollable'
-  ): any[] {
-    return [{
-      type: 'hover',
-      description: interactionDescription,
-      targets: components.map(c => c.id),
-      properties: {
-        scale: layoutMode === 'fixed' ? 1.02 : 1.01,
-        shadow: 'elevated',
-        duration: 200
-      },
-      accessibility: {
-        focusVisible: true,
-        keyboardNavigation: false
-      }
-    }];
-  }
-
-  /**
-   * AI 애니메이션 설명을 기반으로 교육적 기능 객체 생성
-   */
-  private createAnimationsFromDescription(
-    animationDescription: string,
-    components: any[],
-    layoutMode: 'fixed' | 'scrollable'
-  ): any[] {
-    return [{
-      id: 'animation-entrance',
-      type: 'readingProgress',
-      position: 'top',
-      dimensions: {
-        width: 100,
-        height: 4
-      },
-      styling: {
-        primaryColor: '#2563eb',
-        secondaryColor: '#64748b',
-        backgroundColor: '#f1f5f9',
-        opacity: 0.9
-      },
-      behavior: {
-        autoUpdate: true,
-        userControl: false,
-        persistence: false
-      },
-      description: animationDescription,
-      properties: {
-        trigger: layoutMode === 'scrollable' ? 'inView' : 'pageLoad',
-        animation: 'fadeUp',
-        duration: layoutMode === 'fixed' ? 300 : 400,
-        stagger: layoutMode === 'scrollable' ? 60 : 40
-      }
-    }];
-  }
-
-  /**
-   * Step3 데이터를 기반으로 기본 이미지 배치 생성 (개선된 구조 지원)
-   */
-  private generateImagePlacements(step3PageData: any): any[] {
-    // Step3의 mediaAssets 구조 지원
-    const images = step3PageData.mediaAssets || step3PageData.images || [];
-
-    console.log(`🖼️ Step4 이미지 처리: ${images.length}개 이미지 발견`);
-
-    return images.map((image: any, index: number) => {
-      // Step3의 새로운 구조 지원
-      const filename = image.fileName || image.filename || `placeholder-${index}.jpg`;
-      const aiPrompt = image.aiPrompt || image.prompt || `이미지 ${index + 1}`;
-
-      console.log(`📸 이미지 ${index + 1}: ${filename} | ${aiPrompt.substring(0, 50)}...`);
-
-      return {
-        id: image.id || `image-${index}`,
-        filename: filename,
-        section: `section-0`,
-        position: {
-          x: 100,
-          y: 200 + (index * 250)
-        },
-        dimensions: {
-          width: 400,
-          height: 200
-        },
-        objectFit: 'cover',
-        borderRadius: 8,
-        boxShadow: '0 4px 8px rgba(0, 0, 0, 0.1)',
-        loading: 'lazy',
-        priority: index === 0 ? 'high' : 'normal', // 첫 번째 이미지 우선순위 높임
-        alt: aiPrompt,
-        zIndex: 15,
-        // Step3 메타데이터 보존
-        originalPath: image.path,
-        category: image.category,
-        purpose: image.purpose,
-        aiPrompt: aiPrompt
-      };
-    });
-  }
+  // 텍스트 기반 JSON 응답 파싱
 }

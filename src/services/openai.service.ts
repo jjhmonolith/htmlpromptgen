@@ -89,7 +89,7 @@ export class OpenAIService {
     if (targetModel?.startsWith('gpt-5-mini')) {
       maxOutputTokens = 1200;
     } else if (targetModel?.startsWith('gpt-5')) {
-      maxOutputTokens = 8000;
+      maxOutputTokens = 6000;
     }
     const request: any = {
       model: targetModel,
@@ -127,32 +127,46 @@ export class OpenAIService {
 
   // Structured Output을 사용한 구조화된 응답 생성
   async generateStructuredCompletion(
-    prompt: string, 
-    schema: any, 
-    context?: string
+    prompt: string,
+    schema: any,
+    context?: string,
+    options?: {
+      model?: string;
+      reasoningEffort?: 'low' | 'medium' | 'high';
+      maxOutputTokens?: number;
+    }
   ) {
     const client = this.getClient();
-    
-    const allowsSampling = this.supportsSamplingControls(this.model);
+    const targetModel = options?.model ?? this.model;
+
+    const allowsSampling = this.supportsSamplingControls(targetModel);
+    const schemaName = typeof context === 'string'
+      ? context.replace(/[^a-zA-Z0-9]+/g, '_').toLowerCase() || 'structured_response'
+      : 'structured_response';
+
     const structuredRequest: any = {
-      model: this.model,
+      model: targetModel,
       input: [
         {
           role: 'user',
           content: prompt
         }
       ],
-      max_output_tokens: this.model?.startsWith('gpt-5') ? 8000 : 4000,
-      response_format: {
-        type: 'json_schema',
-        json_schema: {
-          name: 'wireframe_response',
+      max_output_tokens: options?.maxOutputTokens ?? this.resolveMaxOutputTokens(targetModel),
+      text: {
+        format: {
+          type: 'json_schema',
+          name: schemaName,
           schema,
           strict: true
         }
-      },
-      reasoning: this.model?.startsWith('gpt-5') ? { effort: 'low' } : undefined
+      }
     };
+
+    const reasoningEffort = options?.reasoningEffort ?? (targetModel?.startsWith('gpt-5') ? 'low' : undefined);
+    if (reasoningEffort && targetModel?.startsWith('gpt-5')) {
+      structuredRequest.reasoning = { effort: reasoningEffort };
+    }
 
     if (allowsSampling) {
       structuredRequest.temperature = 0.3; // encourage deterministic output when supported
@@ -171,7 +185,7 @@ export class OpenAIService {
     }
 
     const parsedJson = this.extractJson(response);
-    const rawContent = parsedJson ? JSON.stringify(parsedJson) : '{}';
+    const rawContent = parsedJson ? JSON.stringify(parsedJson) : this.extractText(response) || '{}';
 
     try {
       const parsed = parsedJson ?? JSON.parse(rawContent);
@@ -184,6 +198,19 @@ export class OpenAIService {
       console.error('Failed to parse structured response:', error);
       throw new Error('Invalid structured response from OpenAI');
     }
+  }
+
+  private resolveMaxOutputTokens(model?: string | null) {
+    const normalized = (model ?? this.model ?? '').toLowerCase();
+    if (normalized.startsWith('gpt-5-mini')) {
+      return 1200;
+    }
+
+    if (normalized.startsWith('gpt-5')) {
+      return 6000;
+    }
+
+    return 4000;
   }
 
   // Step2에서 사용하는 특화된 completion 메서드
