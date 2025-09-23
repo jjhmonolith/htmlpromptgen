@@ -36,6 +36,8 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
   const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false);
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [debugMode, setDebugMode] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('');
   const lastStep4HashRef = useRef<string>('');
 
   // 생성 상태 변경을 부모로 전달
@@ -83,14 +85,23 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
     }
   }, [step4Data, initialData]);
 
+  // AI 디자이너 페르소나 기반 로딩 메시지와 진행률
+  const designerMessages = [
+    { progress: 12, message: "🎨 프로젝트 요구사항을 분석하고 디자인 방향을 잡고 있어요..." },
+    { progress: 25, message: "📐 레이아웃 구조를 설계하고 비례를 맞추고 있어요" },
+    { progress: 40, message: "🎯 사용자 경험을 고려한 인터페이스를 그려내고 있어요" },
+    { progress: 55, message: "🖌️ 브랜드 아이덴티티를 반영한 스타일을 적용하고 있어요" },
+    { progress: 70, message: "⚡ 상호작용 요소와 동적 효과를 설계하고 있어요" },
+    { progress: 85, message: "🔍 세부사항을 점검하고 디자인을 최적화하고 있어요" },
+    { progress: 95, message: "✨ 최종 디자인 명세를 정리하고 완성하고 있어요" }
+  ];
+
   // 자동 생성 실행
   useEffect(() => {
     if (shouldAutoGenerate && !isGenerating && apiKey) {
       generateStep4Data();
     }
   }, [shouldAutoGenerate, isGenerating, apiKey]);
-
-
 
   const generateStep4Data = async () => {
     if (!apiKey || isGenerating) {
@@ -103,8 +114,26 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
     try {
       setIsGenerating(true);
       setError(null);
+      setLoadingProgress(0);
+      setLoadingMessage(designerMessages[0].message);
 
       console.log('🎯 Step4: 디자인 명세 생성 시작');
+
+      // 진행률 애니메이션 시뮬레이션
+      let currentMessageIndex = 0;
+      const progressInterval = setInterval(() => {
+        if (currentMessageIndex < designerMessages.length) {
+          const targetProgress = designerMessages[currentMessageIndex].progress;
+          setLoadingProgress(prev => {
+            const newProgress = Math.min(prev + (Math.random() * 6 + 3), targetProgress);
+            if (newProgress >= targetProgress) {
+              setLoadingMessage(designerMessages[currentMessageIndex].message);
+              currentMessageIndex++;
+            }
+            return newProgress;
+          });
+        }
+      }, 600 + Math.random() * 400); // 600-1000ms 간격으로 랜덤하게
 
       const openAIService = new OpenAIService();
       openAIService.initialize(apiKey);
@@ -116,11 +145,18 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
         step3Result
       );
 
-      setStep4Data(result);
-      setIsDataLoaded(true);
-      setShouldAutoGenerate(false);
+      // 완료 시 진행률을 100%로 맞추고 정리
+      clearInterval(progressInterval);
+      setLoadingProgress(100);
+      setLoadingMessage("🎉 완벽한 디자인 명세가 완성되었어요!");
 
-      console.log('✅ Step4: 디자인 명세 생성 완료', result);
+      // 잠시 완료 메시지를 보여주고 결과 표시
+      setTimeout(() => {
+        setStep4Data(result);
+        setIsDataLoaded(true);
+        setShouldAutoGenerate(false);
+        console.log('✅ Step4: 디자인 명세 생성 완료', result);
+      }, 800);
 
     } catch (error) {
       console.error('❌ Step4 생성 실패:', error);
@@ -179,14 +215,58 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
   // 초기 로딩 중일 때만 전체 화면 로딩 표시
   if (isInitialLoading) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 space-y-4 bg-white rounded-lg shadow-sm border">
-        <div className="animate-spin w-8 h-8 border-4 border-purple-500 border-t-transparent rounded-full"></div>
-        <h3 className="text-lg font-semibold text-gray-900">정밀한 디자인 명세 생성 중...</h3>
-        <p className="text-sm text-gray-600 text-center">
-          Step3의 콘텐츠 계획을 구현 가능한 정밀 명세로 변환하고 있습니다.
-          <br />
-          레이아웃 정밀화, 스타일 구체화, 상호작용 설계가 진행됩니다.
-        </p>
+      <div className="flex flex-col" style={{ backgroundColor: '#f5f5f7', height: 'calc(100vh - 72px)', marginTop: '72px' }}>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="max-w-4xl mx-auto px-4 xl:px-8 2xl:px-12 py-8">
+            <div className="text-center">
+
+            {/* 제목과 부제목 */}
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">AI 디자이너가 설계 중이에요</h2>
+            <p className="text-lg text-gray-600 mb-12">정밀한 디자인 명세와 구현 가능한 설계 문서를 작성하고 있어요</p>
+
+            {/* 진행률 바 */}
+            <div className="max-w-md mx-auto mb-8">
+              <div className="relative">
+                {/* 배경 바 */}
+                <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                  {/* 진행률 바 */}
+                  <div
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={{
+                      width: `${loadingProgress}%`,
+                      background: 'linear-gradient(90deg, #8B5CF6 0%, #A855F7 50%, #C084FC 100%)',
+                      boxShadow: '0 2px 10px rgba(139, 92, 246, 0.3)'
+                    }}
+                  >
+                    {/* 반짝이는 효과 */}
+                    <div className="h-full w-full relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 -skew-x-12 animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 퍼센테이지 표시 */}
+                <div className="text-center mt-3">
+                  <span className="text-2xl font-bold text-gray-800">{Math.round(loadingProgress)}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 현재 작업 메시지 */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-lg mx-auto">
+              <p className="text-gray-700 text-lg leading-relaxed font-medium">
+                {loadingMessage}
+              </p>
+            </div>
+
+            {/* 예상 소요 시간 */}
+            <p className="text-sm text-gray-500 mt-6">
+              보통 30-60초 정도 소요됩니다
+            </p>
+
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

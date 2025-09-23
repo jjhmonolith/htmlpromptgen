@@ -213,40 +213,39 @@ export class Step4DesignSpecificationService {
   }
 
   /**
-   * 모든 페이지 처리
+   * 모든 페이지 처리 (병렬 처리)
    */
   private async processAllPages(
     step3Pages: any[],
     projectData: ProjectData,
     visualIdentity: VisualIdentity
   ): Promise<Step4PageResult[]> {
-    console.log(`⚡ Step4: ${step3Pages.length}개 페이지 처리 시작`);
+    console.log(`🚀 Step4: ${step3Pages.length}개 페이지 병렬 처리 시작`);
 
-    const results: Step4PageResult[] = [];
-
-    for (let i = 0; i < step3Pages.length; i++) {
-      const page = step3Pages[i];
-
+    // 병렬 처리를 위한 Promise 배열 생성
+    const pagePromises = step3Pages.map(async (page, i) => {
       try {
         if (!page.phase2Complete) {
           console.log(`⏭️ 페이지 ${page.pageNumber}: Step3 Phase2 미완료로 건너뜀`);
-          results.push(this.createEmptyPageResult(page));
-          continue;
+          return this.createEmptyPageResult(page);
         }
 
         console.log(`🔄 페이지 ${page.pageNumber} 처리 시작`);
         const result = await this.processPage(page, projectData, visualIdentity);
-        results.push(result);
         console.log(`✅ 페이지 ${page.pageNumber} 처리 완료`);
+        return result;
 
       } catch (error) {
         console.error(`❌ 페이지 ${page.pageNumber} 처리 실패:`, error);
         const errorMessage = error instanceof Error ? error.message : String(error);
-        results.push(this.createErrorPageResult(page, errorMessage));
+        return this.createErrorPageResult(page, errorMessage);
       }
-    }
+    });
 
-    console.log(`✅ Step4: ${step3Pages.length}개 페이지 처리 완료`);
+    // 모든 페이지를 병렬로 처리
+    const results = await Promise.all(pagePromises);
+    console.log(`🎉 Step4: ${step3Pages.length}개 페이지 병렬 처리 완료`);
+
     return results;
   }
 

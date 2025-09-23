@@ -86,70 +86,67 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
   const compileHTMLPrompt = (): string => {
     const sections = [];
 
+    // 레이아웃 및 콘텐츠 모드 조합 결정
+    const isScrollable = projectData.layoutMode === 'scrollable';
+    const isEnhanced = projectData.contentMode === 'enhanced';
+
+    // 모드 조합에 따른 설명
+    const getModeDescription = () => {
+      if (isScrollable && isEnhanced) {
+        return '📜 스크롤 가능 + ✨ AI 보강 모드 - AI가 내용을 창의적으로 확장';
+      } else if (isScrollable && !isEnhanced) {
+        return '📜 스크롤 가능 + 📝 원본 유지 모드 - 사용자가 입력한 내용만 사용';
+      } else if (!isScrollable && isEnhanced) {
+        return '🖼️ 고정 크기 + ✨ AI 보강 모드 - AI가 내용을 창의적으로 확장하되 크기 제한 준수';
+      } else {
+        return '🖼️ 고정 크기 + 📝 원본 유지 모드 - 사용자가 입력한 내용만 사용';
+      }
+    };
+
     // 1. 프로젝트 개요
-    sections.push(`# 교육용 HTML 교안 개발 명세서
+    sections.push(`# 최종 교안 개발 프롬프트
 
-## 📋 프로젝트 개요
-
-**제목**: ${projectData.projectTitle}
-**대상 학습자**: ${projectData.targetAudience}
-**레이아웃 모드**: ${projectData.layoutMode === 'scrollable'
-  ? '스크롤형 - 가로폭 1600px 고정, 세로 높이는 콘텐츠에 따라 자동 확장되어 스크롤 생성 가능'
-  : '고정형 - 1600px × 1000px 고정 크기, 슬라이드 형식으로 페이지 전환'}
-**총 페이지 수**: ${projectData.pages.length}개
-
+## 1. 프로젝트 개요
+- **프로젝트명**: ${projectData.projectTitle}
+- **대상 학습자**: ${projectData.targetAudience}
+- **레이아웃 모드**: ${isScrollable ? ':scroll: 스크롤 가능 (가로 1600px, 세로 유연)' : ':triangular_ruler: 고정 크기 (1600x1000px)'}
+- **콘텐츠 모드**: ${isEnhanced ? ':sparkles: AI 보강 모드 - AI가 내용을 창의적으로 확장' : ':memo: 원본 유지 모드 - 사용자가 입력한 내용만 사용'}
 ${projectData.suggestions && projectData.suggestions.length > 0
-  ? `**특별 요구사항**: ${projectData.suggestions.join(' ')}`
+  ? `- **사용자 추가 제안**: ${projectData.suggestions.join(' ')}`
   : ''}`);
 
     // 2. 디자인 시스템 (Step2 구조화된 데이터 정확히 반영)
-    sections.push(`## 🎨 디자인 시스템 (Step2 비주얼 아이덴티티 기반)
+    sections.push(`## 2. 디자인 시스템
+- **분위기 & 톤**: ${visualIdentity.moodAndTone.join(', ')}
+- **색상 팔레트 (css/style.css 에 변수로 정의할 것)**:
+  --primary-color: ${visualIdentity.colorPalette.primary};
+  --secondary-color: ${visualIdentity.colorPalette.secondary};
+  --accent-color: ${visualIdentity.colorPalette.accent};
+  --text-color: ${visualIdentity.colorPalette.text};
+  --background-color: ${visualIdentity.colorPalette.background};
+- **타이포그래피 (css/style.css 에 정의할 것)**:
+  - Heading Font: ${visualIdentity.typography.headingFont}
+  - Body Font: ${visualIdentity.typography.bodyFont}
+  - Base Size: ${visualIdentity.typography.baseSize}
+- **컴포넌트 스타일**: ${visualIdentity.componentStyle}`);
 
-### 🌈 색상 팔레트 (정확한 HEX 코드)
-다음 5가지 색상을 모든 페이지에서 일관되게 사용하세요:
+    // 3. 핵심 개발 요구사항 (4가지 조합별로 구분)
+    sections.push(generateCoreRequirements(isScrollable, isEnhanced));
 
-- **PRIMARY (주색상)**: \`${visualIdentity.colorPalette.primary}\` - 주요 제목, 중요한 버튼, 핵심 강조 요소
-- **SECONDARY (보조색상)**: \`${visualIdentity.colorPalette.secondary}\` - 카드 배경, 섹션 구분, 보조 영역
-- **ACCENT (강조색상)**: \`${visualIdentity.colorPalette.accent}\` - 행동 유도, 하이라이트, 주의 집중 요소
-- **BACKGROUND (배경색상)**: \`${visualIdentity.colorPalette.background}\` - 전체 페이지 배경색
-- **TEXT (텍스트색상)**: \`${visualIdentity.colorPalette.text}\` - 모든 텍스트의 기본 색상
+    // 4. 콘텐츠 생성 규칙 (enhanced vs restricted)
+    sections.push(generateContentRules(isEnhanced));
 
-### ✍️ 타이포그래피 시스템
-- **헤딩 폰트**: ${visualIdentity.typography.headingFont} (제목, 섹션 헤더에 사용)
-  - 특성: ${visualIdentity.typography.headingStyle || '견고하면서도 친근한'}
-- **본문 폰트**: ${visualIdentity.typography.bodyFont} (일반 텍스트, 설명문에 사용)
-  - 특성: ${visualIdentity.typography.bodyStyle || '읽기 편안하고 깔끔한'}
-- **기본 크기**: ${visualIdentity.typography.baseSize}
-- **최소 폰트 크기**: 모든 텍스트는 최소 18pt(24px) 이상 필수
-
-### 🎭 무드 & 톤 (4가지 핵심 감성)
-${visualIdentity.moodAndTone.map(mood => `- **${mood}**: 이 감성을 레이아웃의 모든 요소(여백, 정렬, 색상 배치, 컴포넌트 형태)에 반영하세요`).join('\n')}
-
-### 🎪 컴포넌트 스타일 가이드
-${visualIdentity.componentStyle}
-
-### 💡 디자인 적용 지침
-1. **색상 일관성**: 위 5가지 색상만 사용하여 통일된 컬러 팔레트 유지
-2. **폰트 일관성**: 지정된 2가지 폰트만 사용하여 타이포그래피 시스템 준수
-3. **감성 반영**: 4가지 무드를 레이아웃의 전체적인 느낌에 녹여내세요
-4. **컴포넌트 가이드 준수**: 위 스타일 가이드에 맞는 UI 요소들로 구성하세요`);
-
-    // 3. 페이지별 상세 명세 (새로운 구조)
+    // 5. 페이지별 상세 구현 가이드
     sections.push(generatePageByPageSpecification());
 
-    // 4. CSS 스타일 명세
+    // 5. CSS 및 JavaScript 구현 가이드
     sections.push(generateCSSSpecification());
-
-    // 5. JavaScript 상호작용 명세 (Step4가 있는 경우)
-    if (step4Result) {
-      sections.push(generateJavaScriptSpecification());
-    }
 
     // 6. 이미지 생성 명세서
     sections.push(generateImagePromptSection());
 
     // 7. 개선된 파일 구조 및 하이브리드 스타일링 가이드
-    sections.push(`## 📁 프로젝트 폴더 구조 및 하이브리드 스타일링
+    sections.push(`## 7. 프로젝트 폴더 구조 및 개발 가이드라인
 
 ### 🛠️ 권장 프로젝트 구조
 다음과 같은 체계적인 폴더 구조로 결과물을 구성해주세요:
@@ -166,9 +163,29 @@ ${projectData.pages.length > 3 ? `├── page4.html          # 네 번째 페
 │   └── script.js       # 모든 상호작용 관련 JavaScript
 ├── image/
 ${step3Result ? step3Result.pages.map((page, pageIndex) => {
+  const allImages: string[] = [];
+
+  // mediaAssets에서 이미지 수집
   if (page.mediaAssets && page.mediaAssets.length > 0) {
-    const pageImages = page.mediaAssets.map(img => `│   │   ├── ${img.fileName}`).join('\n');
-    return `│   ├── page${pageIndex + 1}/\n${pageImages}`;
+    page.mediaAssets.forEach(img => {
+      if (img.fileName) {
+        allImages.push(`│   │   ├── ${img.fileName}`);
+      }
+    });
+  }
+
+  // content.images에서 이미지 수집
+  if (page.content && page.content.images && page.content.images.length > 0) {
+    page.content.images.forEach(img => {
+      const fileName = img.filename || img.fileName;
+      if (fileName && !allImages.some(existingImg => existingImg.includes(fileName))) {
+        allImages.push(`│   │   ├── ${fileName}`);
+      }
+    });
+  }
+
+  if (allImages.length > 0) {
+    return `│   ├── page${pageIndex + 1}/\n${allImages.join('\n')}`;
   }
   return `│   ├── page${pageIndex + 1}/    # 이미지 없음 (HTML/CSS 기반)`;
 }).join('\n') : '│   └── (이미지 폴더는 실제 이미지가 있는 페이지만 생성)'}
@@ -268,50 +285,78 @@ ${step3Result ? step3Result.pages.map((page, pageIndex) => {
     return sections.join('\n\n');
   };
 
-  // 페이지별 상세 명세 생성 (Step3 fullDescription 중심으로 변경)
+  // 페이지별 상세 명세 생성 (사용자 양식 기반으로 변경)
   const generatePageByPageSpecification = (): string => {
     if (!step3Result) return '';
+
+    const isEnhanced = projectData.contentMode === 'enhanced';
 
     const pageSpecs = projectData.pages.map((page, index) => {
       const step3Page = step3Result.pages[index];
       const step4Page = step4Result?.pages?.find(p => p.pageNumber === page.pageNumber);
 
-      return `## 📄 Page ${index + 1}: ${page.topic}
+      if (isEnhanced) {
+        // AI 보강 모드 - 상세한 설명과 구현 가이드 제공
+        return `## 페이지 ${index + 1}: ${page.topic}
 
-### 📝 페이지 정보
-- **파일명**: \`page${index + 1}.html\`
-- **주제**: ${page.topic}
-- **설명**: ${page.description || '설명 없음'}
-- **학습 목표**: ${step3Page?.learningObjectives?.join(', ') || '기본 학습 목표'}
+### 1. 페이지 구성 및 내용
+\`\`\`
+${step3Page?.fullDescription ? step3Page.fullDescription : `
+${page.topic}에 대한 기본 교육 내용을 다룹니다.
+- 주제: ${page.topic}
+- 설명: ${page.description || '페이지 설명'}
+- 학습 목표: ${step3Page?.learningObjectives?.join(', ') || '기본 학습 목표'}
 
-### 🎨 창의적 레이아웃 설계 (Step3 AI 설계 기반)
-${step3Page?.fullDescription ? `
-**AI 디자이너의 창의적 레이아웃 설명:**
+이 페이지는 학습자가 ${page.topic}에 대해 체계적으로 이해할 수 있도록 구성되어야 합니다.
+정보의 우선순위에 따른 시각적 계층을 명확히 구성하고,
+텍스트는 본문 최소 18pt 이상, 제목은 28–56pt 범위로 설정해 가독성을 확보합니다.
 
-${step3Page.fullDescription}
+[구체적인 레이아웃 설명]
+- 캔버스: 너비 1600px 고정, 높이 가변(세로 스크롤)
+- 좌우 여백(Safe Area): 120px(좌), 120px(우) — 콘텐츠 최대 폭 1360px
+- 컬러: Primary, Secondary, Accent 색상을 활용한 조화로운 배색
+- 폰트 크기: 모든 텍스트 18pt 이상 준수
+- 라운딩/그림자: 부드럽고 가벼운 느낌의 카드 컴포넌트
 
-**구현 지침:**
-- 위 설명을 바탕으로 HTML 구조와 CSS 스타일을 작성하세요
-- 모든 시각적 요소와 배치 방식을 충실히 구현하세요
-- 설명된 색상, 타이포그래피, 레이아웃을 정확히 반영하세요
-` : '기본 교육 레이아웃을 구현하세요'}
+섹션별 구성:
+1. 상단 브랜드/제목 영역
+2. 메인 콘텐츠 영역 - 핵심 학습 내용
+3. 인터랙티브 요소 영역 - 학습 활동
+4. 정리/마무리 영역
 
-### 🖼️ 이미지 명세 (정확한 크기와 위치 정보)
+접근성 및 가독성:
+- 최소 폰트 크기 준수: 본문 19–20pt, 설명/캡션 18–19pt, 제목 28–56pt
+- 대비: 본문 텍스트와 배경 대비비 4.5:1 이상 유지
+- 줄 길이: 본문 60–80자 폭 유지
+- 라인하이트: 본문 1.5, 제목 1.2
+`}
+\`\`\`
+
+### 2. 페이지에 사용될 이미지
 ${generateImageSpecification(step3Page, step4Page, index)}
 
-### ⚡ 상호작용 및 애니메이션 명세
-${generateInteractionAndAnimationSpecification(step4Page)}
+### 3. 애니메이션 및 상호작용
+${generateInteractionAndAnimationSpecification(step4Page)}`;
+      } else {
+        // 원본 유지 모드 - 간결한 구성
+        return `## 페이지 ${index + 1}: ${page.topic}
 
----`;
+### 1. 페이지 구성 및 내용
+\`\`\`
+- 제목: ${page.topic}
+- 내용: ${page.description || '기본 설명'}
+${step3Page?.learningObjectives ? `- 학습 목표: ${step3Page.learningObjectives.join(', ')}` : ''}
+\`\`\`
+
+### 2. 페이지에 사용될 이미지
+${generateImageSpecification(step3Page, step4Page, index)}
+
+### 3. 애니메이션 및 상호작용
+${generateInteractionAndAnimationSpecification(step4Page)}`;
+      }
     });
 
-    return `## 🏗️ 페이지별 창의적 설계 명세
-
-### ⚠️ 핵심 구현 방식 변경
-- **Step3 AI 설계 중심**: 각 페이지의 fullDescription을 바탕으로 창의적 레이아웃 구현
-- **자유로운 HTML/CSS**: 구조화된 컴포넌트가 아닌 창의적 설계 설명 기반
-- **개별 HTML 파일**: 각 페이지를 page1.html, page2.html... 형태로 분리
-- **완전 독립적 동작**: 페이지 간 네비게이션 절대 금지
+    return `## 4. 페이지별 상세 구현 가이드
 
 ${pageSpecs.join('\n\n')}`;
   };
@@ -319,39 +364,82 @@ ${pageSpecs.join('\n\n')}`;
   // 더 이상 사용하지 않는 구조화된 컴포넌트 함수들
   // Step3의 fullDescription 중심으로 변경되어 이 함수들은 간소화됨
 
-  // 이미지 배치 명세 생성 (Step3 mediaAssets 기반)
+  // 이미지 배치 명세 생성 (Step3 이미지 데이터 기반)
   const generateImageSpecification = (step3Page: any, step4Page: any, pageIndex: number): string => {
-    if (!step3Page?.mediaAssets || step3Page.mediaAssets.length === 0) {
+    const imageSpecs: string[] = [];
+
+    // mediaAssets 먼저 확인
+    if (step3Page?.mediaAssets && step3Page.mediaAssets.length > 0) {
+      step3Page.mediaAssets.forEach((img: any, imgIndex: number) => {
+        let spec = `**${imgIndex + 1}. ${img.fileName}**`;
+
+        spec += `
+   - **파일 경로**: \`${img.path || `./images/page${pageIndex + 1}/${img.fileName}`}\`
+   - **크기**: ${img.sizeGuide || '600x400px'}
+   - **배치 위치**: ${img.placement?.position || '메인 영역'}
+   - **용도**: ${img.purpose || '교육용 이미지'}
+   - **설명**: ${img.description || '교육 콘텐츠 시각화'}
+   - **접근성**: ${img.accessibility?.altText || img.alt || '교육용 이미지'}`;
+
+        if (img.aiPrompt) {
+          spec += `
+   - **AI 생성 프롬프트**: ${img.aiPrompt}`;
+        }
+
+        // 플레이스홀더 구현 지침 추가
+        const sizeGuide = img.sizeGuide || '600x400';
+        const dimensions = sizeGuide.match(/(\d+)[×x](\d+)/);
+        if (dimensions) {
+          const width = dimensions[1];
+          const height = dimensions[2];
+          spec += `
+   - **플레이스홀더**: \`https://via.placeholder.com/${width}x${height}/cccccc/666666?text=${encodeURIComponent((img.fileName || 'image').replace('.png', ''))}\``;
+        }
+
+        imageSpecs.push(spec);
+      });
+    }
+
+    // content.images도 확인
+    if (step3Page?.content && step3Page.content.images && step3Page.content.images.length > 0) {
+      step3Page.content.images.forEach((img: any, imgIndex: number) => {
+        // 이미 mediaAssets에서 처리된 이미지인지 확인
+        const alreadyProcessed = step3Page.mediaAssets && step3Page.mediaAssets.some((ma: any) =>
+          ma.fileName === img.filename || ma.fileName === img.fileName
+        );
+
+        if (!alreadyProcessed) {
+          let spec = `**${imageSpecs.length + 1}. ${img.filename || img.fileName}**`;
+
+          spec += `
+   - **파일 경로**: \`./images/page${pageIndex + 1}/${img.filename || img.fileName}\`
+   - **크기**: ${img.width && img.height ? `${img.width}x${img.height}px` : '600x400px'}
+   - **배치 위치**: ${img.placement || img.section || '메인 영역'}
+   - **용도**: ${img.purpose || '교육용 이미지'}
+   - **설명**: ${img.alt || img.description || '교육 콘텐츠 시각화'}
+   - **접근성**: ${img.alt || '교육용 이미지'}`;
+
+          if (img.aiPrompt) {
+            spec += `
+   - **AI 생성 프롬프트**: ${img.aiPrompt}`;
+          }
+
+          // 플레이스홀더 구현 지침 추가
+          const width = img.width || 600;
+          const height = img.height || 400;
+          spec += `
+   - **플레이스홀더**: \`https://via.placeholder.com/${width}x${height}/cccccc/666666?text=${encodeURIComponent((img.filename || img.fileName || 'image').replace('.png', ''))}\``;
+
+          imageSpecs.push(spec);
+        }
+      });
+    }
+
+    if (imageSpecs.length === 0) {
       return '이미지가 없습니다.';
     }
 
-    return step3Page.mediaAssets.map((img: any, imgIndex: number) => {
-      let spec = `**${imgIndex + 1}. ${img.fileName}**`;
-
-      spec += `
-   - **파일 경로**: \`${img.path}\`
-   - **크기**: ${img.sizeGuide}
-   - **배치 위치**: ${img.placement?.position || '메인 영역'}
-   - **용도**: ${img.purpose}
-   - **설명**: ${img.description}
-   - **접근성**: ${img.accessibility?.altText}`;
-
-      if (img.aiPrompt) {
-        spec += `
-   - **AI 생성 프롬프트**: ${img.aiPrompt}`;
-      }
-
-      // 플레이스홀더 구현 지침 추가
-      const dimensions = img.sizeGuide.match(/(\d+)[×x](\d+)/);
-      if (dimensions) {
-        const width = dimensions[1];
-        const height = dimensions[2];
-        spec += `
-   - **플레이스홀더**: \`https://via.placeholder.com/${width}x${height}/cccccc/666666?text=${encodeURIComponent(img.fileName.replace('.png', ''))}\``;
-      }
-
-      return spec;
-    }).join('\n\n');
+    return imageSpecs.join('\n\n');
   };
 
   // 새로운 상호작용 및 애니메이션 명세 생성 (Step4 텍스트 기반)
@@ -479,156 +567,304 @@ ${step4Page.interactionDescription}
     }
   };
 
-  // CSS 스타일 명세 생성
-  const generateCSSSpecification = (): string => {
-    return `## 🎨 CSS 스타일 명세
+  // 핵심 개발 요구사항 생성 (4가지 조합별)
+  const generateCoreRequirements = (isScrollable: boolean, isEnhanced: boolean): string => {
+    if (isScrollable && isEnhanced) {
+      // 스크롤 가능 + AI 보강 모드
+      return `## 3. 핵심 개발 요구사항
 
-### 🔴 최소 폰트 크기 규칙 (매우 중요!) 🔴
-**모든 텍스트는 최소 18pt(24px) 이상 필수**
-- 본문: 18-20pt (24-27px)
-- 부제목: 22-24pt (29-32px)
-- 제목: 28-36pt (37-48px)
-- 작은 주석이나 캡션도 최소 18pt 유지
-- **가독성을 위해 절대 18pt 미만 사용 금지**
+### :scroll: 스크롤 가능 레이아웃 규칙
+**콘텐츠 우선 접근으로 자연스러운 흐름을 만듭니다.**
 
-### 🚫 페이지 독립성 규칙 (절대 위반 금지!) 🚫
-- **네비게이션 요소 완전 금지**: 다음/이전 버튼, 페이지 번호, 진행률 표시 등 절대 금지
-- **페이지 간 링크 금지**: 다른 HTML 파일로의 링크나 참조 절대 금지
-- **각 페이지는 완전히 독립적**: 다른 페이지의 존재를 암시하는 요소 금지
-- **페이지 표시 금지**: "1/5", "페이지 1", "다음으로" 같은 표현 절대 사용 금지
+1.  **가로 고정, 세로 유연**
+    *   가로: 1600px 고정
+    *   세로: 콘텐츠 양에 따라 자유롭게 확장
+    *   \`overflow-x: hidden; overflow-y: auto;\` 적용
+    *   최소 높이 1000px 유지
 
-${projectData.layoutMode === 'fixed' ? `### ⛔ 스크롤 절대 금지 규칙 (Fixed 레이아웃)
+2.  **콘텐츠 우선 배치**
+    *   콘텐츠의 자연스러운 흐름 유지
+    *   적절한 여백으로 가독성 확보
+    *   섹션 간 충분한 간격 유지
+    *   길이 제한 없이 완전한 정보 전달
+
+3.  **반응형 요소 설계**
+    *   이미지는 최대 너비 제한 (max-width: 100%)
+    *   긴 콘텐츠는 섹션별로 구분
+    *   스크롤 진행에 따른 애니메이션 고려 가능
+
+4.  **:red_circle: 최소 폰트 크기 규칙 (매우 중요!) :red_circle:**
+    *   **모든 텍스트는 최소 18pt(24px) 이상**
+    *   본문: 18-20pt (24-27px)
+    *   부제목: 22-24pt (29-32px)
+    *   제목: 28-36pt (37-48px)
+    *   작은 주석이나 캡션도 최소 18pt 유지
+    *   **가독성을 위해 절대 18pt 미만 사용 금지**
+
+5.  **:no_entry_sign: 페이지 독립성 규칙 (절대 위반 금지!) :no_entry_sign:**
+    *   **네비게이션 요소 완전 금지**: 다음/이전 버튼, 페이지 번호, 진행률 표시 등 절대 금지
+    *   **페이지 간 링크 금지**: 다른 HTML 파일로의 링크나 참조 절대 금지
+    *   **각 페이지는 완전히 독립적**: 다른 페이지의 존재를 암시하는 요소 금지
+    *   **페이지 표시 금지**: "1/5", "페이지 1", "다음으로" 같은 표현 절대 사용 금지
+
+### :hammer_and_wrench: 기술적 개발 규칙
+1.  **프로젝트 폴더 구조**: 다음과 같은 체계적인 폴더 구조로 결과물을 구성해주세요.
+    *   \`/\` (root)
+        *   \`page1.html\`, \`page2.html\`, ...
+        *   \`css/\`
+            *   \`style.css\` (폰트, 색상 등 모든 공통 스타일)
+        *   \`js/\`
+            *   \`script.js\` (모든 상호작용 관련 JavaScript)
+        *   \`images/\`
+            *   \`page1/\`
+                *   \`1.png\`
+            *   \`README.md\`
+2.  **하이브리드 스타일링**:
+    *   **공통 스타일**: \`css/style.css\`에는 폰트, 색상 변수, 공통 버튼 스타일 등 프로젝트 전반에 사용될 스타일을 정의하세요.
+    *   **페이지 전용 스타일**: 각 HTML 파일의 \`<head>\` 안에 \`<style>\` 태그를 사용하여, 해당 페이지에만 적용되는 복잡하고 창의적인 레이아웃(Grid, Flexbox 등)을 자유롭게 작성하세요. 이를 통해 각 페이지의 디자인 품질을 극대화하세요.
+3.  **완전히 독립된 페이지**: 각 페이지는 그 자체로 완결된 하나의 독립적인 웹페이지입니다. **절대로** 다른 페이지로 이동하는 링크, '다음'/'이전' 버튼, 메뉴, 또는 외부 사이트로 나가는 하이퍼링크를 포함해서는 안 됩니다.
+4.  **이미지 관리**:
+    *   **경로**: 이미지는 반드시 페이지별 하위 폴더에 저장하고, HTML에서는 \`<img src="./images/page1/1.png">\` 와 같은 상대 경로를 사용해야 합니다.
+    *   **파일명 규칙**: 각 페이지별로 \`1.png\`, \`2.png\` 형태로 순차적으로 번호를 부여합니다"
+
+### :sparkles: 디자인 및 애니메이션 가이드라인
+1.  **디자인 시스템 준수**: 아래에 정의된 '디자인 시스템'의 색상, 타이포그래피, 스타일 가이드를 모든 페이지에서 일관되게 적용해주세요.
+2.  **이미지 사용 최소화**: 학습 내용에 필수적인 이미지만 사용하세요. 의미 없는 장식용 이미지는 피하고, 여백과 타이포그래피를 활용해 디자인을 완성하세요.
+3.  **애니메이션**:
+    *   **방향성**: 모든 애니메이션은 학습자의 시선 흐름을 자연스럽게 유도해야 합니다. (예: 왼쪽에서 오른쪽으로, 위에서 아래로)
+    *   **자연스러움**: \`transition: all 0.5s ease-in-out;\` 과 같이 부드러운 \`ease\` 함수를 사용하세요. 너무 빠르거나 갑작스러운 움직임은 피해주세요.`;
+    } else if (isScrollable && !isEnhanced) {
+      // 스크롤 가능 + 원본 유지 모드
+      return `## 3. 핵심 개발 요구사항
+
+### :scroll: 스크롤 가능 레이아웃 규칙
+**콘텐츠 우선 접근으로 자연스러운 흐름을 만듭니다.**
+
+1.  **가로 고정, 세로 유연**
+    *   가로: 1600px 고정
+    *   세로: 콘텐츠 양에 따라 자유롭게 확장
+    *   \`overflow-x: hidden; overflow-y: auto;\` 적용
+    *   최소 높이 1000px 유지
+
+2.  **:red_circle: 최소 폰트 크기 규칙 (매우 중요!) :red_circle:**
+    *   **모든 텍스트는 최소 18pt(24px) 이상**
+    *   본문: 18-20pt (24-27px)
+    *   부제목: 22-24pt (29-32px)
+    *   제목: 28-36pt (37-48px)
+    *   작은 주석이나 캡션도 최소 18pt 유지
+    *   **가독성을 위해 절대 18pt 미만 사용 금지**
+
+3.  **:no_entry_sign: 페이지 독립성 규칙 (절대 위반 금지!) :no_entry_sign:**
+    *   **네비게이션 요소 완전 금지**: 다음/이전 버튼, 페이지 번호, 진행률 표시 등 절대 금지
+    *   **페이지 간 링크 금지**: 다른 HTML 파일로의 링크나 참조 절대 금지
+    *   **각 페이지는 완전히 독립적**: 다른 페이지의 존재를 암시하는 요소 금지
+    *   **페이지 표시 금지**: "1/5", "페이지 1", "다음으로" 같은 표현 절대 사용 금지
+
+### :hammer_and_wrench: 기술적 개발 규칙
+**간결하고 효율적인 구현을 우선시합니다.**`;
+    } else if (!isScrollable && isEnhanced) {
+      // 고정 크기 + AI 보강 모드
+      return `## 3. 핵심 개발 요구사항
+
+### :triangular_ruler: 고정 크기 레이아웃 규칙 + AI 창의적 확장
+**1600x1000px 고정 크기 내에서 AI가 창의적으로 콘텐츠를 확장합니다.**
+
+1.  **:no_entry: 스크롤 절대 금지 규칙**
+    *   \`overflow: hidden !important;\` 필수 적용
+    *   절대로 \`overflow: auto\`, \`overflow: scroll\`, \`overflow-y: auto\` 사용 금지
+    *   모든 콘텐츠는 1600x1000px 안에 완벽히 수납되어야 함
+
+2.  **콘텐츠 양 조절 필수**
+    *   AI가 확장한 텍스트가 길면 요약하고 핵심만 유지
+    *   이미지 크기를 조절하라
+    *   여백과 패딩을 최적화하라
+    *   **절대로 스크롤로 해결하려 하지 마라**
+
+3.  **:red_circle: 최소 폰트 크기 규칙 (매우 중요!) :red_circle:**
+    *   **모든 텍스트는 최소 18pt(24px) 이상**
+    *   본문: 18-20pt (24-27px)
+    *   부제목: 22-24pt (29-32px)
+    *   제목: 28-36pt (37-48px)
+    *   작은 주석이나 캡션도 최소 18pt 유지
+    *   **가독성을 위해 절대 18pt 미만 사용 금지**
+
+4.  **:no_entry_sign: 페이지 독립성 규칙 (절대 위반 금지!) :no_entry_sign:**
+    *   **네비게이션 요소 완전 금지**: 다음/이전 버튼, 페이지 번호, 진행률 표시 등 절대 금지
+    *   **페이지 간 링크 금지**: 다른 HTML 파일로의 링크나 참조 절대 금지
+    *   **각 페이지는 완전히 독립적**: 다른 페이지의 존재를 암시하는 요소 금지
+    *   **페이지 표시 금지**: "1/5", "페이지 1", "다음으로" 같은 표현 절대 사용 금지
+
+### :hammer_and_wrench: 기술적 개발 규칙
+**크기 제한을 엄격히 준수하면서도 창의적인 확장을 수행합니다.**`;
+    } else {
+      // 고정 크기 + 원본 유지 모드
+      return `## 3. 핵심 개발 요구사항
+
+### :no_entry: 스크롤 절대 금지 규칙
 **이것은 가장 중요한 규칙입니다. 어떤 경우에도 타협 불가!**
 
-1. **컨테이너 내부 스크롤 완전 금지**
-   - \`overflow: hidden !important;\` 필수 적용
-   - 절대로 \`overflow: auto\`, \`overflow: scroll\`, \`overflow-y: auto\` 사용 금지
-   - 모든 콘텐츠는 1600x1000px 안에 완벽히 수납되어야 함
+1.  **컨테이너 내부 스크롤 완전 금지**
+    *   \`overflow: hidden !important;\` 필수 적용
+    *   절대로 \`overflow: auto\`, \`overflow: scroll\`, \`overflow-y: auto\` 사용 금지
+    *   모든 콘텐츠는 1600x1000px 안에 완벽히 수납되어야 함
 
-2. **콘텐츠 양 조절 필수**
-   - 텍스트가 길면 줄이고 요약하라
-   - 이미지 크기를 조절하라
-   - 여백과 패딩을 최적화하라
-   - **절대로 스크롤로 해결하려 하지 마라**
+2.  **콘텐츠 양 조절 필수**
+    *   텍스트가 길면 줄이고 요약하라
+    *   이미지 크기를 조절하라
+    *   여백과 패딩을 최적화하라
+    *   **절대로 스크롤로 해결하려 하지 마라**
 
-3. **레이아웃 최적화**
-   - 모든 요소의 높이를 계산하여 1000px를 초과하지 않도록 조정
-   - padding은 컨테이너 크기 내에서 계산 (box-sizing: border-box 필수)
-   - 콘텐츠가 많으면 그리드나 컬럼을 활용하여 가로로 배치
+3.  **레이아웃 최적화**
+    *   모든 요소의 높이를 계산하여 1000px를 초과하지 않도록 조정
+    *   padding은 컨테이너 크기 내에서 계산 (box-sizing: border-box 필수)
+    *   콘텐츠가 많으면 그리드나 컬럼을 활용하여 가로로 배치
 
-` : ''}`;
+4.  **:red_circle: 최소 폰트 크기 규칙 (매우 중요!) :red_circle:**
+    *   **모든 텍스트는 최소 18pt(24px) 이상**
+    *   본문: 18-20pt (24-27px)
+    *   부제목: 22-24pt (29-32px)
+    *   제목: 28-36pt (37-48px)
+    *   작은 주석이나 캡션도 최소 18pt 유지
+    *   **가독성을 위해 절대 18pt 미만 사용 금지**
+
+5.  **:no_entry_sign: 페이지 독립성 규칙 (절대 위반 금지!) :no_entry_sign:**
+    *   **네비게이션 요소 완전 금지**: 다음/이전 버튼, 페이지 번호, 진행률 표시 등 절대 금지
+    *   **페이지 간 링크 금지**: 다른 HTML 파일로의 링크나 참조 절대 금지
+    *   **각 페이지는 완전히 독립적**: 다른 페이지의 존재를 암시하는 요소 금지
+    *   **페이지 표시 금지**: "1/5", "페이지 1", "다음으로" 같은 표현 절대 사용 금지
+
+### :hammer_and_wrench: 기술적 개발 규칙
+**간결하고 효율적인 구현을 우선시합니다.**`;
+    }
   };
 
-  // JavaScript 상호작용 명세 생성
-  const generateJavaScriptSpecification = (): string => {
-    // Step4의 상세한 애니메이션/상호작용 설명들을 수집
-    const step4AnimationDescriptions: string[] = [];
-    const step4InteractionDescriptions: string[] = [];
+  // 콘텐츠 생성 규칙 생성 (enhanced vs restricted)
+  const generateContentRules = (isEnhanced: boolean): string => {
+    if (isEnhanced) {
+      return `## 4. 콘텐츠 생성 규칙
 
-    if (step4Result?.pages) {
-      step4Result.pages.forEach(page => {
-        if (page.animationDescription) {
-          step4AnimationDescriptions.push(page.animationDescription);
-        }
-        if (page.interactionDescription) {
-          step4InteractionDescriptions.push(page.interactionDescription);
-        }
-      });
+### :pushpin: 콘텐츠 생성 규칙
+
+- **AI 보강 모드 활성화**: 내용을 창의적으로 확장하고 보강
+- **학습 효과 극대화**: 추가 설명, 예시, 시각 자료 적극 활용
+- **풍부한 콘텐츠**: 학습자의 이해를 돕는 다양한 요소 추가
+- **창의적 표현**: 교육적 가치를 높이는 콘텐츠 생성`;
+    } else {
+      return `## 4. 콘텐츠 생성 규칙
+
+### :pushpin: 콘텐츠 생성 규칙
+
+- **원본 유지 모드 활성화**: 사용자가 입력한 내용만을 정확히 사용
+- **추가 내용 생성 금지**: AI의 창의적 확장이나 보강 금지
+- **레이아웃 중심**: 주어진 내용을 효과적으로 배치하는 것에 집중
+- **시각적 표현 최적화**: 제한된 내용으로도 효과적인 학습 경험 제공`;
     }
-
-    let jsSpec = `## ⚡ JavaScript 상호작용 명세
-
-### ⚠️ 중요 지침
-각 HTML 파일은 독립적으로 작동해야 하며, 페이지 간 네비게이션 기능은 절대 구현하지 마세요.
-
-`;
-
-    // Step4 애니메이션 설명이 있으면 활용
-    if (step4AnimationDescriptions.length > 0) {
-      jsSpec += `### 🎬 Step4 애니메이션 설계 반영
-
-**다음 Step4 애니메이션 설계를 JavaScript와 CSS로 구현하세요:**
-
-${step4AnimationDescriptions.map((desc, idx) => `**페이지 ${idx + 1} 애니메이션:**
-${desc}`).join('\n\n')}
-
-`;
-    }
-
-    // Step4 상호작용 설명이 있으면 활용
-    if (step4InteractionDescriptions.length > 0) {
-      jsSpec += `### ⚡ Step4 상호작용 설계 반영
-
-**다음 Step4 상호작용 설계를 JavaScript 이벤트 핸들러로 구현하세요:**
-
-${step4InteractionDescriptions.map((desc, idx) => `**페이지 ${idx + 1} 상호작용:**
-${desc}`).join('\n\n')}
-
-`;
-    }
-
-    // Step4 설계 구현 체크리스트 추가
-    jsSpec += `
-
-### 📋 Step4 설계 구현 체크리스트
-
-${step4AnimationDescriptions.length > 0 ? '✅ Step4 애니메이션 설계를 JavaScript/CSS로 정확히 구현' : '⚠️ Step4 애니메이션 설계가 없으므로 기본 애니메이션 구현'}
-${step4InteractionDescriptions.length > 0 ? '✅ Step4 상호작용 설계를 이벤트 핸들러로 정확히 구현' : '⚠️ Step4 상호작용 설계가 없으므로 기본 상호작용 구현'}
-✅ 접근성 기능 (키보드 네비게이션, reduced-motion) 구현
-✅ 성능 최적화 (transform/opacity 기반 애니메이션)
-✅ 각 페이지의 독립적 동작 보장
-❌ 페이지 간 네비게이션 기능 구현 금지`;
-
-    return jsSpec;
   };
 
-  // 이미지 프롬프트 섹션 생성 (Step3 mediaAssets 기반)
+  // CSS 스타일 명세 생성 (간소화 버전)
+  const generateCSSSpecification = (): string => {
+    return `## 5. CSS 및 JavaScript 구현 가이드
+
+### CSS 구현 지침
+- **공통 스타일 파일**: css/style.css에 색상 변수, 폰트, 공통 컴포넌트 스타일 정의
+- **페이지별 스타일**: 각 HTML 파일의 <head> 내 <style> 태그에 고유 레이아웃 구현
+- **디자인 시스템 준수**: 위에 정의된 색상 팔레트와 타이포그래피 시스템 일관 적용
+- **반응형 요소**: 이미지는 max-width: 100%, 적절한 여백과 간격 유지
+
+### JavaScript 구현 지침
+- **상호작용 스크립트**: js/script.js에 모든 페이지 공통 기능 구현
+- **페이지별 기능**: 필요시 각 HTML 파일에 페이지 전용 스크립트 추가
+- **접근성 고려**: 키보드 네비게이션, prefers-reduced-motion 지원
+- **성능 최적화**: transform/opacity 기반 애니메이션, 부드러운 전환 효과`;
+  };
+
+
+  // 이미지 프롬프트 섹션 생성 (Step3 이미지 데이터 기반)
   const generateImagePromptSection = (): string => {
     if (!step3Result) return '';
 
     const imagePrompts: string[] = [];
 
     step3Result.pages.forEach((page, pageIndex) => {
+      // mediaAssets 먼저 확인
       if (page.mediaAssets && page.mediaAssets.length > 0) {
         page.mediaAssets.forEach((image, imageIndex) => {
           imagePrompts.push(`### 이미지 ${pageIndex + 1}-${imageIndex + 1}: ${image.fileName}
 
 **AI 생성 프롬프트:**
-${image.aiPrompt}
+${image.aiPrompt || '기본 이미지 생성 프롬프트'}
 
 **디자인 가이드라인:**
 - 무드: ${visualIdentity.moodAndTone.join(', ')}
 - 색상 팔레트: 주색상 ${visualIdentity.colorPalette.primary}, 보조색상 ${visualIdentity.colorPalette.secondary}, 강조색상 ${visualIdentity.colorPalette.accent}
 - 배경색: ${visualIdentity.colorPalette.background}
 - 텍스트색: ${visualIdentity.colorPalette.text}
-- 용도: ${image.purpose}
-- 설명: ${image.description}
+- 용도: ${image.purpose || '교육용 이미지'}
+- 설명: ${image.description || '교육 콘텐츠 시각화'}
 - 교육 대상: ${projectData.targetAudience}
-- 해상도: ${image.sizeGuide}
-- 접근성: ${image.accessibility?.altText}
-- 교육적 목적: ${image.category} - 명확하고 이해하기 쉬운 시각적 표현
+- 해상도: ${image.sizeGuide || '600x400px'}
+- 접근성: ${image.accessibility?.altText || image.alt || '교육용 이미지'}
+- 교육적 목적: ${image.category || '시각적 학습 보조'} - 명확하고 이해하기 쉬운 시각적 표현
 
 **파일 정보:**
-- 저장 경로: ${image.path}
+- 저장 경로: ${image.path || `./images/page${pageIndex + 1}/${image.fileName}`}
 - 플레이스홀더: ${(() => {
-  const dimensions = image.sizeGuide.match(/(\d+)[×x](\d+)/);
+  const sizeGuide = image.sizeGuide || '600x400';
+  const dimensions = sizeGuide.match(/(\d+)[×x](\d+)/);
   if (dimensions) {
-    return `https://via.placeholder.com/${dimensions[1]}x${dimensions[2]}/cccccc/666666?text=${encodeURIComponent(image.fileName.replace('.png', ''))}`;
+    return `https://via.placeholder.com/${dimensions[1]}x${dimensions[2]}/cccccc/666666?text=${encodeURIComponent((image.fileName || 'image').replace('.png', ''))}`;
   }
-  return '600x400px 기본 크기';
+  return 'https://via.placeholder.com/600x400/cccccc/666666?text=Image';
 })()}`);
+        });
+      }
+
+      // content.images도 확인 (Step3에서 다른 구조로 저장될 수 있음)
+      if (page.content && page.content.images && page.content.images.length > 0) {
+        page.content.images.forEach((image, imageIndex) => {
+          // 이미 mediaAssets에서 처리된 이미지인지 확인
+          const alreadyProcessed = page.mediaAssets && page.mediaAssets.some(ma =>
+            ma.fileName === image.filename || ma.fileName === image.fileName
+          );
+
+          if (!alreadyProcessed) {
+            imagePrompts.push(`### 이미지 ${pageIndex + 1}-${imageIndex + 1}: ${image.filename || image.fileName}
+
+**AI 생성 프롬프트:**
+${image.aiPrompt || `${projectData.targetAudience}를 위한 ${image.purpose || '교육용'} 이미지. ${image.alt || image.description || '학습 내용을 시각적으로 표현'}. 밝고 친근한 스타일로 제작.`}
+
+**디자인 가이드라인:**
+- 무드: ${visualIdentity.moodAndTone.join(', ')}
+- 색상 팔레트: 주색상 ${visualIdentity.colorPalette.primary}, 보조색상 ${visualIdentity.colorPalette.secondary}, 강조색상 ${visualIdentity.colorPalette.accent}
+- 배경색: ${visualIdentity.colorPalette.background}
+- 텍스트색: ${visualIdentity.colorPalette.text}
+- 용도: ${image.purpose || '교육용 이미지'}
+- 설명: ${image.alt || image.description || '교육 콘텐츠 시각화'}
+- 교육 대상: ${projectData.targetAudience}
+- 해상도: ${image.width && image.height ? `${image.width}x${image.height}px` : '600x400px'}
+- 접근성: ${image.alt || '교육용 이미지'}
+- 교육적 목적: 시각적 학습 보조 - 명확하고 이해하기 쉬운 시각적 표현
+
+**파일 정보:**
+- 저장 경로: ./images/page${pageIndex + 1}/${image.filename || image.fileName}
+- 플레이스홀더: ${(() => {
+  const width = image.width || 600;
+  const height = image.height || 400;
+  return `https://via.placeholder.com/${width}x${height}/cccccc/666666?text=${encodeURIComponent((image.filename || image.fileName || 'image').replace('.png', ''))}`;
+})()}`);
+          }
         });
       }
     });
 
     if (imagePrompts.length === 0) {
-      return `## 🖼️ 이미지 생성 명세서
+      return `## 6. 이미지 생성 명세서
 
 이 프로젝트는 HTML/CSS 기반 시각화로 설계되어 별도의 이미지가 필요하지 않습니다.
 모든 시각적 요소는 CSS로 구현되도록 설계되었습니다.`;
     }
 
-    return `## 🖼️ 이미지 생성 명세서
+    return `## 6. 이미지 생성 명세서
 
 아래의 이미지들을 AI 이미지 생성 도구(DALL-E, Midjourney, Stable Diffusion 등)를 사용하여 생성하고,
 지정된 경로에 저장한 후 HTML에서 참조하세요.

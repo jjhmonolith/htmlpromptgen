@@ -244,6 +244,8 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
   const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false);
   const [selectedPageIndex, setSelectedPageIndex] = useState(0);
   const [debugMode, setDebugMode] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   const lastStep3HashRef = useRef<string>('');
 
@@ -303,6 +305,18 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
     }
   }, [shouldAutoGenerate, isGenerating, apiKey]);
 
+  // AI 편집자 페르소나 기반 로딩 메시지와 진행률 (2분 소요시간에 맞춤)
+  const editorMessages = [
+    { progress: 8, message: "📚 참고 자료를 정리하고 목차를 구상하고 있어요..." },
+    { progress: 18, message: "✏️ 교육 목표에 맞는 핵심 내용을 선별하고 있어요" },
+    { progress: 30, message: "📖 각 페이지의 구성과 흐름을 설계하고 있어요" },
+    { progress: 45, message: "🎯 학습자의 이해도를 높이는 구조를 만들고 있어요" },
+    { progress: 60, message: "📝 시각적 요소와 텍스트의 균형을 조정하고 있어요" },
+    { progress: 75, message: "🔍 내용의 정확성과 교육 효과를 검토하고 있어요" },
+    { progress: 88, message: "✨ 최종 편집과 퀄리티 체크를 진행하고 있어요" },
+    { progress: 95, message: "📋 완성된 교육 자료를 정리하고 마무리하고 있어요" }
+  ];
+
   const generateStep3Data = async () => {
     if (!apiKey || isGenerating) {
       if (!apiKey) {
@@ -314,8 +328,27 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
     try {
       setIsGenerating(true);
       setError(null);
+      setLoadingProgress(0);
+      setLoadingMessage(editorMessages[0].message);
 
       console.log('🎓 Step3: 교육 콘텐츠 설계 생성 시작');
+
+      // 진행률 애니메이션 시뮬레이션 (2분 소요시간에 맞춤)
+      let currentMessageIndex = 0;
+      const progressInterval = setInterval(() => {
+        if (currentMessageIndex < editorMessages.length) {
+          const targetProgress = editorMessages[currentMessageIndex].progress;
+          setLoadingProgress(prev => {
+            const increment = Math.random() * 3 + 1; // 1-4% 증가 (더 천천히)
+            const newProgress = Math.min(prev + increment, targetProgress);
+            if (newProgress >= targetProgress) {
+              setLoadingMessage(editorMessages[currentMessageIndex].message);
+              currentMessageIndex++;
+            }
+            return newProgress;
+          });
+        }
+      }, 800 + Math.random() * 400); // 800-1200ms 간격으로 더 천천히
 
       const openAIService = new OpenAIService();
       openAIService.initialize(apiKey);
@@ -324,11 +357,18 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
       const educationalResult = await educationalService.generateEducationalDesign(projectData, visualIdentity);
       const step3Result = convertEducationalDesignToStep3(educationalResult);
 
-      setStep3Data(step3Result);
-      setIsDataLoaded(true);
-      setShouldAutoGenerate(false);
+      // 완료 시 진행률을 100%로 맞추고 정리
+      clearInterval(progressInterval);
+      setLoadingProgress(100);
+      setLoadingMessage("🎉 완벽한 교육 콘텐츠 설계가 완성되었어요!");
 
-      console.log('✅ Step3: 교육 콘텐츠 설계 완료', step3Result);
+      // 잠시 완료 메시지를 보여주고 결과 표시
+      setTimeout(() => {
+        setStep3Data(step3Result);
+        setIsDataLoaded(true);
+        setShouldAutoGenerate(false);
+        console.log('✅ Step3: 교육 콘텐츠 설계 완료', step3Result);
+      }, 1000);
 
     } catch (error) {
       console.error('❌ Step3 생성 실패:', error);
@@ -397,14 +437,75 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
   // 초기 로딩 중일 때만 전체 화면 로딩 표시
   if (isInitialLoading) {
     return (
-      <div className="flex flex-col items-center justify-center p-12 space-y-4 bg-white rounded-lg shadow-sm border">
-        <div className="animate-spin w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
-        <h3 className="text-lg font-semibold text-gray-900">🎓 교육 콘텐츠 설계 중...</h3>
-        <p className="text-sm text-gray-600 text-center">
-          교육 효과를 극대화하는 구체적이고 실용적인 콘텐츠를 설계하고 있습니다.
-          <br />
-          개발자가 바로 구현할 수 있는 명확한 설계를 제공합니다.
-        </p>
+      <div className="flex flex-col" style={{ backgroundColor: '#f5f5f7', height: 'calc(100vh - 72px)', marginTop: '72px' }}>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="max-w-4xl mx-auto px-4 xl:px-8 2xl:px-12 py-8">
+            <div className="text-center">
+
+
+            {/* 제목과 부제목 */}
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">AI 편집자가 교육 자료를 만들고 있어요</h2>
+            <p className="text-lg text-gray-600 mb-12">전문적인 교육 콘텐츠 설계와 구성을 통해 최고의 학습 효과를 만들어내고 있어요</p>
+
+            {/* 진행률 바 */}
+            <div className="max-w-md mx-auto mb-8">
+              <div className="relative">
+                {/* 배경 바 */}
+                <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
+                  {/* 진행률 바 */}
+                  <div
+                    className="h-full rounded-full transition-all duration-700 ease-out"
+                    style={{
+                      width: `${loadingProgress}%`,
+                      background: 'linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                      boxShadow: '0 2px 15px rgba(102, 126, 234, 0.4)'
+                    }}
+                  >
+                    {/* 반짝이는 효과 */}
+                    <div className="h-full w-full relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-40 -skew-x-12 animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 퍼센테이지 표시 */}
+                <div className="text-center mt-4">
+                  <span className="text-2xl font-bold text-gray-800">{Math.round(loadingProgress)}%</span>
+                </div>
+              </div>
+            </div>
+
+            {/* 현재 작업 메시지 */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-lg mx-auto">
+              <p className="text-gray-700 text-lg leading-relaxed font-medium">
+                {loadingMessage}
+              </p>
+            </div>
+
+            {/* 예상 소요 시간 */}
+            <p className="text-sm text-gray-500 mt-6">
+              교육 자료 작성에는 보통 1-2분 정도 소요됩니다
+            </p>
+
+            {/* 작업 단계 표시 */}
+            <div className="mt-8 flex justify-center space-x-4 text-xs text-gray-400">
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 rounded-full bg-blue-400"></div>
+                <span>목차 구성</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 rounded-full bg-green-400"></div>
+                <span>콘텐츠 설계</span>
+              </div>
+              <div className="flex items-center space-x-1">
+                <div className="w-2 h-2 rounded-full bg-orange-400"></div>
+                <span>품질 검토</span>
+              </div>
+            </div>
+
+            </div>
+          </div>
+        </div>
       </div>
     );
   }

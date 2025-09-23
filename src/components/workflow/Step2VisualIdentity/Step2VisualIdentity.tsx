@@ -28,6 +28,8 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [shouldAutoGenerate, setShouldAutoGenerate] = useState(false);
+  const [loadingProgress, setLoadingProgress] = useState(0);
+  const [loadingMessage, setLoadingMessage] = useState('');
 
   // 생성 상태 변경을 부모로 전달
   useEffect(() => {
@@ -64,6 +66,16 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
     }
   }, [step2Data, isDataLoaded, onDataChange]);
 
+  // AI 화가 페르소나 기반 로딩 메시지와 진행률
+  const artistMessages = [
+    { progress: 15, message: "🎨 빈 캔버스 앞에서 영감을 받고 있어요..." },
+    { progress: 30, message: "🖌️ 프로젝트의 감성을 색깔로 번역하고 있어요" },
+    { progress: 50, message: "🎪 팔레트에 완벽한 색조합을 만들어가고 있어요" },
+    { progress: 70, message: "✨ 무드와 톤에 생명력을 불어넣고 있어요" },
+    { progress: 85, message: "🖼️ 마지막 터치로 완성도를 높이고 있어요" },
+    { progress: 95, message: "🌟 작품을 세심하게 다듬고 마무리하고 있어요" }
+  ];
+
   const handleGenerate = useCallback(async () => {
     if (!apiKey) {
       setError('API 키가 필요합니다.');
@@ -73,19 +85,45 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
     try {
       setIsGenerating(true);
       setError(null);
-      
+      setLoadingProgress(0);
+      setLoadingMessage(artistMessages[0].message);
+
       console.log('🎨 Step2: 비주얼 아이덴티티 생성 요청');
-      
+
+      // 진행률 애니메이션 시뮬레이션
+      let currentMessageIndex = 0;
+      const progressInterval = setInterval(() => {
+        if (currentMessageIndex < artistMessages.length) {
+          const targetProgress = artistMessages[currentMessageIndex].progress;
+          setLoadingProgress(prev => {
+            const newProgress = Math.min(prev + (Math.random() * 8 + 2), targetProgress);
+            if (newProgress >= targetProgress) {
+              setLoadingMessage(artistMessages[currentMessageIndex].message);
+              currentMessageIndex++;
+            }
+            return newProgress;
+          });
+        }
+      }, 300 + Math.random() * 200); // 300-500ms 간격으로 랜덤하게
+
       const openAIService = OpenAIService.getInstance();
       openAIService.initialize(apiKey);
       const step2Service = new Step2VisualIdentityService(openAIService);
-      
+
       const result = await step2Service.generateVisualIdentity(projectData);
-      
-      console.log('✅ Step2 생성 완료:', result);
-      setStep2Data(result);
-      setIsDataLoaded(true);
-      
+
+      // 완료 시 진행률을 100%로 맞추고 정리
+      clearInterval(progressInterval);
+      setLoadingProgress(100);
+      setLoadingMessage("🎉 완벽한 비주얼 아이덴티티가 완성되었어요!");
+
+      // 잠시 완료 메시지를 보여주고 결과 표시
+      setTimeout(() => {
+        console.log('✅ Step2 생성 완료:', result);
+        setStep2Data(result);
+        setIsDataLoaded(true);
+      }, 800);
+
     } catch (error) {
       console.error('❌ Step2 생성 실패:', error);
       setError(error instanceof Error ? error.message : '비주얼 아이덴티티 생성에 실패했습니다.');
@@ -115,17 +153,57 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
 
   if (isGenerating) {
     return (
-      <div className="min-h-screen" style={{ backgroundColor: '#f5f5f7' }}>
-        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 py-12">
-          <div className="text-center py-16">
-            <div className="inline-flex items-center justify-center w-16 h-16 mb-6 bg-blue-100 rounded-full">
-              <svg className="w-8 h-8 text-blue-600 animate-spin" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+      <div className="flex flex-col" style={{ backgroundColor: '#f5f5f7', height: 'calc(100vh - 72px)', marginTop: '72px' }}>
+        <div className="flex-1 flex items-center justify-center">
+          <div className="max-w-4xl mx-auto px-4 xl:px-8 2xl:px-12 py-8">
+            <div className="text-center">
+
+
+            {/* 제목과 부제목 */}
+            <h2 className="text-3xl font-bold text-gray-900 mb-3">AI 화가가 작업 중이에요</h2>
+            <p className="text-lg text-gray-600 mb-12">당신의 프로젝트를 위한 완벽한 비주얼 아이덴티티를 그려내고 있어요</p>
+
+            {/* 진행률 바 */}
+            <div className="max-w-md mx-auto mb-8">
+              <div className="relative">
+                {/* 배경 바 */}
+                <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden">
+                  {/* 진행률 바 */}
+                  <div
+                    className="h-full rounded-full transition-all duration-500 ease-out"
+                    style={{
+                      width: `${loadingProgress}%`,
+                      background: 'linear-gradient(90deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                      boxShadow: '0 2px 10px rgba(102, 126, 234, 0.3)'
+                    }}
+                  >
+                    {/* 반짝이는 효과 */}
+                    <div className="h-full w-full relative overflow-hidden">
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white to-transparent opacity-30 -skew-x-12 animate-pulse"></div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 퍼센테이지 표시 */}
+                <div className="text-center mt-3">
+                  <span className="text-2xl font-bold text-gray-800">{Math.round(loadingProgress)}%</span>
+                </div>
+              </div>
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">비주얼 아이덴티티 생성 중</h2>
-            <p className="text-gray-600">프로젝트에 맞는 색상과 스타일을 생성하고 있습니다...</p>
+
+            {/* 현재 작업 메시지 */}
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 max-w-lg mx-auto">
+              <p className="text-gray-700 text-lg leading-relaxed font-medium">
+                {loadingMessage}
+              </p>
+            </div>
+
+            {/* 예상 소요 시간 */}
+            <p className="text-sm text-gray-500 mt-6">
+              보통 10-20초 정도 소요됩니다
+            </p>
+
+            </div>
           </div>
         </div>
       </div>
