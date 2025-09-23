@@ -8,7 +8,7 @@ import { Step3IntegratedResult } from '../../../types/workflow.types';
 import { EducationalDesignResult } from '../../../types/educational-design.types';
 import { OpenAIService } from '../../../services/openai.service';
 
-interface Step3IntegratedDesignProps {
+interface Step3EducationalDesignProps {
   initialData?: Step3IntegratedResult;
   projectData: ProjectData;
   visualIdentity: VisualIdentity;
@@ -227,7 +227,7 @@ const getCircledNumber = (filename?: string): string => {
   return circledNumbers[num] || '❓';
 };
 
-export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
+export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = ({
   initialData,
   projectData,
   visualIdentity,
@@ -895,4 +895,4 @@ export const Step3IntegratedDesignFC: React.FC<Step3IntegratedDesignProps> = ({
 };
 
 // 기본 익스포트
-export { Step3IntegratedDesignFC as Step3IntegratedDesign };
+export { Step3EducationalDesignFC as Step3EducationalDesign };

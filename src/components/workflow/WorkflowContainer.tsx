@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Step1BasicInfo } from './Step1BasicInfo';
 import { Step2VisualIdentity } from './Step2VisualIdentity/Step2VisualIdentity';
-import { Step3IntegratedDesign } from './Step3IntegratedDesign';
+import { Step3EducationalDesign } from './Step3EducationalDesign';
 import { Step4DesignSpecification } from './Step4DesignSpecification';
 import { Step5FinalPrompt } from './Step5FinalPrompt';
 import { GNB } from '../common';
@@ -426,7 +426,7 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         }
         
         return (
-          <Step3IntegratedDesign
+          <Step3EducationalDesign
             initialData={workflowData.step3}
             projectData={workflowData.step1}
             visualIdentity={workflowData.step2.visualIdentity}
