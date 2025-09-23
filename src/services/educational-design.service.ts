@@ -1,3 +1,4 @@
+// Fixed TypeError: not a function error
 import { OpenAIService } from './openai.service';
 import { ProjectData, VisualIdentity } from '../types/workflow.types';
 import {
@@ -182,100 +183,85 @@ export class EducationalDesignService {
 - 긴 텍스트는 여러 컬럼으로 분할
 - 기존 내용의 가독성 최대화
 - **시각적 설명만 사용**: 어떤 시각화도 이미지로 대체하지 않음`;
-        case 'original':
-          return `
-### 🎯 Original 모드
-- 원본 내용 최대한 보존
-- 필요시 텍스트 분할하여 여러 영역에 배치
-- 내용 변경 없이 레이아웃만 최적화
-- **시각적 설명 활용**: 모든 도표와 차트를 설명으로 표현`;
         default:
           return '';
       }
     };
 
+    // 콘텐츠 모드 전략을 미리 계산
+    const contentModeStrategy = getContentModeStrategy(projectData.contentMode);
+
     // Fixed 모드와 Scrollable 모드별 프롬프트
     if (projectData.layoutMode === 'fixed') {
-      return `당신은 주어진 '비주얼 아이덴티티'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 스크롤 없는 1600x1000px 화면에 들어갈 콘텐츠 레이아웃을 **자유롭게, 상세하게, 창의적으로 서술**해주세요.
+      const visualIdentitySection = this.formatStep2VisualIdentityForPrompt(emotionalContext.visualIdentity);
+      const projectContextSection = this.formatProjectContextForPrompt(projectData, page, pageIndex, totalPages);
 
-### 🔴 FIXED 레이아웃 필수 준수사항 (절대 위반 금지)
+      const contentAnalysisSection = page.contentAnalysis ?
+        `\n\n### 📊 콘텐츠 분석 결과\n` +
+        `- **예상 구성**: ${page.contentAnalysis.outline ? page.contentAnalysis.outline.join(', ') : '정보 없음'}\n` +
+        `- **예상 섹션 수**: ${page.contentAnalysis.estimatedSections}개\n` +
+        `- **콘텐츠 밀도**: ${page.contentAnalysis.densityScore >= 0.8 ? '높음 (분할 권장)' : page.contentAnalysis.densityScore >= 0.6 ? '적정' : '여유'}\n`
+        : '';
 
-1. **전체 높이 제한**: 900px 이내 (여백 100px 제외)
-2. **콘텐츠 예산**:
-   - 제목: 최대 2줄 (80px)
-   - 본문: 최대 20줄 (480px)
-   - 이미지: 최대 2개, 각 150px 높이
-   - 카드/박스: 최대 3개, 각 80px 높이
-   - 여백 및 간격: 총 110px
-
-3. **폰트 크기 고려 계산**:
-   - 제목: 28pt = 37px + 여백 = 45px/줄
-   - 본문: 18pt = 24px + 여백 = 30px/줄
-   - 이미지 캡션: 18pt = 24px
-
-4. **자동 조정 규칙**:
-   - 내용이 많으면: 텍스트 줄이기 → 이미지 크기 축소 → 요소 개수 감소
-   - 절대 스크롤 생성하지 않음
-
-` + this.formatStep2VisualIdentityForPrompt(emotionalContext.visualIdentity) + `
-
-` + this.formatProjectContextForPrompt(projectData, page, pageIndex, totalPages) + `
-
-${page.contentAnalysis ? `
-### 📊 콘텐츠 분석 결과
-- **예상 구성**: ${page.contentAnalysis.outline.join(', ')}
-- **예상 섹션 수**: ${page.contentAnalysis.estimatedSections}개
-- **콘텐츠 밀도**: ${page.contentAnalysis.densityScore >= 0.8 ? '높음 (분할 권장)' : page.contentAnalysis.densityScore >= 0.6 ? '적정' : '여유'}
-` : ''}
-
-### 🖼️ 이미지 사용 가이드라인 (중요!)
-
-**이미지가 정말 필요한 경우에만** 다음 **정확한 형식**을 사용하세요:
-
-**✅ 올바른 형식**: \`[IMAGE: filename.png | Detailed English AI prompt]\`
-
-**📋 형식 규칙**:
-- 대괄호와 IMAGE: 키워드 사용 필수
-- 파일명은 영문+숫자+하이픈만 (공백 금지)
-- 세로바(|) 구분자 사용 필수
-- AI 프롬프트는 영문으로 상세하게 작성
-- 한 줄에 하나의 이미지만 지정
-
-**📝 예시**:
-- \`[IMAGE: concept-diagram.png | Educational diagram illustrating the main concepts with clear visual hierarchy and bright educational colors]\`
-- \`[IMAGE: process-flow.png | Step by step process flowchart with numbered stages and directional arrows]\`
-
-### 📜 핵심 규칙
-1.  **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.
-2.  **공간 최적화**: 콘텐츠를 화면에 효과적으로 배치하여 어색한 빈 공간이 생기지 않도록 하세요.
-3.  **시각화 설계 우선**: 그래프, 차트, 다이어그램, 인포그래픽, 플로우차트, 표 등은 **구체적인 설명으로만** 설계하세요.
-4.  **이미지 최소화**: 이미지는 **실제 사진이나 대체불가능한 일러스트**에만 사용하세요. 데이터 시각화, 구조도, 개념도 등은 설명으로 충분합니다.
-5.  **이미지 사용 기준**: 다음 경우에만 이미지 사용 허용
-   - 실제 인물/장소/사물 사진
-   - 역사적 문서나 예술작품
-   - 복잡한 일러스트레이션 (단순 도형/차트 제외)
-6.  **🚫 HTML/CSS 코드 작성 절대 금지**:
-   ⚠️ **어떤 경우에도 HTML 태그나 CSS 코드를 작성하지 마세요**
-   ⚠️ **`<div>`, `<span>`, CSS 속성 등 모든 코드 예시 금지**
-   ⚠️ **"div + CSS height"와 같은 구현 방법 제시 금지**
-   ✅ **대신 "세로 막대 형태의 그래프"처럼 시각적 설명만 제공**
-7.  **이미지 사용 규칙**: 정말 필요한 경우에만 다음 **정확한 형식**을 사용하세요
-   - **형식**: \`[IMAGE: 파일명.png | AI 이미지 생성 프롬프트]\`
-   - **예시**: \`[IMAGE: diagram1.png | Educational diagram showing the main concept with clear labels and bright colors]\`
-   - **중요**: 파일명은 영문과 숫자만 사용, 프롬프트는 영문으로 상세하게 작성, 한 줄에 하나의 이미지만 지정
-8.  **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.
-
-### 🚫 절대 금지 사항
-- **HTML/CSS 코드 작성 절대 금지**: \`<div>\`, \`<span>\`, \`class=\`, \`style=\`, CSS 속성 등 모든 코드 예시를 절대 작성하지 마세요
-- **CSS 기술 용어 금지**: flexbox, grid, position, margin, padding 등 CSS 관련 용어 사용 금지
-- **구현 방법 제시 금지**: 기술적 구현 방법 대신 시각적 결과만 설명하세요
-- **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.
-- **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.
-- **최소 폰트 크기**: 모든 텍스트는 반드시 18pt 이상으로 설정하세요. 본문은 18-20pt, 제목은 24pt 이상을 권장합니다.
-
-${getContentModeStrategy(projectData.contentMode)}
-
-이제 위의 가이드라인에 맞춰 페이지 레이아웃을 창의적으로 서술해주세요.`;
+      return '당신은 주어진 \'비주얼 아이덴티티\'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 스크롤 없는 1600x1000px 화면에 들어갈 콘텐츠 레이아웃을 **자유롭게, 상세하게, 창의적으로 서술**해주세요.\n\n' +
+        '### 🔴 FIXED 레이아웃 필수 준수사항 (절대 위반 금지)\n\n' +
+        '1. **전체 높이 제한**: 900px 이내 (여백 100px 제외)\n' +
+        '2. **콘텐츠 예산**:\n' +
+        '   - 제목: 최대 2줄 (80px)\n' +
+        '   - 본문: 최대 20줄 (480px)\n' +
+        '   - 이미지: 최대 2개, 각 150px 높이\n' +
+        '   - 카드/박스: 최대 3개, 각 80px 높이\n' +
+        '   - 여백 및 간격: 총 110px\n\n' +
+        '3. **폰트 크기 고려 계산**:\n' +
+        '   - 제목: 28pt = 37px + 여백 = 45px/줄\n' +
+        '   - 본문: 18pt = 24px + 여백 = 30px/줄\n' +
+        '   - 이미지 캡션: 18pt = 24px\n\n' +
+        '4. **자동 조정 규칙**:\n' +
+        '   - 내용이 많으면: 텍스트 줄이기 → 이미지 크기 축소 → 요소 개수 감소\n' +
+        '   - 절대 스크롤 생성하지 않음\n\n' +
+        visualIdentitySection + '\n\n' +
+        projectContextSection +
+        contentAnalysisSection + '\n\n' +
+        '### 🖼️ 이미지 사용 가이드라인 (중요!)\n\n' +
+        '**이미지가 정말 필요한 경우에만** 다음 **정확한 형식**을 사용하세요:\n\n' +
+        '**✅ 올바른 형식**: `[IMAGE: filename.png | Detailed English AI prompt]`\n\n' +
+        '**📋 형식 규칙**:\n' +
+        '- 대괄호와 IMAGE: 키워드 사용 필수\n' +
+        '- 파일명은 영문+숫자+하이픈만 (공백 금지)\n' +
+        '- 세로바(|) 구분자 사용 필수\n' +
+        '- AI 프롬프트는 영문으로 상세하게 작성\n' +
+        '- 한 줄에 하나의 이미지만 지정\n\n' +
+        '**📝 예시**:\n' +
+        '- `[IMAGE: concept-diagram.png | Educational diagram illustrating the main concepts with clear visual hierarchy using bright blue, soft green, and warm orange tones for educational clarity]`\n' +
+        '- `[IMAGE: process-flow.png | Step by step process flowchart with numbered stages and directional arrows in professional blue and friendly green colors]`\n\n' +
+        '### 📜 핵심 규칙\n' +
+        '1.  **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.\n' +
+        '2.  **공간 최적화**: 콘텐츠를 화면에 효과적으로 배치하여 어색한 빈 공간이 생기지 않도록 하세요.\n' +
+        '3.  **시각화 설계 우선**: 그래프, 차트, 다이어그램, 인포그래픽, 플로우차트, 표 등은 **구체적인 설명으로만** 설계하세요.\n' +
+        '4.  **이미지 최소화**: 이미지는 **실제 사진이나 대체불가능한 일러스트**에만 사용하세요. 데이터 시각화, 구조도, 개념도 등은 설명으로 충분합니다.\n' +
+        '5.  **이미지 사용 기준**: 다음 경우에만 이미지 사용 허용\n' +
+        '   - 실제 인물/장소/사물 사진\n' +
+        '   - 역사적 문서나 예술작품\n' +
+        '   - 복잡한 일러스트레이션 (단순 도형/차트 제외)\n' +
+        '6.  **🚫 HTML/CSS 코드 작성 절대 금지**:\n' +
+        '   ⚠️ **어떤 경우에도 HTML 태그나 CSS 코드를 작성하지 마세요**\n' +
+        '   ⚠️ **`<div>`, `<span>`, CSS 속성 등 모든 코드 예시 금지**\n' +
+        '   ⚠️ **"div + CSS height"와 같은 구현 방법 제시 금지**\n' +
+        '   ✅ **대신 "세로 막대 형태의 그래프"처럼 시각적 설명만 제공**\n' +
+        '7.  **이미지 사용 규칙**: 정말 필요한 경우에만 다음 **정확한 형식**을 사용하세요\n' +
+        '   - **형식**: `[IMAGE: 파일명.png | AI 이미지 생성 프롬프트]`\n' +
+        '   - **예시**: `[IMAGE: diagram1.png | Educational diagram showing the main concept with clear labels using bright blue, soft green, and warm orange colors for clarity]`\n' +
+        '   - **중요**: 파일명은 영문과 숫자만 사용, 프롬프트는 영문으로 상세하게 작성, 한 줄에 하나의 이미지만 지정\n' +
+        '8.  **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.\n\n' +
+        '### 🚫 절대 금지 사항\n' +
+        '- **HTML/CSS 코드 작성 절대 금지**: `<div>`, `<span>`, `class=`, `style=`, CSS 속성 등 모든 코드 예시를 절대 작성하지 마세요\n' +
+        '- **CSS 기술 용어 금지**: flexbox, grid, position, margin, padding 등 CSS 관련 용어 사용 금지\n' +
+        '- **구현 방법 제시 금지**: 기술적 구현 방법 대신 시각적 결과만 설명하세요\n' +
+        '- **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.\n' +
+        '- **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.\n' +
+        '- **최소 폰트 크기**: 모든 텍스트는 반드시 18pt 이상으로 설정하세요. 본문은 18-20pt, 제목은 24pt 이상을 권장합니다.\n\n' +
+        contentModeStrategy + '\n\n' +
+        '이제 위의 가이드라인에 맞춰 페이지 레이아웃을 창의적으로 서술해주세요.';
     } else {
       return '당신은 주어진 \'비주얼 아이덴티티\'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. **1600px 너비의 가변 높이 화면**에 들어갈 콘텐츠 레이아웃을 **자유롭게, 상세하게, 창의적으로 서술**해주세요.\n\n' +
         this.formatStep2VisualIdentityForPrompt(emotionalContext.visualIdentity) + '\n\n' +
@@ -298,8 +284,8 @@ ${getContentModeStrategy(projectData.contentMode)}
         '- AI 프롬프트는 영문으로 상세하게 작성\n' +
         '- 한 줄에 하나의 이미지만 지정\n\n' +
         '**📝 예시**:\n' +
-        '- `[IMAGE: hero-visual.png | Inspiring hero image that represents the main topic with modern educational design]`\n' +
-        '- `[IMAGE: detailed-chart.png | Complex data visualization chart with multiple data points and clear legends]`\n\n' +
+        '- `[IMAGE: hero-visual.png | Inspiring hero image that represents the main topic with modern educational design in soft blue and warm green tones]`\n' +
+        '- `[IMAGE: detailed-chart.png | Complex data visualization chart with multiple data points and clear legends using professional blue, friendly green, and warm orange colors]`\n\n' +
         '### 📜 핵심 규칙\n' +
         '1. **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.\n' +
         '2. **세로 스크롤 친화적**: 사용자가 세로로 스크롤하며 자연스럽게 콘텐츠를 소비할 수 있도록 구성하세요.\n' +
@@ -629,7 +615,7 @@ ${getContentModeStrategy(projectData.contentMode)}
     }
 
     // 한국어 설명을 기반으로 영문 프롬프트 생성
-    return `Educational illustration for ${topic}, detailed and clear visual representation with bright colors and simple design elements, suitable for students`;
+    return `Educational illustration for ${topic}, detailed and clear visual representation with bright blue, soft green, and warm orange colors and simple design elements, suitable for students`;
   }
 
   // 상세한 이미지 설명 생성 (3문장 이상, 색상/구조/그림체/맥락 포함)
@@ -703,10 +689,11 @@ ${getContentModeStrategy(projectData.contentMode)}
     const audience = projectData.targetAudience;
     const topic = page.topic;
     const description = page.description || '';
+
     const colors = {
-      primary: emotionalContext.colorEmotions.primary,
-      secondary: emotionalContext.colorEmotions.secondary,
-      accent: emotionalContext.colorEmotions.accent
+      primary: 'professional blue',
+      secondary: 'soft gray',
+      accent: 'warm orange'
     };
 
     // 이미지 타입에 따른 크기와 역할 결정
@@ -736,7 +723,7 @@ ${getContentModeStrategy(projectData.contentMode)}
 
 **Visual Requirements**:
 - Style: ${styleGuide}
-- Color Palette: Use ${colors.primary} as primary color, ${colors.secondary} as secondary, ${colors.accent} for highlights
+- Color Palette: Use ${colors.primary} for primary areas, ${colors.secondary} for secondary areas, ${colors.accent} for highlights (using natural color descriptions only)
 - Composition: Clear, well-organized layout with logical information flow
 - Elements: Include relevant diagrams, icons, illustrations, or infographics
 - Text Integration: Minimal, essential text labels in Korean if needed
@@ -1084,7 +1071,7 @@ ${allPagesOverview}
 - **인터랙션 요소 금지**: 퀴즈, 실습, 아코디언, 카드 뒤집기, 애니메이션 등 Step4에서 처리
 ${layoutMode === 'fixed' ? '- **총 높이 제한**: 1000px 절대 초과 금지' : ''}
 - **반응형 고려 불필요**: 고정 크기 기준 설계
-- **색상 코드 금지**: 이미지 설명에서 헥스 코드 사용 절대 금지
+- **색상 코드 금지**: 이미지 프롬프트에서 #FF0000, rgb(), hsl() 등 색상 코드 사용 절대 금지 - 대신 "bright red", "soft blue", "warm orange" 등 자연어 색상 표현만 사용
 
 📐 **레이아웃 창의성 가이드**:
 - 모든 영역이 풀와이드인 단조로운 구성 금지
@@ -1134,6 +1121,7 @@ ${layoutMode === 'fixed' ? '- **총 높이 제한**: 1000px 절대 초과 금지
     return metadata;
   }
 
+
   // 색상 코드 검증
   private validateNoColorCodes(colorDescription: string): void {
     const colorCodePatterns = [/#[A-Fa-f0-9]{3,6}/, /rgb\(/, /rgba\(/, /hsl\(/];
@@ -1141,7 +1129,7 @@ ${layoutMode === 'fixed' ? '- **총 높이 제한**: 1000px 절대 초과 금지
     colorCodePatterns.forEach(pattern => {
       if (pattern.test(colorDescription)) {
         console.warn('⚠️ 색상 코드 감지됨 - AI 이미지 생성 오류 위험:', colorDescription);
-        // 색상 코드를 자연어로 변환하는 로직 추가 가능
+        console.warn('💡 수정 권장: "bright blue", "soft green", "warm orange" 등 자연어 색상 표현 사용');
       }
     });
   }
@@ -1151,7 +1139,7 @@ ${layoutMode === 'fixed' ? '- **총 높이 제한**: 1000px 절대 초과 금지
     return `Educational illustration for "${topic}".
 
 Visual Elements: ${metadata.visualElements || 'Clear educational content'}
-Color Composition: ${metadata.colorScheme || 'Natural, readable colors'} (NO hex codes, natural color names only)
+Color Composition: ${metadata.colorScheme || 'Natural, readable colors such as soft blue, warm green, friendly orange'} (IMPORTANT: Use only natural color names like "bright red", "soft blue", "warm orange" - never use hex codes like #FF0000 or rgb() values as AI cannot process them)
 Page Context: ${metadata.pageContext || 'Main content area'}
 Style and Texture: ${metadata.styleTexture || 'Clean educational style'}
 Learner Perspective: ${metadata.learnerPerspective || 'Age-appropriate design'}
@@ -1240,8 +1228,8 @@ Create a comprehensive educational image that combines all these elements effect
         isValid: false,
         errorType: 'COLOR_CODE_DETECTED',
         suggestions: [
-          '색상 코드 감지됨 - AI 이미지 생성 오류 위험',
-          '자연어 색상 표현으로 변경 필요'
+          '색상 코드 감지됨 - AI 이미지 생성에서 색상 인식 불가',
+          '자연어 색상 표현으로 변경 필요 (예: "bright blue", "soft green", "warm orange")'
         ]
       };
     }
