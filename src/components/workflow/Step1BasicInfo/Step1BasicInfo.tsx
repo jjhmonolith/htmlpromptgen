@@ -934,7 +934,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
 
 
         {/* 네비게이션 버튼들 */}
-        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-8 mb-8">
+        <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-8">
           <div className="flex justify-between">
             <button
               onClick={onBack}
