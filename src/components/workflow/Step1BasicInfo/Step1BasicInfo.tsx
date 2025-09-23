@@ -11,15 +11,13 @@ interface Step1BasicInfoProps {
   onComplete: (data: ProjectData) => void;
   onBack?: () => void;
   onDataChange?: (data: Partial<ProjectData>) => void; // 실시간 데이터 변경 알림
-  onFastTrack?: (data: ProjectData) => void; // 패스트트랙 시작
 }
 
 export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   initialData,
   onComplete,
   onBack,
-  onDataChange,
-  onFastTrack
+  onDataChange
 }) => {
   const [projectTitle, setProjectTitle] = useState('');
   const [targetAudience, setTargetAudience] = useState('');
@@ -27,7 +25,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     { id: '1', pageNumber: 1, topic: '', description: '' }
   ]);
   const [layoutMode, setLayoutMode] = useState<'fixed' | 'scrollable'>('scrollable');
-  const [contentMode, setContentMode] = useState<'original' | 'enhanced' | 'restricted'>('enhanced');
+  const [contentMode, setContentMode] = useState<'enhanced' | 'restricted'>('enhanced');
   const [suggestions, setSuggestions] = useState('');
 
   // Learning Journey Designer 상태 추가
@@ -39,14 +37,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   const [showApiKeyManager, setShowApiKeyManager] = useState(false);
   const [hasGeneratedJourney, setHasGeneratedJourney] = useState(false);
 
-  // 패스트트랙 상태 관리
-  const [isFastTrackMode, setIsFastTrackMode] = useState(false);
-  const [fastTrackProgress, setFastTrackProgress] = useState({
-    currentStep: 0,
-    steps: ['Step 2: 비주얼 아이덴티티', 'Step 3: 교육 콘텐츠 설계', 'Step 4: 디자인 명세', 'Step 5: 최종 프롬프트'],
-    isCompleted: false,
-    errorMessage: null as string | null
-  });
   
   // 초기 데이터 로딩 (한 번만 실행)
   const hasLoadedInitialData = useRef(false);
@@ -455,25 +445,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     };
   };
 
-  // 패스트트랙 시작 핸들러
-  const handleFastTrack = async () => {
-    if (!validateForm()) return;
-    if (!onFastTrack) return;
-
-    const projectData = createProjectData();
-
-    // 패스트트랙 모드 시작
-    setIsFastTrackMode(true);
-    setFastTrackProgress({
-      currentStep: 0,
-      steps: ['Step 2: 비주얼 아이덴티티', 'Step 3: 교육 콘텐츠 설계', 'Step 4: 디자인 명세', 'Step 5: 최종 프롬프트'],
-      isCompleted: false,
-      errorMessage: null
-    });
-
-    // 패스트트랙 시작
-    onFastTrack(projectData);
-  };
 
   // API 키 매니저 표시 중이면 해당 컴포넌트만 렌더링
   if (showApiKeyManager) {
@@ -752,9 +723,9 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
         {/* 페이지 구성 스크롤 영역 - 전체 화면 폭 사용 */}
         <div className="w-full">
           <div className="scroll-container" ref={scrollContainerRef}>
-            <motion.div 
-              className="flex gap-6 pb-4 pt-2" 
-              style={{ 
+            <motion.div
+              className="flex gap-6 pb-4 pt-2"
+              style={{
                 minWidth: 'max-content',
                 paddingLeft: `${scrollPadding}px`,
                 paddingRight: '24px' // 카드 간 간격과 동일하게 설정 (gap-6 = 24px)
@@ -769,17 +740,14 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                 initial={{ opacity: 0, scale: 0.8, x: 50 }}
                 animate={{ opacity: 1, scale: 1, x: 0 }}
                 exit={{ opacity: 0, scale: 0.8, x: -50 }}
-                transition={{ 
+                transition={{
                   duration: 0.3,
                   type: "spring",
                   stiffness: 300,
                   damping: 25
                 }}
-                className="bg-white rounded-3xl p-6 h-96 flex flex-col w-[480px] flex-shrink-0 transition-all duration-300"
-                whileHover={{ scale: 1.011, transition: { duration: 0.3 } }}
-                onMouseEnter={(e) => { e.currentTarget.style.boxShadow = '0 0 15px 2px rgba(0, 0, 0, 0.08)'; }}
-                onMouseLeave={(e) => { e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.04)'; }}
-                style={{ boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)' }}
+                className="bg-white rounded-xl p-6 hover:shadow-lg h-96 flex flex-col w-[480px] flex-shrink-0 shadow-sm"
+                whileHover={{ scale: 1.02, transition: { duration: 0.2 } }}
               >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-lg font-semibold text-gray-700">
@@ -806,9 +774,9 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                     setPages(updated);
                   }}
                   placeholder="페이지 주제"
-                  className="w-full px-4 py-2 mb-4 rounded-xl border border-[#f5f5f7] bg-white hover:border-gray-300 text-base focus:outline-none focus:border-[#3e88ff] focus:border-2 transition-all text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-3 mb-4 rounded-xl bg-gray-50 border-2 border-transparent text-lg focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all text-gray-900 placeholder-gray-400"
                 />
-                
+
                 <textarea
                   value={page.description}
                   onChange={(e) => {
@@ -817,14 +785,14 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                     setPages(updated);
                   }}
                   placeholder="페이지 설명 (선택)"
-                  className="w-full px-4 py-3 rounded-xl border border-[#f5f5f7] bg-white hover:border-gray-300 text-base focus:outline-none focus:border-[#3e88ff] focus:border-2 transition-all resize-none flex-1 text-gray-900 placeholder-gray-400"
+                  className="w-full px-4 py-3 rounded-xl bg-gray-50 border-2 border-transparent text-base focus:outline-none focus:bg-white focus:border-[#3e88ff] transition-all resize-none flex-1 text-gray-900 placeholder-gray-400"
                 />
               </motion.div>
             ))}
             </AnimatePresence>
-            
+
             {/* 새 페이지 추가 버튼 - 아이콘 형태 */}
-            <motion.div 
+            <motion.div
               className="flex items-center justify-center w-20 flex-shrink-0"
               layout
               transition={{ duration: 0.3 }}
@@ -964,51 +932,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
           </div>
         </div>
 
-        {/* 패스트트랙 모드 진행 상황 표시 */}
-        {isFastTrackMode && (
-          <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-8">
-            <div className="bg-gradient-to-r from-purple-50 to-blue-50 rounded-2xl p-6 border border-purple-200">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-purple-900">🚀 패스트트랙 진행 중</h3>
-                <div className="text-sm text-purple-600">
-                  {fastTrackProgress.currentStep + 1} / {fastTrackProgress.steps.length}
-                </div>
-              </div>
-
-              {/* 진행 바 */}
-              <div className="mb-4">
-                <div className="flex justify-between text-xs text-purple-600 mb-2">
-                  <span>진행률</span>
-                  <span>{Math.round(((fastTrackProgress.currentStep + 1) / fastTrackProgress.steps.length) * 100)}%</span>
-                </div>
-                <div className="w-full bg-purple-100 rounded-full h-2">
-                  <div
-                    className="bg-gradient-to-r from-purple-500 to-blue-500 h-2 rounded-full transition-all duration-500"
-                    style={{ width: `${((fastTrackProgress.currentStep + 1) / fastTrackProgress.steps.length) * 100}%` }}
-                  ></div>
-                </div>
-              </div>
-
-              {/* 현재 단계 */}
-              <div className="text-center">
-                <div className="text-purple-800 font-medium">
-                  현재 진행: {fastTrackProgress.steps[fastTrackProgress.currentStep]}
-                </div>
-                <div className="flex items-center justify-center mt-2">
-                  <div className="animate-spin w-4 h-4 border-2 border-purple-500 border-t-transparent rounded-full mr-2"></div>
-                  <span className="text-sm text-purple-600">자동으로 진행하고 있습니다...</span>
-                </div>
-              </div>
-
-              {/* 에러 메시지 */}
-              {fastTrackProgress.errorMessage && (
-                <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg">
-                  <div className="text-red-800 text-sm">{fastTrackProgress.errorMessage}</div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
 
         {/* 네비게이션 버튼들 */}
         <div className="max-w-7xl mx-auto px-4 xl:px-8 2xl:px-12 mt-8 mb-8">
@@ -1016,32 +939,12 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
             <button
               onClick={onBack}
               className="px-6 py-3 text-gray-600 hover:text-gray-800 transition-all font-medium"
-              disabled={isFastTrackMode}
             >
               ← 이전
             </button>
 
             <div className="flex gap-3">
-              {/* 패스트트랙 버튼 */}
-              {onFastTrack && !isFastTrackMode && (
-                <button
-                  onClick={handleFastTrack}
-                  className="px-6 py-3 text-white rounded-full transition-all font-medium shadow-sm"
-                  style={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)';
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-                  }}
-                >
-                  ⚡ 패스트트랙으로 완주
-                </button>
-              )}
-
-              {/* 일반 다음 버튼 */}
+              {/* 다음 버튼 */}
               <button
                 onClick={handleSubmit}
                 className="px-8 py-3 text-white rounded-full transition-all font-medium shadow-sm"
@@ -1050,7 +953,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                 }}
                 onMouseEnter={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#2c6ae6'}
                 onMouseLeave={(e) => (e.target as HTMLButtonElement).style.backgroundColor = '#3e88ff'}
-                disabled={isFastTrackMode}
               >
                 다음 단계로 →
               </button>
