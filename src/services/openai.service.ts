@@ -89,7 +89,7 @@ export class OpenAIService {
     if (targetModel?.startsWith('gpt-5-mini')) {
       maxOutputTokens = 1200;
     } else if (targetModel?.startsWith('gpt-5')) {
-      maxOutputTokens = 6000;
+      maxOutputTokens = 8000;
     }
     const request: any = {
       model: targetModel,
