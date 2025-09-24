@@ -126,7 +126,7 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
           const targetProgress = designerMessages[currentMessageIndex].progress;
           setLoadingProgress(prev => {
             const newProgress = Math.min(prev + (Math.random() * 6 + 3), targetProgress);
-            if (newProgress >= targetProgress) {
+            if (newProgress >= targetProgress && currentMessageIndex < designerMessages.length) {
               setLoadingMessage(designerMessages[currentMessageIndex].message);
               currentMessageIndex++;
             }
@@ -460,29 +460,14 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
                 </div>
               )}
 
-              {/* 요약 정보 (기존 기술적 정보들은 접힌 상태로 제공) */}
-              {debugMode && selectedPage.layout && selectedPage.componentStyles && (
+              {/* Debug Mode에서 기본 정보만 표시 */}
+              {debugMode && (
                 <div className="bg-gray-50 p-4 rounded-lg border">
-                  <h4 className="text-md font-semibold text-gray-700 mb-3">🔧 기술적 명세 (Debug Mode)</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <div className="bg-white p-3 rounded border">
-                      <span className="font-medium text-gray-700">페이지 크기:</span>
-                      <div className="text-gray-600">
-                        {selectedPage.layout.pageWidth} × {
-                          selectedPage.layout.pageHeight === 'auto'
-                            ? 'auto'
-                            : `${selectedPage.layout.pageHeight}px`
-                        }
-                      </div>
-                    </div>
-                    <div className="bg-white p-3 rounded border">
-                      <span className="font-medium text-gray-700">컴포넌트 수:</span>
-                      <div className="text-gray-600">{selectedPage.componentStyles.length}개</div>
-                    </div>
-                    <div className="bg-white p-3 rounded border">
-                      <span className="font-medium text-gray-700">섹션 수:</span>
-                      <div className="text-gray-600">{selectedPage.layout.sections?.length || 0}개</div>
-                    </div>
+                  <h4 className="text-md font-semibold text-gray-700 mb-3">🔧 기본 정보 (Debug Mode)</h4>
+                  <div className="text-sm text-gray-600">
+                    <p><strong>페이지:</strong> {selectedPage.pageNumber} - {selectedPage.pageTitle}</p>
+                    <p><strong>레이아웃:</strong> 1600×{selectedPage.layout?.pageHeight === 'auto' ? '가변' : '1000px'}</p>
+                    <p><strong>생성 시간:</strong> {selectedPage.generatedAt?.toLocaleString()}</p>
                   </div>
                 </div>
               )}

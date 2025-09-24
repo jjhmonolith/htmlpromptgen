@@ -287,7 +287,9 @@ ${step3Result ? step3Result.pages.map((page, pageIndex) => {
 
   // 페이지별 상세 명세 생성 (사용자 양식 기반으로 변경)
   const generatePageByPageSpecification = (): string => {
-    if (!step3Result) return '';
+    if (!step3Result) {
+      return '## 4. 페이지별 상세 구현 가이드\n\n⚠️ Step 3 데이터가 없어 페이지별 명세를 생성할 수 없습니다. Step 3를 먼저 완료해주세요.';
+    }
 
     const isEnhanced = projectData.contentMode === 'enhanced';
 
@@ -295,41 +297,30 @@ ${step3Result ? step3Result.pages.map((page, pageIndex) => {
       const step3Page = step3Result.pages[index];
       const step4Page = step4Result?.pages?.find(p => p.pageNumber === page.pageNumber);
 
+      // Step3에서 생성된 fullDescription을 우선적으로 사용
+      const pageContent = step3Page?.fullDescription ||
+        `${page.topic}에 대한 기본 교육 내용입니다.\n- 주제: ${page.topic}\n- 설명: ${page.description || '페이지 설명'}`;
+
       if (isEnhanced) {
-        // AI 보강 모드 - 상세한 설명과 구현 가이드 제공
+        // AI 보강 모드 - Step3의 fullDescription을 그대로 활용
         return `## 페이지 ${index + 1}: ${page.topic}
 
 ### 1. 페이지 구성 및 내용
 \`\`\`
-${step3Page?.fullDescription ? step3Page.fullDescription : `
-${page.topic}에 대한 기본 교육 내용을 다룹니다.
-- 주제: ${page.topic}
-- 설명: ${page.description || '페이지 설명'}
-- 학습 목표: ${step3Page?.learningObjectives?.join(', ') || '기본 학습 목표'}
+${pageContent}
 
-이 페이지는 학습자가 ${page.topic}에 대해 체계적으로 이해할 수 있도록 구성되어야 합니다.
-정보의 우선순위에 따른 시각적 계층을 명확히 구성하고,
-텍스트는 본문 최소 18pt 이상, 제목은 28–56pt 범위로 설정해 가독성을 확보합니다.
-
-[구체적인 레이아웃 설명]
+[레이아웃 구현 지침]
 - 캔버스: 너비 1600px 고정, 높이 가변(세로 스크롤)
 - 좌우 여백(Safe Area): 120px(좌), 120px(우) — 콘텐츠 최대 폭 1360px
 - 컬러: Primary, Secondary, Accent 색상을 활용한 조화로운 배색
 - 폰트 크기: 모든 텍스트 18pt 이상 준수
 - 라운딩/그림자: 부드럽고 가벼운 느낌의 카드 컴포넌트
 
-섹션별 구성:
-1. 상단 브랜드/제목 영역
-2. 메인 콘텐츠 영역 - 핵심 학습 내용
-3. 인터랙티브 요소 영역 - 학습 활동
-4. 정리/마무리 영역
-
 접근성 및 가독성:
-- 최소 폰트 크기 준수: 본문 19–20pt, 설명/캡션 18–19pt, 제목 28–56pt
+- 최소 폰트 크기 준수: 본문 18-20pt, 부제목 22-24pt, 제목 28-36pt
 - 대비: 본문 텍스트와 배경 대비비 4.5:1 이상 유지
 - 줄 길이: 본문 60–80자 폭 유지
 - 라인하이트: 본문 1.5, 제목 1.2
-`}
 \`\`\`
 
 ### 2. 페이지에 사용될 이미지
@@ -343,9 +334,7 @@ ${generateInteractionAndAnimationSpecification(step4Page)}`;
 
 ### 1. 페이지 구성 및 내용
 \`\`\`
-- 제목: ${page.topic}
-- 내용: ${page.description || '기본 설명'}
-${step3Page?.learningObjectives ? `- 학습 목표: ${step3Page.learningObjectives.join(', ')}` : ''}
+${pageContent}
 \`\`\`
 
 ### 2. 페이지에 사용될 이미지
@@ -1047,7 +1036,7 @@ ${imagePrompts.join('\n\n---\n\n')}`;
                         >
                           {activeSection === 'main'
                             ? finalPrompt.htmlPrompt
-                            : finalPrompt.htmlPrompt.split('## 🖼️ 이미지 생성 명세서')[1] || '이미지 프롬프트 섹션을 생성 중입니다...'
+                            : finalPrompt.htmlPrompt.split('## 6. 이미지 생성 명세서')[1] || '이미지 프롬프트 섹션을 생성 중입니다...'
                           }
                         </ReactMarkdown>
                       </div>
@@ -1055,7 +1044,7 @@ ${imagePrompts.join('\n\n---\n\n')}`;
                       <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
                         {activeSection === 'main'
                           ? finalPrompt.htmlPrompt
-                          : finalPrompt.htmlPrompt.split('## 🖼️ 이미지 생성 명세서')[1] || '이미지 프롬프트 섹션을 생성 중입니다...'
+                          : finalPrompt.htmlPrompt.split('## 6. 이미지 생성 명세서')[1] || '이미지 프롬프트 섹션을 생성 중입니다...'
                         }
                       </pre>
                     )}

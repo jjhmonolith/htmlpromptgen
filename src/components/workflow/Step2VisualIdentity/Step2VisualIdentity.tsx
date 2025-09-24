@@ -97,7 +97,7 @@ export const Step2VisualIdentity: React.FC<Step2VisualIdentityProps> = ({
           const targetProgress = artistMessages[currentMessageIndex].progress;
           setLoadingProgress(prev => {
             const newProgress = Math.min(prev + (Math.random() * 8 + 2), targetProgress);
-            if (newProgress >= targetProgress) {
+            if (newProgress >= targetProgress && currentMessageIndex < artistMessages.length) {
               setLoadingMessage(artistMessages[currentMessageIndex].message);
               currentMessageIndex++;
             }

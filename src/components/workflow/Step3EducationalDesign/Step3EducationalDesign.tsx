@@ -341,7 +341,7 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
           setLoadingProgress(prev => {
             const increment = Math.random() * 3 + 1; // 1-4% 증가 (더 천천히)
             const newProgress = Math.min(prev + increment, targetProgress);
-            if (newProgress >= targetProgress) {
+            if (newProgress >= targetProgress && currentMessageIndex < editorMessages.length) {
               setLoadingMessage(editorMessages[currentMessageIndex].message);
               currentMessageIndex++;
             }

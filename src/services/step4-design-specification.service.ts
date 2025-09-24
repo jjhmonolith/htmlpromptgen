@@ -315,8 +315,8 @@ export class Step4DesignSpecificationService {
       `페이지 ${p.pageNumber} (${p.topic}${p.description ? ` - ${p.description}` : ''}): ${step3PageData.pageNumber === p.pageNumber ? step3PageData.structure?.sections?.[0]?.hint || '현재 페이지' : '...'}`
     ).join('\n');
 
-    // 페이지 구성안 설명
-    const pageContent = this.buildPageContentSummary(step3PageData);
+    // Step3 결과 사용 (fullDescription만 사용)
+    const pageContent = step3PageData.fullDescription || `페이지 ${step3PageData.pageNumber}: ${step3PageData.pageTitle}`;
 
     // 레이아웃 모드에 따른 프롬프트 분기
     if (projectData.layoutMode === 'fixed') {
@@ -411,29 +411,6 @@ ${pageContent}
 
 
 
-  private buildPageContentSummary(step3PageData: any): string {
-    // Step3 구조 정보를 요약
-    const sections = step3PageData.structure?.sections || [];
-    const components = step3PageData.content?.components || [];
-    const images = step3PageData.content?.images || [];
-
-    let summary = `**페이지 구조:**\n`;
-    sections.forEach((section: any) => {
-      summary += `- ${section.id}: ${section.hint} (${section.grid})\n`;
-    });
-
-    summary += `\n**컴포넌트 (${components.length}개):**\n`;
-    components.slice(0, 5).forEach((comp: any) => {
-      summary += `- ${comp.id}: ${comp.type} - "${comp.text || '내용 없음'}"\n`;
-    });
-
-    summary += `\n**이미지 (${images.length}개):**\n`;
-    images.forEach((img: any) => {
-      summary += `- ${img.id}: ${img.desc} (${img.secRef})\n`;
-    });
-
-    return summary;
-  }
 
   private parseJsonResponse(textContent: string): any {
     try {
@@ -456,123 +433,38 @@ ${pageContent}
   }
 
   private assembleStep4FromJson(parsedData: any, step3PageData: any, layoutMode: 'fixed' | 'scrollable'): Step4PageResult {
+    // 단순화된 결과 - AI 생성 텍스트만 사용
     return {
       pageId: step3PageData.pageId,
       pageTitle: step3PageData.pageTitle,
       pageNumber: step3PageData.pageNumber,
+
+      // 기본 레이아웃 (사용되지 않음)
       layout: {
         pageWidth: 1600,
         pageHeight: layoutMode === 'fixed' ? 1000 : 'auto',
-        sections: step3PageData.structure?.sections?.map((section: any, index: number) => ({
-          id: section.id || `section_${index}`,
-          gridType: (section.grid as '1-12' | '8+4' | '2-11' | '3-10') || '1-12',
-          position: { x: 0, y: index * 200 },
-          dimensions: { width: 1600, height: section.height || 'auto' },
-          padding: { top: 32, right: 32, bottom: 32, left: 32 },
-          backgroundColor: section.background || '#FFFFFF',
-          gap: 24,
-          marginBottom: 24
-        })) || [{
-          id: 'main',
-          gridType: '1-12',
-          position: { x: 0, y: 0 },
-          dimensions: { width: 1600, height: 'auto' },
-          padding: { top: 32, right: 32, bottom: 32, left: 32 },
-          backgroundColor: '#FFFFFF',
-          gap: 24,
-          marginBottom: 24
-        }],
+        sections: [],
         backgroundColor: '#FFFFFF',
         safeArea: { top: 80, right: 100, bottom: 120, left: 100 }
       },
-      componentStyles: step3PageData.content?.components?.map((comp: any, index: number) => ({
-        id: comp.id,
-        type: comp.type === 'text' ? 'paragraph' : (comp.type as 'heading' | 'paragraph' | 'card' | 'image'),
-        section: 'main',
-        position: { x: 100 + (index % 2) * 300, y: 100 + Math.floor(index / 2) * 100 },
-        dimensions: { width: 300, height: 'auto' },
-        font: {
-          family: 'Noto Sans KR',
-          weight: 400,
-          size: '18px',
-          lineHeight: 1.6
-        },
-        colors: {
-          text: '#1F2937',
-          background: 'transparent'
-        },
-        visual: {
-          borderRadius: 8,
-          opacity: 1
-        },
-        zIndex: 1,
-        display: 'block'
-      })) || [],
-      imagePlacements: step3PageData.content?.images?.map((img: any, index: number) => ({
-        id: img.id,
-        filename: img.filename || `${index + 1}.png`,
-        section: 'main',
-        position: { x: 400 + (index % 2) * 300, y: 100 + Math.floor(index / 2) * 200 },
-        dimensions: { width: 200, height: 150 },
-        objectFit: 'cover' as const,
-        borderRadius: 8,
-        loading: 'lazy' as const,
-        priority: 'normal' as const,
-        alt: img.desc || '이미지',
-        zIndex: 10
-      })) || [],
-      interactions: [{
-        id: 'hover_effect',
-        target: '.interactive',
-        trigger: 'hover',
-        effect: 'scale',
-        duration: '200ms',
-        delay: '0ms',
-        easing: 'ease-in-out'
-      }],
-      educationalFeatures: [{
-        id: 'scroll_reveal',
-        type: 'scrollIndicator',
-        position: 'bottom',
-        dimensions: { width: 100, height: 4 },
-        styling: {
-          primaryColor: '#3B82F6',
-          secondaryColor: '#E5E7EB',
-          backgroundColor: 'transparent',
-          opacity: 0.8
-        },
-        behavior: {
-          autoUpdate: true,
-          userControl: false,
-          persistence: false
-        }
-      }],
-      isGenerating: false,
-      isComplete: true,
+      componentStyles: [],
+      imagePlacements: [],
+      interactions: [],
+      educationalFeatures: [],
+
+      // 실제 사용되는 데이터: AI 생성 텍스트
       animationDescription: parsedData.animationDescription || '기본 애니메이션: 요소들이 부드럽게 나타납니다.',
       interactionDescription: parsedData.interactionDescription || '기본 인터랙션: 호버 시 요소들이 반응합니다.',
+
+      isGenerating: false,
+      isComplete: true,
       generatedAt: new Date()
     };
   }
 
   private generateGlobalFeatures(layoutMode: 'fixed' | 'scrollable'): any[] {
-    return [
-      {
-        type: 'accessibility',
-        specifications: {
-          focusVisible: true,
-          keyboardNav: false
-        },
-        enabled: true
-      },
-      {
-        type: 'performance',
-        specifications: {
-          animationOptimization: true
-        },
-        enabled: layoutMode === 'scrollable'
-      }
-    ];
+    // 기본 전역 기능 (사용되지 않음)
+    return [];
   }
 
   private createEmptyPageResult(step3PageData: any): Step4PageResult {
