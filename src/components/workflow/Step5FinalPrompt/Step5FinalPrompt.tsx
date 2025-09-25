@@ -63,20 +63,55 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
     return () => clearTimeout(timeoutId);
   }, [finalPrompt, isDataLoaded, onDataChange]);
 
-  // 프롬프트 생성 엔진
-  const generateFinalPrompt = () => {
+  // 통합된 프롬프트 생성 엔진 (Step4-5 통합 로직 실행)
+  const generateFinalPrompt = async () => {
     setIsGenerating(true);
 
     try {
-      const htmlPrompt = compileHTMLPrompt();
-      const newFinalPrompt: FinalPrompt = {
-        htmlPrompt
-      };
+      // Step4-5 통합 서비스 사용
+      const { IntegratedStep4And5Service } = await import('../../../services/integrated-step4-5.service');
+      const { OpenAIService } = await import('../../../services/openai.service');
 
-      setFinalPrompt(newFinalPrompt);
+      // OpenAI 서비스 초기화
+      const openAIService = new OpenAIService();
+
+      // 통합 서비스 초기화
+      const integratedService = new IntegratedStep4And5Service(openAIService);
+
+      // Step4-5 통합 처리 실행
+      const integratedResult = await integratedService.executeIntegratedProcess(
+        projectData,
+        visualIdentity,
+        designTokens,
+        step3Result
+      );
+
+      // 통합 결과를 상위 컴포넌트에 전달
+      const finalPromptData: FinalPrompt = integratedResult.step5Result;
+
+      setFinalPrompt(finalPromptData);
       setIsDataLoaded(true);
+
+      // 통합된 결과를 부모 컴포넌트에 전달 (Step4와 Step5 데이터 모두)
+      onComplete({
+        step4Result: integratedResult.step4Result,
+        step5Result: integratedResult.step5Result
+      });
+
     } catch (error) {
-      console.error('프롬프트 생성 중 오류:', error);
+      console.error('통합 프롬프트 생성 중 오류:', error);
+
+      // 실패 시 기존 방식으로 폴백
+      try {
+        const htmlPrompt = compileHTMLPrompt();
+        const newFinalPrompt: FinalPrompt = {
+          htmlPrompt
+        };
+        setFinalPrompt(newFinalPrompt);
+        setIsDataLoaded(true);
+      } catch (fallbackError) {
+        console.error('폴백 프롬프트 생성도 실패:', fallbackError);
+      }
     } finally {
       setIsGenerating(false);
     }
@@ -898,7 +933,12 @@ ${imagePrompts.join('\n\n---\n\n')}`;
   };
 
   const handleComplete = () => {
-    onComplete(finalPrompt);
+    // 통합된 결과를 전달하기 위해 수정
+    if (finalPrompt) {
+      onComplete({
+        step5Result: finalPrompt
+      });
+    }
   };
 
   return (
