@@ -75,7 +75,7 @@ export function useAutoSave(
         projectService.saveWorkflowData(proj.id, workflow);
       }
       
-      onSave?.(proj, workflow);
+      onSave?.(proj, workflow || undefined);
       
       // 저장 완료 로그 간소화 (Step 변경 시에만)
       const currentStep = workflow?.currentStep || 0;

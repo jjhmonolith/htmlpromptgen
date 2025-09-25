@@ -320,6 +320,8 @@ export interface ImageLine {
     altText: string;
     caption: string;
   };
+  category?: string;
+  path?: string;
   structuredMetadata?: any; // 8가지 구조화된 메타데이터
 }
 

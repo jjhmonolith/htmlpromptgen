@@ -25,7 +25,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     { id: '1', pageNumber: 1, topic: '', description: '' }
   ]);
   const [layoutMode, setLayoutMode] = useState<'fixed' | 'scrollable'>('scrollable');
-  const [contentMode, setContentMode] = useState<'enhanced' | 'restricted'>('enhanced');
+  const [contentMode, setContentMode] = useState<'original' | 'enhanced' | 'restricted'>('enhanced');
   const [suggestions, setSuggestions] = useState('');
 
   // Learning Journey Designer 상태 추가

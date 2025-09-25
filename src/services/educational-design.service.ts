@@ -1,6 +1,6 @@
 // Fixed TypeError: not a function error
 import { OpenAIService } from './openai.service';
-import { ProjectData, VisualIdentity } from '../types/workflow.types';
+import { ProjectData, VisualIdentity, QualityMetrics } from '../types/workflow.types';
 import {
   EducationalDesignResult,
   EducationalPageDesign,
