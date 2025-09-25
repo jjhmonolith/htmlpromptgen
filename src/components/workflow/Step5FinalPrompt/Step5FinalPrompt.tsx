@@ -34,6 +34,8 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [activeSection, setActiveSection] = useState<'main' | 'images'>('main');
   const [viewMode, setViewMode] = useState<'raw' | 'preview'>('preview');
+  const [step4ResultData, setStep4ResultData] = useState<Step4DesignResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const hasLoadedInitialData = useRef(false);
 
@@ -44,8 +46,8 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
       hasLoadedInitialData.current = true;
       setIsDataLoaded(true);
     } else if (!initialData && !hasLoadedInitialData.current) {
-      // 초기 데이터가 없으면 바로 생성
-      generateFinalPrompt();
+      // 초기 데이터가 없으면 바로 생성 (최초 생성)
+      generateFinalPrompt(false);
       hasLoadedInitialData.current = true;
     }
   }, [initialData]);
@@ -64,21 +66,34 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
   }, [finalPrompt, isDataLoaded, onDataChange]);
 
   // 통합된 프롬프트 생성 엔진 (Step4-5 통합 로직 실행)
-  const generateFinalPrompt = async () => {
+  const generateFinalPrompt = async (isRegenerate: boolean = false) => {
     setIsGenerating(true);
+    setError(null); // 에러 초기화
 
     try {
+      console.log(`🔄 ${isRegenerate ? '재생성' : '최초 생성'} 시작 - Step4-5 통합 프로세스`);
+
       // Step4-5 통합 서비스 사용
       const { IntegratedStep4And5Service } = await import('../../../services/integrated-step4-5.service');
       const { OpenAIService } = await import('../../../services/openai.service');
 
-      // OpenAI 서비스 초기화
-      const openAIService = new OpenAIService();
+      // OpenAI 서비스 싱글톤 인스턴스 사용
+      const openAIService = OpenAIService.getInstance();
 
-      // 통합 서비스 초기화
+      // API 키 재로드 시도 (Step5에서 새로 시작할 때)
+      const hasApiKey = openAIService.reloadApiKey();
+      if (!hasApiKey) {
+        console.warn('⚠️ API 키가 설정되지 않았습니다. 폴백 모드로 진행합니다.');
+        // API 키가 없으면 바로 폴백 모드로
+        throw new Error('API key not found');
+      }
+
+      // 통합 서비스 초기화 (매번 새로운 인스턴스)
       const integratedService = new IntegratedStep4And5Service(openAIService);
 
-      // Step4-5 통합 처리 실행
+      console.log('🎯 Step4-5 통합 처리 실행 중...');
+
+      // Step4-5 통합 처리 실행 (매번 새롭게 실행됨)
       const integratedResult = await integratedService.executeIntegratedProcess(
         projectData,
         visualIdentity,
@@ -86,31 +101,74 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
         step3Result
       );
 
+      console.log('✅ Step4-5 통합 처리 완료');
+      console.log('Step4 결과 미리보기:', {
+        페이지수: integratedResult.step4Result.pages?.length,
+        전체요약존재: !!integratedResult.step4Result.overallSummary
+      });
+
       // 통합 결과를 상위 컴포넌트에 전달
       const finalPromptData: FinalPrompt = integratedResult.step5Result;
 
       setFinalPrompt(finalPromptData);
       setIsDataLoaded(true);
 
-      // 통합된 결과를 부모 컴포넌트에 전달 (Step4와 Step5 데이터 모두)
-      onComplete({
-        step4Result: integratedResult.step4Result,
-        step5Result: integratedResult.step5Result
-      });
+      // Step4 결과 데이터 저장
+      setStep4ResultData(integratedResult.step4Result);
+
+      // 최초 생성시에만 onComplete 호출 (재생성시에는 호출하지 않음)
+      if (!isRegenerate) {
+        console.log('📤 부모 컴포넌트로 완료 신호 전달');
+        onComplete({
+          step4Result: integratedResult.step4Result,
+          step5Result: integratedResult.step5Result
+        });
+      } else {
+        console.log('🔄 재생성 완료 - onComplete 스킵');
+      }
 
     } catch (error) {
       console.error('통합 프롬프트 생성 중 오류:', error);
 
+      // API 키 관련 에러인지 확인
+      const isApiKeyError = error instanceof Error &&
+        (error.message.includes('API key not found') ||
+         error.message.includes('OpenAI client not initialized'));
+
+      if (isApiKeyError) {
+        console.log('🔑 API 키 문제로 인한 폴백 모드 실행');
+        // API 키 에러 메시지 표시를 위한 특별한 처리
+        setError('⚠️ OpenAI API 키가 설정되지 않았습니다. 설정 페이지에서 API 키를 먼저 설정해주세요.');
+      }
+
       // 실패 시 기존 방식으로 폴백
       try {
+        console.log('🚨 폴백 모드로 전환 - 로컬 프롬프트 생성');
         const htmlPrompt = compileHTMLPrompt();
         const newFinalPrompt: FinalPrompt = {
           htmlPrompt
         };
         setFinalPrompt(newFinalPrompt);
         setIsDataLoaded(true);
+
+        // API 키 에러가 아닌 경우에만 Step4 기본 데이터 설정
+        if (!isApiKeyError && !step4ResultData) {
+          // 기본 Step4 결과 데이터 생성
+          const defaultStep4Result = {
+            pages: projectData.pages.map((page, index) => ({
+              pageNumber: index + 1,
+              animationDescription: '기본 페이드인 애니메이션과 호버 효과를 구현하세요.',
+              interactionDescription: '키보드 네비게이션과 접근성 기능을 포함하세요.',
+              educationalFeatures: []
+            })),
+            overallSummary: '기본 디자인 명세가 적용되었습니다.'
+          };
+          setStep4ResultData(defaultStep4Result);
+        }
+
       } catch (fallbackError) {
         console.error('폴백 프롬프트 생성도 실패:', fallbackError);
+        setError('프롬프트 생성에 실패했습니다. 페이지를 새로고침하고 다시 시도해주세요.');
       }
     } finally {
       setIsGenerating(false);
@@ -341,22 +399,21 @@ ${step3Result ? step3Result.pages.map((page, pageIndex) => {
         return `## 페이지 ${index + 1}: ${page.topic}
 
 ### 1. 페이지 구성 및 내용
-\`\`\`
+
 ${pageContent}
 
-[레이아웃 구현 지침]
+**레이아웃 구현 지침:**
 - 캔버스: 너비 1600px 고정, 높이 가변(세로 스크롤)
 - 좌우 여백(Safe Area): 120px(좌), 120px(우) — 콘텐츠 최대 폭 1360px
 - 컬러: Primary, Secondary, Accent 색상을 활용한 조화로운 배색
 - 폰트 크기: 모든 텍스트 18pt 이상 준수
 - 라운딩/그림자: 부드럽고 가벼운 느낌의 카드 컴포넌트
 
-접근성 및 가독성:
+**접근성 및 가독성:**
 - 최소 폰트 크기 준수: 본문 18-20pt, 부제목 22-24pt, 제목 28-36pt
 - 대비: 본문 텍스트와 배경 대비비 4.5:1 이상 유지
 - 줄 길이: 본문 60–80자 폭 유지
 - 라인하이트: 본문 1.5, 제목 1.2
-\`\`\`
 
 ### 2. 페이지에 사용될 이미지
 ${generateImageSpecification(step3Page, step4Page, index)}
@@ -368,9 +425,8 @@ ${generateInteractionAndAnimationSpecification(step4Page)}`;
         return `## 페이지 ${index + 1}: ${page.topic}
 
 ### 1. 페이지 구성 및 내용
-\`\`\`
+
 ${pageContent}
-\`\`\`
 
 ### 2. 페이지에 사용될 이미지
 ${generateImageSpecification(step3Page, step4Page, index)}
@@ -932,6 +988,131 @@ ${imagePrompts.join('\n\n---\n\n')}`;
     }
   };
 
+  // 활성 섹션에 따른 콘텐츠 반환
+  const getDisplayContent = (): string => {
+    if (activeSection === 'main') {
+      return finalPrompt.htmlPrompt;
+    } else if (activeSection === 'images') {
+      return generateImageOnlyPrompts();
+    }
+    return '콘텐츠를 로드하는 중입니다...';
+  };
+
+  // Step3 데이터만을 사용하여 이미지 생성 프롬프트 생성
+  const generateImageOnlyPrompts = (): string => {
+    if (!step3Result) {
+      return '## 이미지 생성 명세서\n\n⚠️ Step 3 데이터가 없어 이미지 프롬프트를 생성할 수 없습니다. Step 3를 먼저 완료해주세요.';
+    }
+
+    const imagePrompts: string[] = [];
+    let imageCounter = 1;
+
+    // 페이지별로 순서대로 이미지 수집
+    step3Result.pages.forEach((page, pageIndex) => {
+      const pageImages: Array<{
+        fileName: string;
+        aiPrompt?: string;
+        description?: string;
+        purpose?: string;
+        sizeGuide?: string;
+        path?: string;
+        accessibility?: { altText: string } | null;
+        alt?: string;
+        width?: number;
+        height?: number;
+      }> = [];
+
+      // mediaAssets에서 이미지 수집
+      if (page.mediaAssets && page.mediaAssets.length > 0) {
+        page.mediaAssets.forEach((image) => {
+          if (image.fileName) {
+            pageImages.push(image);
+          }
+        });
+      }
+
+      // content.images에서 이미지 수집 (중복 제거)
+      if (page.content && page.content.images && page.content.images.length > 0) {
+        page.content.images.forEach((image) => {
+          const fileName = image.filename || image.fileName;
+          if (fileName && !pageImages.some(existing => existing.fileName === fileName)) {
+            pageImages.push({
+              fileName,
+              aiPrompt: image.aiPrompt,
+              description: image.description || image.alt,
+              purpose: image.purpose,
+              alt: image.alt,
+              width: image.width,
+              height: image.height
+            });
+          }
+        });
+      }
+
+      // 페이지에 이미지가 있으면 추가
+      if (pageImages.length > 0) {
+        const pageTitle = projectData.pages[pageIndex]?.topic || `페이지 ${pageIndex + 1}`;
+
+        pageImages.forEach((image) => {
+          const width = image.width || (image.sizeGuide ? parseInt(image.sizeGuide.split('x')[0]) : 600);
+          const height = image.height || (image.sizeGuide ? parseInt(image.sizeGuide.split('x')[1]) : 400);
+
+          imagePrompts.push(`### 이미지 ${imageCounter}: ${image.fileName}
+
+**페이지**: ${pageTitle} (페이지 ${pageIndex + 1})
+
+**AI 생성 프롬프트:**
+${image.aiPrompt || `${projectData.targetAudience}를 위한 ${image.purpose || '교육용'} 이미지. ${image.description || image.alt || '학습 내용을 시각적으로 표현'}. 밝고 친근한 스타일로 제작.`}
+
+**디자인 가이드라인:**
+- 무드: ${visualIdentity.moodAndTone.join(', ')}
+- 주색상: ${visualIdentity.colorPalette.primary}
+- 보조색상: ${visualIdentity.colorPalette.secondary}
+- 강조색상: ${visualIdentity.colorPalette.accent}
+- 배경색: ${visualIdentity.colorPalette.background}
+- 텍스트색: ${visualIdentity.colorPalette.text}
+- 교육 대상: ${projectData.targetAudience}
+- 해상도: ${width}x${height}px
+- 용도: ${image.purpose || '교육용 이미지'}
+- 설명: ${image.description || image.alt || '교육 콘텐츠 시각화'}
+- 접근성: ${image.accessibility?.altText || image.alt || '교육용 이미지'}
+
+**파일 정보:**
+- 저장 경로: ./image/page${pageIndex + 1}/${image.fileName}
+- 플레이스홀더: https://via.placeholder.com/${width}x${height}/cccccc/666666?text=${encodeURIComponent((image.fileName || 'image').replace('.png', '').replace(/[^a-zA-Z0-9]/g, '+'))}
+
+---`);
+          imageCounter++;
+        });
+      }
+    });
+
+    if (imagePrompts.length === 0) {
+      return `## 이미지 생성 명세서
+
+이 프로젝트는 HTML/CSS 기반 시각화로 설계되어 별도의 이미지가 필요하지 않습니다.
+모든 시각적 요소는 CSS로 구현되도록 설계되었습니다.`;
+    }
+
+    return `## 이미지 생성 명세서
+
+아래의 이미지들을 AI 이미지 생성 도구(DALL-E, Midjourney, Stable Diffusion 등)를 사용하여 생성하고,
+지정된 경로에 저장한 후 HTML에서 참조하세요.
+
+**총 ${imageCounter - 1}개의 이미지가 필요합니다.**
+
+${imagePrompts.join('\n\n')}
+
+## 이미지 생성 후 작업 안내
+
+1. **파일명 준수**: 위에 지정된 파일명을 정확히 사용하세요
+2. **경로 설정**: 각 이미지를 해당 페이지 폴더에 저장하세요
+3. **크기 확인**: 지정된 해상도로 생성하여 레이아웃 시프트를 방지하세요
+4. **품질 검토**: 교육 대상에 적합한 내용인지 확인하세요
+5. **접근성 고려**: 시각 장애인을 위한 대체 텍스트가 의미 있는지 확인하세요`;
+  };
+
+
   const handleComplete = () => {
     // 통합된 결과를 전달하기 위해 수정
     if (finalPrompt) {
@@ -1042,7 +1223,7 @@ ${imagePrompts.join('\n\n---\n\n')}`;
                       </div>
 
                       <button
-                        onClick={() => copyToClipboard(finalPrompt.htmlPrompt)}
+                        onClick={() => copyToClipboard(getDisplayContent())}
                         className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-700 rounded-lg hover:bg-blue-100 transition-colors text-sm font-medium"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1051,13 +1232,23 @@ ${imagePrompts.join('\n\n---\n\n')}`;
                         복사
                       </button>
                       <button
-                        onClick={generateFinalPrompt}
-                        className="flex items-center gap-2 px-4 py-2 bg-gray-50 text-gray-700 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium"
+                        onClick={() => generateFinalPrompt(true)}
+                        disabled={isGenerating}
+                        className="flex items-center gap-2 px-4 py-2 bg-green-50 text-green-700 rounded-lg hover:bg-green-100 disabled:bg-gray-100 disabled:text-gray-400 transition-colors text-sm font-medium"
                       >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        새로고침
+                        {isGenerating ? (
+                          <>
+                            <div className="w-4 h-4 border-2 border-green-600 border-t-transparent rounded-full animate-spin"></div>
+                            재생성 중...
+                          </>
+                        ) : (
+                          <>
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                            </svg>
+                            재생성
+                          </>
+                        )}
                       </button>
                     </div>
                   </div>
@@ -1074,26 +1265,20 @@ ${imagePrompts.join('\n\n---\n\n')}`;
                             ol: ({children}) => <ol className="list-decimal list-outside ml-6 mb-3 space-y-1">{children}</ol>,
                           }}
                         >
-                          {activeSection === 'main'
-                            ? finalPrompt.htmlPrompt
-                            : finalPrompt.htmlPrompt.split('## 6. 이미지 생성 명세서')[1] || '이미지 프롬프트 섹션을 생성 중입니다...'
-                          }
+                          {getDisplayContent()}
                         </ReactMarkdown>
                       </div>
                     ) : (
                       <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono leading-relaxed">
-                        {activeSection === 'main'
-                          ? finalPrompt.htmlPrompt
-                          : finalPrompt.htmlPrompt.split('## 6. 이미지 생성 명세서')[1] || '이미지 프롬프트 섹션을 생성 중입니다...'
-                        }
+                        {getDisplayContent()}
                       </pre>
                     )}
                   </div>
 
                   {/* 통계 정보 */}
                   <div className="mt-4 flex items-center gap-6 text-sm text-gray-600">
-                    <span>총 {finalPrompt.htmlPrompt.length.toLocaleString()}자</span>
-                    <span>약 {Math.ceil(finalPrompt.htmlPrompt.length / 100)} 토큰</span>
+                    <span>총 {getDisplayContent().length.toLocaleString()}자</span>
+                    <span>약 {Math.ceil(getDisplayContent().length / 100)} 토큰</span>
                     <span className="flex items-center gap-1">
                       <div className="w-2 h-2 bg-green-500 rounded-full"></div>
                       생성 완료
@@ -1161,10 +1346,29 @@ ${imagePrompts.join('\n\n---\n\n')}`;
 
           <div className="flex gap-3 ml-auto">
             <button
-              onClick={() => copyToClipboard(finalPrompt.htmlPrompt)}
+              onClick={() => generateFinalPrompt(true)}
+              disabled={isGenerating}
+              className="flex items-center gap-2 px-6 py-3 bg-blue-50 text-blue-700 rounded-full hover:bg-blue-100 disabled:bg-gray-100 disabled:text-gray-400 transition-all font-medium shadow-sm"
+            >
+              {isGenerating ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
+                  재생성 중...
+                </>
+              ) : (
+                <>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                  </svg>
+                  🔄 재생성
+                </>
+              )}
+            </button>
+            <button
+              onClick={() => copyToClipboard(getDisplayContent())}
               className="px-6 py-3 bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-all font-medium shadow-sm"
             >
-              📋 전체 복사
+              📋 {activeSection === 'images' ? '이미지 프롬프트 복사' : '전체 복사'}
             </button>
             <button
               onClick={handleComplete}

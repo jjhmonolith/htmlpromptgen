@@ -50,10 +50,22 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         // Step4가 통합된 최종 단계이므로 step4와 step5 모두 초기화
         updatedData.step4 = null;
         updatedData.step5 = null;
+        // stepCompletion도 함께 초기화
+        updatedData.stepCompletion = {
+          ...updatedData.stepCompletion,
+          step4: false,
+          step5: false
+        };
       } else {
         updatedData[`step${i}` as keyof typeof updatedData] = null;
+        // stepCompletion도 함께 초기화
+        updatedData.stepCompletion = {
+          ...updatedData.stepCompletion,
+          [`step${i}`]: false
+        };
       }
     }
+    console.log(`🗑️ Step${fromStep} 수정으로 Step${fromStep + 1}~4 초기화됨`);
     return updatedData;
   };
 
@@ -120,11 +132,12 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     // 기존 Step1 데이터와 비교하여 실제로 변경되었는지 확인
     const currentStep1Hash = JSON.stringify(workflowData.step1);
     const newStep1Hash = JSON.stringify(partialData);
-    
+
     let updatedWorkflowData;
-    
-    // 실제로 Step1 데이터가 변경된 경우에만 뒷 단계 초기화
-    if (currentStep1Hash !== newStep1Hash && workflowData.step1) {
+
+    // Step1이 이미 존재하고 실제로 변경된 경우에만 뒷 단계 초기화
+    if (currentStep1Hash !== newStep1Hash && workflowData.step1 &&
+        (workflowData.step2 || workflowData.step3 || workflowData.step4 || workflowData.step5)) {
       console.log('🔄 Step1 데이터 변경 감지 - 뒷 단계 초기화');
       const resetData = resetLaterSteps(1);
       updatedWorkflowData = {
@@ -133,16 +146,16 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         currentStep: currentStep
       };
     } else {
-      // 데이터 변경이 없거나 최초 로드인 경우 뒷 단계 유지
+      // 데이터 변경이 없거나 최초 로드인 경우, 또는 뒷 단계가 없는 경우 뒷 단계 유지
       updatedWorkflowData = {
         ...workflowData,
         step1: partialData,
         currentStep: currentStep
       };
     }
-    
+
     setWorkflowData(updatedWorkflowData);
-    
+
     // 부모에게 실시간 변경 알림
     onWorkflowDataChange?.(updatedWorkflowData);
   };
@@ -169,11 +182,12 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     // 기존 Step2 데이터와 비교하여 실제로 변경되었는지 확인
     const currentStep2Hash = JSON.stringify(workflowData.step2);
     const newStep2Hash = JSON.stringify(partialData);
-    
+
     let updatedWorkflowData;
-    
-    // 실제로 Step2 데이터가 변경된 경우에만 뒷 단계 초기화
-    if (currentStep2Hash !== newStep2Hash && workflowData.step2) {
+
+    // Step2가 이미 존재하고 실제로 변경된 경우에만 뒷 단계 초기화
+    if (currentStep2Hash !== newStep2Hash && workflowData.step2 &&
+        (workflowData.step3 || workflowData.step4 || workflowData.step5)) {
       console.log('🔄 Step2 데이터 변경 감지 - 뒷 단계 초기화');
       const resetData = resetLaterSteps(2);
       updatedWorkflowData = {
@@ -182,14 +196,14 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         currentStep: currentStep
       };
     } else {
-      // 데이터 변경이 없거나 최초 로드인 경우 뒷 단계 유지
+      // 데이터 변경이 없거나 최초 로드인 경우, 또는 뒷 단계가 없는 경우 뒷 단계 유지
       updatedWorkflowData = {
         ...workflowData,
         step2: partialData,
         currentStep: currentStep
       };
     }
-    
+
     setWorkflowData(updatedWorkflowData);
     onWorkflowDataChange?.(updatedWorkflowData);
   };
@@ -217,11 +231,12 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     // 기존 Step3 데이터와 비교하여 실제로 변경되었는지 확인
     const currentStep3Hash = JSON.stringify(workflowData.step3);
     const newStep3Hash = JSON.stringify(partialData);
-    
+
     let updatedWorkflowData;
-    
-    // 실제로 Step3 데이터가 변경된 경우에만 뒷 단계 초기화
-    if (currentStep3Hash !== newStep3Hash && workflowData.step3) {
+
+    // Step3이 이미 존재하고 실제로 변경된 경우에만 뒷 단계 초기화
+    if (currentStep3Hash !== newStep3Hash && workflowData.step3 &&
+        (workflowData.step4 || workflowData.step5)) {
       console.log('🔄 Step3 데이터 변경 감지 - 뒷 단계 초기화');
       const resetData = resetLaterSteps(3);
       updatedWorkflowData = {
@@ -230,14 +245,14 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         currentStep: currentStep
       };
     } else {
-      // 데이터 변경이 없거나 최초 로드인 경우 뒷 단계 유지
+      // 데이터 변경이 없거나 최초 로드인 경우, 또는 뒷 단계가 없는 경우 뒷 단계 유지
       updatedWorkflowData = {
         ...workflowData,
         step3: partialData,
         currentStep: currentStep
       };
     }
-    
+
     setWorkflowData(updatedWorkflowData);
     onWorkflowDataChange?.(updatedWorkflowData);
   };
