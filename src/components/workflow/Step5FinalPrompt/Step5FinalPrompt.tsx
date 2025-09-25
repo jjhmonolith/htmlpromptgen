@@ -154,14 +154,17 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
         // API 키 에러가 아닌 경우에만 Step4 기본 데이터 설정
         if (!isApiKeyError && !step4ResultData) {
           // 기본 Step4 결과 데이터 생성
-          const defaultStep4Result = {
+          const defaultStep4Result: Step4DesignResult = {
+            layoutMode: 'scrollable' as const,
             pages: projectData.pages.map((page, index) => ({
               pageNumber: index + 1,
               animationDescription: '기본 페이드인 애니메이션과 호버 효과를 구현하세요.',
               interactionDescription: '키보드 네비게이션과 접근성 기능을 포함하세요.',
               educationalFeatures: []
             })),
-            overallSummary: '기본 디자인 명세가 적용되었습니다.'
+            overallSummary: '기본 디자인 명세가 적용되었습니다.',
+            globalFeatures: [],
+            generatedAt: new Date()
           };
           setStep4ResultData(defaultStep4Result);
         }

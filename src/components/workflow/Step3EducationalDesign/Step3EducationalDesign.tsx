@@ -169,12 +169,12 @@ const convertEducationalDesignToStep3 = (educationalResult: EducationalDesignRes
           { id: 'content', type: 'text', section: '메인', role: '내용 전달', text: '핵심 학습 내용', gridSpan: '메인 영역' },
           { id: 'interaction', type: 'interactive', section: '하단', role: '참여 유도', text: '상호작용 요소', gridSpan: '적절한 크기' }
         ] as any,
-        images: (pageDesign.mediaAssets || []).map(media => ({
+        images: (pageDesign.mediaAssets || []).map((media: any) => ({
           filename: media.fileName || `page${pageDesign.pageNumber}_main.png`,
           purpose: media.purpose || '교육 시각화',
           style: media.type || 'image',
-          section: media.placement?.section || '메인 영역',
-          place: media.placement?.position || '중앙',
+          section: typeof media.placement === 'string' ? media.placement : (media.placement?.section || '메인 영역'),
+          place: typeof media.placement === 'string' ? '중앙' : (media.placement?.position || '중앙'),
           width: parseInt((media.sizeGuide || '400×300px').match(/\d+/)?.[0] || '400'),
           height: parseInt((media.sizeGuide || '400×300px').match(/×(\d+)/)?.[1] || '300'),
           alt: media.accessibility?.altText || `${pageDesign.pageTitle} 관련 교육 이미지`,
@@ -835,7 +835,7 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
                           <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
                             <h6 className="text-sm font-semibold text-blue-900 mb-2">🤖 AI 생성 프롬프트</h6>
                             <div className="text-sm text-blue-800 leading-relaxed bg-white rounded p-3 border font-mono">
-                              {image.aiPrompt || image.prompt || 'AI 프롬프트를 생성 중입니다...'}
+                              {image.aiPrompt || 'AI 프롬프트를 생성 중입니다...'}
                             </div>
                           </div>
                         </div>

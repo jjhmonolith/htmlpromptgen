@@ -378,4 +378,5 @@ export interface QualityMetrics {
   structure: number;
   overall: number;
   imageDetailScore?: number;
+  layoutDiversityScore?: number;
 }
