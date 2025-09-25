@@ -24,7 +24,7 @@ export function useAutoSave(
     onError
   } = options;
 
-  const intervalRef = useRef<number | null>(null);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const lastSaveRef = useRef<string>('');
   const lastStepRef = useRef<number>(0);
   const isVisibleRef = useRef(true);

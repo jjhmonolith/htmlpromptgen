@@ -4,7 +4,7 @@ import { Step2VisualIdentity } from './Step2VisualIdentity/Step2VisualIdentity';
 import { Step3EducationalDesign } from './Step3EducationalDesign';
 import { Step5FinalPrompt } from './Step5FinalPrompt';
 import { GNB } from '../common';
-import { loadFromStorage, saveToStorage } from '../../services/storage.service';
+// import { loadFromStorage, saveToStorage } from '../../services/storage.service';
 
 interface WorkflowContainerProps {
   projectId: string;

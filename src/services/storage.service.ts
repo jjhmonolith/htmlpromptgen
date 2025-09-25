@@ -53,3 +53,12 @@ export const loadDraft = <T>(key: string): T | null => {
 export const clearDraft = (key: string): void => {
   localStorage.removeItem(key);
 };
+
+// Add missing functions for WorkflowContainer
+export const loadFromStorage = <T>(key: string): T | null => {
+  return loadDraft<T>(key);
+};
+
+export const saveToStorage = <T>(key: string, data: T): void => {
+  saveDraft(key, data);
+};

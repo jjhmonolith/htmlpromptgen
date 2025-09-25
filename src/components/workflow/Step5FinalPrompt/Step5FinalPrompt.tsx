@@ -3,8 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeHighlight from 'rehype-highlight';
-import { ProjectData, VisualIdentity, DesignTokens, Step3IntegratedResult, ComponentLine, FinalPrompt } from '../../../types/workflow.types';
-import { Step4DesignResult } from '../../../types/step4.types';
+import { ProjectData, VisualIdentity, DesignTokens, Step3IntegratedResult, ComponentLine, FinalPrompt, Step4DesignResult } from '../../../types/workflow.types';
 
 interface Step5FinalPromptProps {
   initialData?: FinalPrompt | null;

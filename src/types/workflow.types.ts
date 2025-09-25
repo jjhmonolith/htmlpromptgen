@@ -1,5 +1,4 @@
 // 워크플로우 타입 정의
-import { Step4DesignResult } from './step4.types';
 
 export interface ProjectData {
   id: string;
@@ -9,6 +8,7 @@ export interface ProjectData {
   contentMode: 'original' | 'enhanced' | 'restricted';
   pages: PageData[];
   suggestions?: string[];
+  additionalRequirements?: string;
   // Learning Journey Designer 필드들
   learningJourneyMode?: 'skip' | 'manual' | 'ai_generated';
   emotionalArc?: string;
@@ -201,6 +201,8 @@ export interface FinalPrompt {
   system?: string;
   context?: string;
   task?: string;
+  step4Result?: Step4DesignResult;
+  step5Result?: any;
 }
 
 
@@ -248,6 +250,9 @@ export interface Step3IntegratedResult {
       generatedAt: Date;
     };
 
+    // 미디어 자산 (Step5에서 사용)
+    mediaAssets?: ImageLine[];
+
     isGenerating: boolean;
     retryCount?: number;  // 자동 재시도 횟수
 
@@ -278,7 +283,7 @@ export interface Step3Section {
 
 export interface ComponentLine {
   id: string;
-  type: 'heading' | 'paragraph' | 'card' | 'image' | 'caption';
+  type: 'heading' | 'paragraph' | 'card' | 'image' | 'caption' | 'button' | 'list' | 'text' | 'chart' | 'interactive' | 'layout';
   variant?: string;
   section: string;
   role: 'title' | 'content';
@@ -316,4 +321,58 @@ export interface ImageLine {
     caption: string;
   };
   structuredMetadata?: any; // 8가지 구조화된 메타데이터
+}
+
+// Step4 관련 타입 정의 추가
+export interface Step4DesignResult {
+  layoutMode: 'scrollable' | 'fixed';
+  pages: Array<{
+    pageNumber: number;
+    animationDescription: string;
+    interactionDescription: string;
+    educationalFeatures: any[];
+  }>;
+  overallSummary?: string;
+  globalFeatures: any[];
+  generatedAt: Date;
+}
+
+export interface PageDataWithMedia {
+  pageId: string;
+  pageTitle: string;
+  pageNumber: number;
+  fullDescription?: string;
+  phase1Complete?: boolean;
+  phase2Complete?: boolean;
+  structure?: {
+    sections: Step3Section[];
+    flow: string;
+    imgBudget: number;
+  };
+  content?: {
+    components: ComponentLine[];
+    images: ImageLine[];
+    generatedAt: Date;
+  };
+  mediaAssets?: ImageLine[];
+  isGenerating: boolean;
+  retryCount?: number;
+  debugInfo?: {
+    originalPrompt: string;
+    originalResponse: string;
+    parsedSections: string | { simplified: string } | Record<string, string>;
+    layoutValidation?: any;
+    qualityMetrics?: any;
+  };
+  parseError?: string;
+  generatedAt: Date;
+}
+
+// QualityMetrics 타입 추가
+export interface QualityMetrics {
+  completeness: number;
+  relevance: number;
+  clarity: number;
+  structure: number;
+  overall: number;
 }

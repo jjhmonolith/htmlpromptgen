@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ApiKeyManager } from '../ApiKeyManager';
 import { ResultDisplay } from '../ResultDisplay';
 import { WorkflowContainer } from '../workflow';
@@ -27,7 +27,7 @@ export const WorkSpace: React.FC<WorkSpaceProps> = ({ project, onBack }) => {
   }, [currentProject.id]);
 
   // 개선된 자동 저장 시스템
-  const { forceSave } = useAutoSave(currentProject, workflowData, {
+  const { } = useAutoSave(currentProject, workflowData, {
     enabled: true,
     interval: 10000, // 10초
     immediate: true,

@@ -1,13 +1,12 @@
 import { OpenAIService } from './openai.service';
-import { Step4DesignSpecificationService } from './step4-design-specification.service';
 import {
   ProjectData,
   VisualIdentity,
   DesignTokens,
   Step3IntegratedResult,
-  FinalPrompt
+  FinalPrompt,
+  Step4DesignResult
 } from '../types/workflow.types';
-import { Step4DesignResult } from '../types/step4.types';
 
 /**
  * Step 4-5 통합 서비스
@@ -17,10 +16,10 @@ import { Step4DesignResult } from '../types/step4.types';
  * 모든 기능을 완전히 보존합니다.
  */
 export class IntegratedStep4And5Service {
-  private step4Service: Step4DesignSpecificationService;
+  // private step4Service: Step4DesignSpecificationService;
 
   constructor(private openAIService: OpenAIService) {
-    this.step4Service = new Step4DesignSpecificationService(openAIService);
+    // this.step4Service = new Step4DesignSpecificationService(openAIService);
   }
 
   /**
