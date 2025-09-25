@@ -377,4 +377,5 @@ export interface QualityMetrics {
   clarity: number;
   structure: number;
   overall: number;
+  imageDetailScore?: number;
 }

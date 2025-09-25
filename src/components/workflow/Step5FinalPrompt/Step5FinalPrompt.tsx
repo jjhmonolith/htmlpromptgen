@@ -119,6 +119,7 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
       if (!isRegenerate) {
         console.log('📤 부모 컴포넌트로 완료 신호 전달');
         onComplete({
+          htmlPrompt: integratedResult.step5Result.htmlPrompt || '',
           step4Result: integratedResult.step4Result,
           step5Result: integratedResult.step5Result
         });
@@ -1116,6 +1117,7 @@ ${imagePrompts.join('\n\n')}
     // 통합된 결과를 전달하기 위해 수정
     if (finalPrompt) {
       onComplete({
+        htmlPrompt: finalPrompt.htmlPrompt || '',
         step5Result: finalPrompt
       });
     }

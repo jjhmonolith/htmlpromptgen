@@ -207,7 +207,7 @@ ${audienceGuide}
     }
   }
 
-  private getContentModeGuide(contentMode: 'restricted' | 'enhanced'): string {
+  private getContentModeGuide(contentMode: 'original' | 'enhanced' | 'restricted'): string {
     if (contentMode === 'enhanced') {
       return `제공된 프로젝트 정보를 바탕으로 **창의적으로 내용을 보강하고 확장**하여 풍부한 교육 콘텐츠를 만드는 방향입니다. 학습자의 이해를 돕는 다양한 시각적 요소, 흥미로운 색상 조합, 매력적인 컴포넌트 스타일을 자유롭게 제안하세요.`;
     } else {
