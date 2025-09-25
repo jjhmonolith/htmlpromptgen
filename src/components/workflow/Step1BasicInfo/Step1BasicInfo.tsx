@@ -35,7 +35,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   const [ahaMoments, setAhaMoments] = useState<Record<string, string>>({});
   const [isGeneratingJourney, setIsGeneratingJourney] = useState(false);
   const [showApiKeyManager, setShowApiKeyManager] = useState(false);
-  const [hasGeneratedJourney, setHasGeneratedJourney] = useState(false);
 
   
   // 초기 데이터 로딩 (한 번만 실행)
@@ -61,7 +60,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       // Learning Journey 데이터가 있으면 확장 상태로 설정하고 생성 완료 표시
       if (initialData.emotionalArc || initialData.learnerPersona || initialData.ahaMoments) {
         setIsLearningJourneyExpanded(true);
-        setHasGeneratedJourney(true);
       }
       if (initialData.emotionalArc) setEmotionalArc(initialData.emotionalArc);
       if (initialData.learnerPersona) setLearnerPersona(initialData.learnerPersona);
@@ -340,23 +338,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
-  // 테스트 모드 실행 함수
-  const handleTestMode = () => {
-    setProjectTitle(mockData.projectTitle);
-    setTargetAudience(mockData.targetAudience);
-    setLayoutMode(mockData.layoutMode);
-    setContentMode(mockData.contentMode);
-    setPages(mockData.pages);
-    setSuggestions(mockData.suggestions);
-    setEmotionalArc(mockData.emotionalArc);
-    setLearnerPersona(mockData.learnerPersona);
-    const momentsObj: Record<string, string> = {};
-    mockData.ahaMoments.forEach((moment: string, index: number) => {
-      momentsObj[index.toString()] = moment;
-    });
-    setAhaMoments(momentsObj);
-    setErrors({});
-  };
 
   // AI로 Learning Journey 생성
   const generateLearningJourney = async () => {
@@ -393,7 +374,6 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
       });
       setAhaMoments(momentsObj);
       setIsLearningJourneyExpanded(true);
-      setHasGeneratedJourney(true);
     } catch (error) {
       console.error('Learning Journey 생성 실패:', error);
       alert('Learning Journey 생성 중 오류가 발생했습니다. 다시 시도해주세요.');
@@ -403,7 +383,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
   };
 
   // API 키 매니저 콜백 함수들
-  const handleApiKeyValidated = (key: string) => {
+  const handleApiKeyValidated = (_key: string) => {
     setShowApiKeyManager(false);
     // API 키 설정 후 자동으로 Learning Journey 생성 시도
     setTimeout(() => {
@@ -890,7 +870,7 @@ export const Step1BasicInfo: React.FC<Step1BasicInfoProps> = ({
                     <span className="text-xs text-gray-600 ml-2">({pages.filter(p => p.topic.trim()).length}개 페이지)</span>
                   </div>
                   <div className="space-y-2">
-                    {pages.filter(p => p.topic.trim()).map((page, index) => (
+                    {pages.filter(p => p.topic.trim()).map((_, index) => (
                       <div key={index} className="flex items-center gap-3">
                         <span className="text-sm font-medium text-gray-700 min-w-[20px]">
                           {index + 1}.

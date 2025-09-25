@@ -18,7 +18,7 @@ import {
 export class IntegratedStep4And5Service {
   // private step4Service: Step4DesignSpecificationService;
 
-  constructor(private openAIService: OpenAIService) {
+  constructor(private _openAIService: OpenAIService) {
     // this.step4Service = new Step4DesignSpecificationService(openAIService);
   }
 
@@ -113,7 +113,7 @@ export class IntegratedStep4And5Service {
   private compileHTMLPrompt(
     projectData: ProjectData,
     visualIdentity: VisualIdentity,
-    designTokens: DesignTokens,
+    _designTokens: DesignTokens,
     step3Result: Step3IntegratedResult,
     step4Result: Step4DesignResult
   ): string {
@@ -296,7 +296,7 @@ ${pageSpecs.join('\n\n')}`;
     return spec;
   }
 
-  private generateImageSpecification(step3Page: any, step4Page: any, pageIndex: number): string {
+  private generateImageSpecification(step3Page: any, _step4Page: any, pageIndex: number): string {
     if (!step3Page?.mediaAssets || step3Page.mediaAssets.length === 0) {
       return '이미지가 없습니다.';
     }
@@ -375,7 +375,7 @@ ${imagePrompts.join('\n\n---\n\n')}`;
 
   private generateProjectStructureGuide(
     projectData: ProjectData,
-    step3Result: Step3IntegratedResult
+    _step3Result: Step3IntegratedResult
   ): string {
     return `## 8. 프로젝트 폴더 구조 및 개발 가이드라인
 

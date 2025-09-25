@@ -156,7 +156,7 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
           // 기본 Step4 결과 데이터 생성
           const defaultStep4Result: Step4DesignResult = {
             layoutMode: 'scrollable' as const,
-            pages: projectData.pages.map((page, index) => ({
+            pages: projectData.pages.map((_, index) => ({
               pageNumber: index + 1,
               animationDescription: '기본 페이드인 애니메이션과 호버 효과를 구현하세요.',
               interactionDescription: '키보드 네비게이션과 접근성 기능을 포함하세요.',
@@ -186,18 +186,6 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
     const isScrollable = projectData.layoutMode === 'scrollable';
     const isEnhanced = projectData.contentMode === 'enhanced';
 
-    // 모드 조합에 따른 설명
-    const getModeDescription = () => {
-      if (isScrollable && isEnhanced) {
-        return '📜 스크롤 가능 + ✨ AI 보강 모드 - AI가 내용을 창의적으로 확장';
-      } else if (isScrollable && !isEnhanced) {
-        return '📜 스크롤 가능 + 📝 원본 유지 모드 - 사용자가 입력한 내용만 사용';
-      } else if (!isScrollable && isEnhanced) {
-        return '🖼️ 고정 크기 + ✨ AI 보강 모드 - AI가 내용을 창의적으로 확장하되 크기 제한 준수';
-      } else {
-        return '🖼️ 고정 크기 + 📝 원본 유지 모드 - 사용자가 입력한 내용만 사용';
-      }
-    };
 
     // 1. 프로젝트 개요
     sections.push(`# 최종 교안 개발 프롬프트
@@ -448,13 +436,13 @@ ${pageSpecs.join('\n\n')}`;
   // Step3의 fullDescription 중심으로 변경되어 이 함수들은 간소화됨
 
   // 이미지 배치 명세 생성 (Step3 이미지 데이터 기반)
-  const generateImageSpecification = (step3Page: any, step4Page: any, pageIndex: number): string => {
+  const generateImageSpecification = (step3Page: any, _step4Page: any, pageIndex: number): string => {
     const imageSpecs: string[] = [];
 
     // mediaAssets 먼저 확인
     if (step3Page?.mediaAssets && step3Page.mediaAssets.length > 0) {
-      step3Page.mediaAssets.forEach((img: any, imgIndex: number) => {
-        let spec = `**${imgIndex + 1}. ${img.fileName}**`;
+      step3Page.mediaAssets.forEach((img: any, _imgIndex: number) => {
+        let spec = `**${_imgIndex + 1}. ${img.fileName}**`;
 
         spec += `
    - **파일 경로**: \`${img.path || `./images/page${pageIndex + 1}/${img.fileName}`}\`
@@ -568,12 +556,12 @@ ${step4Page.interactionDescription}
   };
 
   // 교육적 기능 명세 생성
-  const generateEducationalFeatureSpecification = (step4Page: any): string => {
-    if (!step4Page?.educationalFeatures || step4Page.educationalFeatures.length === 0) {
+  const _generateEducationalFeatureSpecification = (_step4Page: any): string => {
+    if (!_step4Page?.educationalFeatures || _step4Page.educationalFeatures.length === 0) {
       return '기본 교육적 레이아웃 및 시각적 계층 구조';
     }
 
-    return step4Page.educationalFeatures.map((feature: any, idx: number) => {
+    return _step4Page.educationalFeatures.map((feature: any, idx: number) => {
       return `**${idx + 1}. ${feature.type}**
 - 목적: ${feature.purpose}
 - 구현: ${feature.implementation}
@@ -582,26 +570,26 @@ ${step4Page.interactionDescription}
   };
 
   // 단일 페이지 구조 생성
-  const generateSinglePageStructure = (pageIndex: number): string => {
+  const _generateSinglePageStructure = (_pageIndex: number): string => {
     if (!step3Result) return '';
 
-    const page = step3Result.pages[pageIndex];
+    const page = step3Result.pages[_pageIndex];
     if (!page || !page.content) return '';
 
     return page.content.components.map(comp => generateComponentHTML(comp, page)).join('\n                    ');
   };
 
   // 컴포넌트 설명 생성
-  const getComponentDescription = (component: ComponentLine): string => {
-    switch (component.type) {
+  const _getComponentDescription = (_component: ComponentLine): string => {
+    switch (_component.type) {
       case 'heading':
-        return `제목 요소 (h${component.variant || '2'})`;
+        return `제목 요소 (h${_component.variant || '2'})`;
       case 'paragraph':
         return '본문 텍스트';
       case 'image':
-        return `이미지 표시 (${component.width || 400}×${component.height || 300}px)`;
+        return `이미지 표시 (${_component.width || 400}×${_component.height || 300}px)`;
       case 'card':
-        return `카드 컴포넌트 (${component.variant || 'default'} 스타일)`;
+        return `카드 컴포넌트 (${_component.variant || 'default'} 스타일)`;
       case 'caption':
         return '이미지 캡션';
       default:
@@ -957,7 +945,7 @@ ${imagePrompts.join('\n\n---\n\n')}`;
 
 
   // 이미지 파일 목록 생성
-  const getImageFileList = (): string => {
+  const _getImageFileList = (): string => {
     if (!step3Result) return '';
 
     const imageFiles: string[] = [];
@@ -1027,9 +1015,20 @@ ${imagePrompts.join('\n\n---\n\n')}`;
 
       // mediaAssets에서 이미지 수집
       if (page.mediaAssets && page.mediaAssets.length > 0) {
-        page.mediaAssets.forEach((image) => {
+        page.mediaAssets.forEach((image: any) => {
           if (image.fileName) {
-            pageImages.push(image);
+            pageImages.push({
+              fileName: image.fileName,
+              aiPrompt: image.aiPrompt,
+              description: image.description,
+              purpose: image.purpose,
+              sizeGuide: image.sizeGuide,
+              path: image.path,
+              accessibility: image.accessibility,
+              alt: image.alt,
+              width: image.width,
+              height: image.height
+            });
           }
         });
       }

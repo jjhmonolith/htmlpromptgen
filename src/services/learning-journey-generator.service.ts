@@ -77,7 +77,7 @@ ${pagesText}
         : `${expectedAhaMomentsCount}개 페이지 학습을 위한 학습자`;
 
       const ahaMoments = Array.isArray(jsonData.ahaMoments)
-        ? jsonData.ahaMoments.slice(0, expectedAhaMomentsCount).map(moment => String(moment).trim())
+        ? jsonData.ahaMoments.slice(0, expectedAhaMomentsCount).map((moment: any) => String(moment).trim())
         : Array.from({ length: expectedAhaMomentsCount }, (_, i) => `페이지 ${i + 1}에서의 새로운 발견!`);
 
       // 부족한 아하 순간 채우기

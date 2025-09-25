@@ -1,5 +1,5 @@
 import { OpenAIService } from './openai.service';
-import { ProjectData, Step2RawResponse, VisualIdentity, DesignTokens } from '../types/workflow.types';
+import { ProjectData, VisualIdentity, DesignTokens } from '../types/workflow.types';
 import { createStepErrorHandler, FallbackProvider } from './common-error-handler.service';
 
 const BRAND_LOCKS = {

@@ -166,7 +166,7 @@ export function useAutoSave(
 
   // 페이지 이탈 시 마지막 저장
   useEffect(() => {
-    const handleBeforeUnload = (event: BeforeUnloadEvent) => {
+    const handleBeforeUnload = (_event: BeforeUnloadEvent) => {
       const currentHash = getDataHash(project, workflowData);
       if (currentHash !== lastSaveRef.current) {
         // 동기적으로 마지막 저장 시도

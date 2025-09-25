@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import rehypeHighlight from 'rehype-highlight';
 import { ProjectData, VisualIdentity } from '../../../types/workflow.types';
 import { EducationalDesignService } from '../../../services/educational-design.service';
 import { Step3IntegratedResult } from '../../../types/workflow.types';
@@ -913,7 +912,7 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
                             <div className="mb-2">
                               <span className="font-medium">제안:</span>
                               <ul className="mt-1 ml-4">
-                                {selectedPage.debugInfo.layoutValidation.suggestions.map((suggestion, idx) => (
+                                {selectedPage.debugInfo.layoutValidation.suggestions.map((suggestion: string, idx: number) => (
                                   <li key={idx} className="list-disc">{suggestion}</li>
                                 ))}
                               </ul>
@@ -923,7 +922,7 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
                             <div>
                               <span className="font-medium">주의사항:</span>
                               <ul className="mt-1 ml-4">
-                                {selectedPage.debugInfo.layoutValidation.warnings.map((warning, idx) => (
+                                {selectedPage.debugInfo.layoutValidation.warnings.map((warning: string, idx: number) => (
                                   <li key={idx} className="list-disc">{warning}</li>
                                 ))}
                               </ul>
