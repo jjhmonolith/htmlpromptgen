@@ -42,7 +42,7 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
 
   // 생성 상태 변경을 부모로 전달
   useEffect(() => {
-    const overallGenerating = step4Data?.pages.some(page => page.isGenerating) || isGenerating;
+    const overallGenerating = (step4Data?.pages && Array.isArray(step4Data.pages) ? step4Data.pages.some(page => page.isGenerating) : false) || isGenerating;
     onGeneratingChange?.(overallGenerating);
   }, [step4Data, isGenerating, onGeneratingChange]);
 
@@ -286,7 +286,7 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
     );
   }
 
-  if (!step4Data) {
+  if (!step4Data || !step4Data.pages || !Array.isArray(step4Data.pages) || step4Data.pages.length === 0) {
     return (
       <div className="p-6 bg-gray-50 border border-gray-200 rounded-lg">
         <h3 className="text-lg font-semibold text-gray-900 mb-2">데이터 없음</h3>
@@ -302,7 +302,7 @@ export const Step4DesignSpecificationFC: React.FC<Step4DesignSpecificationProps>
     );
   }
 
-  const selectedPage = step4Data.pages[selectedPageIndex];
+  const selectedPage = step4Data.pages[selectedPageIndex] || step4Data.pages[0];
 
   return (
     <div className="space-y-6">
