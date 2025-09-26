@@ -239,25 +239,33 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     console.log('🎯 Step3 완료 처리 시작:', {
       step3데이터: !!data,
       step3페이지수: data?.pages?.length,
-      현재단계: currentStep
+      현재단계: currentStep,
+      기존step4: !!workflowData.step4,
+      기존step5: !!workflowData.step5
     });
 
-    // Step3 완료 시 바로 Step4(통합된 최종 단계)로 이동
+    // Step3 완료 시 Step4/5 강제 초기화하고 Step4로 이동
     const newWorkflowData = {
       ...workflowData,
       step3: data,
+      step4: null, // 강제 초기화
+      step5: null, // 강제 초기화
       currentStep: 4, // 통합된 Step4로 이동 (실제로는 Step4-5 통합 실행)
       stepCompletion: {
         ...workflowData.stepCompletion,
-        step3: true
+        step3: true,
+        step4: false, // 초기화
+        step5: false  // 초기화
       }
     };
     setWorkflowData(newWorkflowData);
     setCurrentStep(4);
 
-    console.log('✅ Step3 완료 → Step4 전환 완료:', {
+    console.log('✅ Step3 완료 → Step4 전환 완료 (Step4/5 강제 초기화):', {
       새로운단계: 4,
       step3완료상태: true,
+      step4초기화: true,
+      step5초기화: true,
       워크플로우데이터업데이트: '완료'
     });
 

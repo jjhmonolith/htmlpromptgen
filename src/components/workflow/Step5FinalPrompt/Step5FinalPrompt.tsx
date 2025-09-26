@@ -91,13 +91,24 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
     }
   }, [isGenerating, onGeneratingChange]);
 
-  // 실시간 데이터 변경 알림
+  // 실시간 데이터 변경 알림 (무한루프 방지)
+  const lastNotifiedData = useRef<string>('');
   useEffect(() => {
     if (!isDataLoaded) return;
 
+    const currentDataHash = JSON.stringify(finalPrompt);
+    if (currentDataHash === lastNotifiedData.current) {
+      return; // 동일한 데이터는 알림 안함
+    }
+
     const timeoutId = setTimeout(() => {
       if (onDataChange) {
+        console.log('📤 Step5 데이터 변경 알림:', {
+          길이: finalPrompt.htmlPrompt.length,
+          해시변경: lastNotifiedData.current !== currentDataHash
+        });
         onDataChange(finalPrompt);
+        lastNotifiedData.current = currentDataHash;
       }
     }, 500);
 
