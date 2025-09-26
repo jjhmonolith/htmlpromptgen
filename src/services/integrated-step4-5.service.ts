@@ -43,21 +43,14 @@ export class IntegratedStep4And5Service {
     console.log('🚀 Step 4-5 통합 프로세스 시작');
 
     try {
-      // 1. Step4 로직 실행 (기존 Step4DesignSpecificationService와 완전히 동일)
+      // 1. Step4 로직 실행 - 실제 AI 호출로 디자인 명세 생성
       console.log('🎯 Step 4: 디자인 명세 생성 시작');
-      // Step4 로직을 직접 구현 (step4Service가 없으므로)
-      const step4Result: Step4DesignResult = {
-        layoutMode: step3Result.layoutMode,
-        pages: step3Result.pages.map(page => ({
-          pageNumber: page.pageNumber,
-          animationDescription: 'Interactive elements with smooth transitions',
-          interactionDescription: 'Click and hover interactions for enhanced user experience',
-          educationalFeatures: []
-        })),
-        overallSummary: 'Design specification completed',
-        globalFeatures: [],
-        generatedAt: new Date()
-      };
+      const step4Result = await this.generateStep4DesignSpecification(
+        projectData,
+        visualIdentity,
+        designTokens,
+        step3Result
+      );
       console.log('✅ Step 4: 디자인 명세 생성 완료');
 
       // 2. Step5 로직 실행 (기존과 완전히 동일)
@@ -423,5 +416,312 @@ ${projectData.pages.length > 3 ? `├── page4.html          # 네 번째 페
 1. **크기 고정**: 각 이미지의 정확한 픽셀 크기(width × height)를 CSS로 고정
 2. **배치 유지**: 실제 이미지와 동일한 위치와 정렬 방식 적용
 3. **플레이스홀더 서비스 활용**: \`https://via.placeholder.com/[width]x[height]/cccccc/666666?text=[설명]\``;
+  }
+
+  /**
+   * Step4 디자인 명세 AI 생성 (원본 Step4DesignSpecificationService 로직 사용)
+   */
+  private async generateStep4DesignSpecification(
+    projectData: ProjectData,
+    visualIdentity: VisualIdentity,
+    designTokens: DesignTokens,
+    step3Result: Step3IntegratedResult
+  ): Promise<Step4DesignResult> {
+    try {
+      console.log('🎯 Step4 디자인 명세 AI 생성 시작');
+
+      // 페이지별 순차 처리 (원본 로직)
+      const processedPages = await this.processAllPages(step3Result.pages, projectData, visualIdentity);
+
+      // 글로벌 기능 생성
+      const globalFeatures = this.generateGlobalFeatures(projectData.layoutMode);
+
+      const result: Step4DesignResult = {
+        layoutMode: step3Result.layoutMode,
+        pages: processedPages,
+        overallSummary: '접근성과 교육적 효과를 고려한 상호작용 디자인 명세가 생성되었습니다.',
+        globalFeatures,
+        generatedAt: new Date()
+      };
+
+      console.log('✅ Step4 디자인 명세 생성 완료:', {
+        페이지수: result.pages.length,
+        전체요약: !!result.overallSummary
+      });
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ Step4 디자인 명세 생성 실패:', error);
+
+      // 폴백으로 기본 디자인 명세 반환
+      return this.generateFallbackStep4Result(step3Result);
+    }
+  }
+
+  /**
+   * 모든 페이지 처리 (원본 Step4 로직)
+   */
+  private async processAllPages(
+    step3Pages: any[],
+    projectData: ProjectData,
+    visualIdentity: VisualIdentity
+  ): Promise<any[]> {
+    console.log(`🚀 Step4: ${step3Pages.length}개 페이지 병렬 처리 시작`);
+
+    // 병렬 처리를 위한 Promise 배열 생성
+    const pagePromises = step3Pages.map(async (page, i) => {
+      try {
+        console.log(`🔄 페이지 ${page.pageNumber} 처리 시작`);
+        const result = await this.processPage(page, projectData, visualIdentity);
+        console.log(`✅ 페이지 ${page.pageNumber} 처리 완료`);
+        return result;
+
+      } catch (error) {
+        console.error(`❌ 페이지 ${page.pageNumber} 처리 실패:`, error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        return this.createErrorPageResult(page, errorMessage);
+      }
+    });
+
+    // 모든 페이지를 병렬로 처리
+    const results = await Promise.all(pagePromises);
+    console.log(`🎉 Step4: ${step3Pages.length}개 페이지 병렬 처리 완료`);
+
+    return results;
+  }
+
+  /**
+   * 개별 페이지 처리 (원본 Step4 로직)
+   */
+  private async processPage(
+    step3PageData: any,
+    projectData: ProjectData,
+    visualIdentity: VisualIdentity
+  ): Promise<any> {
+    try {
+      console.log('🎯 텍스트 기반 Step4 페이지 생성 시작');
+
+      // AI 프롬프트 생성 (원본 Step4 로직)
+      const prompt = this.createStep4Prompt(step3PageData, projectData, visualIdentity);
+
+      // AI 호출 (원본 방식 사용)
+      const response = await this._openAIService.generateResponse(prompt);
+
+      // JSON 응답 파싱
+      const parsedData = this.parseJsonResponse(response);
+      console.log('✅ Step4 파싱 완료:', parsedData);
+
+      // 결과 어셈블리 (원본 로직)
+      const result = this.assembleStep4FromJson(parsedData, step3PageData, projectData.layoutMode);
+      console.log('🎯 Step4 최종 결과 조립 완료');
+
+      return result;
+
+    } catch (error) {
+      console.error('❌ Step4 페이지 처리 실패:', error);
+      // 폴백 처리
+      return this.createErrorPageResult(step3PageData, error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  /**
+   * Step4 프롬프트 생성 (원본 로직)
+   */
+  private createStep4Prompt(
+    step3PageData: any,
+    projectData: ProjectData,
+    visualIdentity: VisualIdentity
+  ): string {
+    const moodAndTone = Array.isArray(visualIdentity.moodAndTone)
+      ? visualIdentity.moodAndTone.join(', ')
+      : visualIdentity.moodAndTone;
+
+    // 전체 프로젝트 구성
+    const allPages = projectData.pages.map((p, index) =>
+      `페이지 ${p.pageNumber} (${p.topic}${p.description ? ` - ${p.description}` : ''}): ${step3PageData.pageNumber === p.pageNumber ? step3PageData.structure?.sections?.[0]?.hint || '현재 페이지' : '...'}`
+    ).join('\n');
+
+    // Step3 결과 사용 (fullDescription만 사용)
+    const pageContent = step3PageData.fullDescription || `페이지 ${step3PageData.pageNumber}: ${step3PageData.pageTitle}`;
+
+    // 레이아웃 모드에 따른 프롬프트 분기 (원본 로직)
+    if (projectData.layoutMode === 'fixed') {
+      // 스크롤 금지 + 내용 제한 모드
+      return `당신은 최고 수준의 UI/UX 디자이너입니다. 주어진 페이지 구성안과 '비주얼 아이덴티티'를 바탕으로, 학습자의 몰입도를 높이는 동적 효과를 제안해주세요.
+
+### ⚠️ 원본 유지 모드
+이 프로젝트는 사용자가 제공한 내용만을 사용합니다. 하지만 애니메이션과 상호작용은 반드시 제안해야 합니다! 기존 내용을 효과적으로 전달하기 위한 애니메이션과 인터랙션을 상세히 설명하세요. 추가 콘텐츠 생성은 제한되지만, 시각적 효과와 상호작용은 풍부하게 제안하세요.
+
+### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${moodAndTone}
+- **색상**: Primary-${visualIdentity.colorPalette?.primary || '#3B82F6'}
+- **컴포넌트 스타일**: ${visualIdentity.componentStyle}
+- **핵심 디자인 원칙**: 효율적인 공간을 활용하고, 빈 공간이 많다면 이를 채울 아이디어를 적극적으로 제안하라
+
+### 📍 전체 페이지 구성 개요
+${allPages}
+
+### 📝 프로젝트 정보
+- 프로젝트: ${projectData.projectTitle}
+- 대상: ${projectData.targetAudience}
+- 전체적인 분위기 및 스타일 제안: ${projectData.additionalRequirements || '기본적인 교육용 디자인'}
+- 현재 페이지 ${step3PageData.pageNumber}: ${step3PageData.pageTitle}
+
+### 페이지 구성안:
+${pageContent}
+
+### 🚫 절대 금지 사항 (매우 중요!)
+- **네비게이션 금지**: 페이지 간 이동을 위한 버튼, 링크, 화살표, 네비게이션 바 등을 절대 만들지 마세요.
+- **페이지 연결 금지**: "다음 페이지로", "이전으로 돌아가기" 같은 상호작용을 절대 제안하지 마세요.
+- **독립적 페이지**: 각 페이지는 완전히 독립적인 HTML 파일로, 다른 페이지와 연결되지 않습니다.
+- **최소 폰트 크기 강제**: 모든 텍스트 애니메이션과 효과에서도 18pt 이상 유지를 명시하세요.
+
+### 제안 항목 (JSON 형식으로 출력)
+반드시 다음 JSON 형식으로 응답해주세요:
+{
+    "animationDescription": "페이지 로드 시 제목이 위에서 부드럽게 내려오고, 콘텐츠 요소들이 순차적으로 페이드인되는 효과를 적용합니다.",
+    "interactionDescription": "카드에 호버하면 살짝 확대되고 그림자가 진해지며, 클릭 가능한 요소들은 호버 시 색상이 밝아집니다."
+}`;
+
+    } else {
+      // 스크롤 허용 + AI 내용 보강 모드
+      return `당신은 최고 수준의 UI/UX 디자이너입니다. 주어진 페이지 구성안과 '비주얼 아이덴티티'를 바탕으로, 학습자의 몰입도를 높이는 동적 효과를 제안해주세요.
+
+### ✨ AI 보강 모드
+창의적인 애니메이션과 상호작용을 자유롭게 제안하세요. 학습 효과를 높이는 추가적인 시각 효과나 인터랙션을 적극적으로 제안할 수 있습니다.
+
+### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${moodAndTone}
+- **색상**: Primary-${visualIdentity.colorPalette?.primary || '#3B82F6'}
+- **컴포넌트 스타일**: ${visualIdentity.componentStyle}
+- **핵심 디자인 원칙**: 효율적인 공간을 활용하고, 빈 공간이 많다면 이를 채울 아이디어를 적극적으로 제안하라
+
+### 📍 전체 페이지 구성 개요
+${allPages}
+
+### 📝 프로젝트 정보
+- 프로젝트: ${projectData.projectTitle}
+- 대상: ${projectData.targetAudience}
+- 전체적인 분위기 및 스타일 제안: ${projectData.additionalRequirements || '기본적인 교육용 디자인'}
+- 현재 페이지 ${step3PageData.pageNumber}: ${step3PageData.pageTitle}
+
+### 페이지 구성안:
+${pageContent}
+
+### 🚫 절대 금지 사항 (매우 중요!)
+- **네비게이션 금지**: 페이지 간 이동을 위한 버튼, 링크, 화살표, 네비게이션 바 등을 절대 만들지 마세요.
+- **페이지 연결 금지**: "다음 페이지로", "이전으로 돌아가기" 같은 상호작용을 절대 제안하지 마세요.
+- **독립적 페이지**: 각 페이지는 완전히 독립적인 HTML 파일로, 다른 페이지와 연결되지 않습니다.
+- **최소 폰트 크기 강제**: 모든 텍스트 애니메이션과 효과에서도 18pt 이상 유지를 명시하세요.
+
+### 제안 항목 (JSON 형식으로 출력)
+반드시 다음 JSON 형식으로 응답해주세요:
+{
+    "animationDescription": "페이지 로드 시 제목이 위에서 부드럽게 내려오고, 콘텐츠 요소들이 순차적으로 페이드인되는 효과를 적용합니다.",
+    "interactionDescription": "카드에 호버하면 살짝 확대되고 그림자가 진해지며, 클릭 가능한 요소들은 호버 시 색상이 밝아집니다."
+}`;
+    }
+  }
+
+  /**
+   * JSON 응답 파싱 (원본 로직)
+   */
+  private parseJsonResponse(textContent: string): any {
+    try {
+      // JSON 부분만 추출
+      const jsonMatch = textContent.match(/\{[\s\S]*\}/);
+      if (jsonMatch) {
+        return JSON.parse(jsonMatch[0]);
+      }
+
+      // 전체를 JSON으로 파싱 시도
+      return JSON.parse(textContent.trim());
+    } catch (error) {
+      console.error('JSON 파싱 실패:', error);
+      // 기본 JSON 구조 반환
+      return {
+        animationDescription: '기본 애니메이션: 요소들이 부드럽게 나타납니다.',
+        interactionDescription: '기본 인터랙션: 호버 시 요소들이 반응합니다.'
+      };
+    }
+  }
+
+  /**
+   * JSON 데이터로부터 Step4 결과 조립 (원본 로직)
+   */
+  private assembleStep4FromJson(parsedData: any, step3PageData: any, layoutMode: 'fixed' | 'scrollable'): any {
+    // 단순화된 결과 - AI 생성 텍스트만 사용
+    return {
+      pageNumber: step3PageData.pageNumber,
+      animationDescription: parsedData.animationDescription || '기본 애니메이션: 요소들이 부드럽게 나타납니다.',
+      interactionDescription: parsedData.interactionDescription || '기본 인터랙션: 호버 시 요소들이 반응합니다.',
+      educationalFeatures: parsedData.educationalFeatures || [{
+        type: '시각적 피드백',
+        purpose: '학습자의 행동에 즉각적인 반응 제공',
+        implementation: '정답/오답시 색상 변화와 애니메이션',
+        expectedOutcome: '학습 몰입도 증가'
+      }]
+    };
+  }
+
+  /**
+   * 글로벌 기능 생성 (원본 로직)
+   */
+  private generateGlobalFeatures(layoutMode: 'fixed' | 'scrollable'): any[] {
+    return [
+      '키보드 네비게이션 완전 지원',
+      'prefers-reduced-motion 미디어 쿼리 지원',
+      '고대비 모드 접근성',
+      '터치 친화적 인터페이스'
+    ];
+  }
+
+  /**
+   * 에러 페이지 결과 생성 (원본 로직)
+   */
+  private createErrorPageResult(step3PageData: any, errorMessage: string): any {
+    return {
+      pageNumber: step3PageData.pageNumber,
+      animationDescription: '페이지 로드 시 순차적 페이드인 애니메이션, 카드 요소에 호버 시 부드러운 확대 효과',
+      interactionDescription: '모든 대화형 요소에 키보드 접근성 지원, 마우스 호버 시 시각적 피드백',
+      educationalFeatures: [{
+        type: '기본 상호작용',
+        purpose: '기본적인 사용자 경험 제공',
+        implementation: '표준 웹 접근성 가이드라인 준수',
+        expectedOutcome: '안정적인 사용자 경험'
+      }],
+      error: errorMessage
+    };
+  }
+
+  /**
+   * 폴백 Step4 결과 생성
+   */
+  private generateFallbackStep4Result(step3Result: Step3IntegratedResult): Step4DesignResult {
+    return {
+      layoutMode: step3Result.layoutMode,
+      pages: step3Result.pages.map(page => ({
+        pageNumber: page.pageNumber,
+        animationDescription: '페이지 로드 시 순차적 페이드인 애니메이션, 카드 요소에 호버 시 부드러운 확대 효과 (transform: scale(1.02)), 버튼 클릭 시 살짝 위로 올라가는 효과 (translateY(-2px))',
+        interactionDescription: '모든 대화형 요소에 키보드 접근성 지원 (Tab, Enter, Space), 마우스 호버 시 시각적 피드백, 터치 기기를 위한 충분한 터치 영역 (44px 이상), 접근성을 위한 ARIA 라벨 제공',
+        educationalFeatures: [
+          {
+            type: '시각적 피드백',
+            purpose: '학습자의 행동에 즉각적인 반응 제공',
+            implementation: '정답/오답시 색상 변화와 애니메이션',
+            expectedOutcome: '학습 몰입도 증가'
+          }
+        ]
+      })),
+      overallSummary: '접근성과 교육적 효과를 고려한 상호작용 디자인 명세가 생성되었습니다. 모든 요소는 사용자 친화적이고 교육 목표에 부합하도록 설계되었습니다.',
+      globalFeatures: [
+        '키보드 네비게이션 완전 지원',
+        'prefers-reduced-motion 미디어 쿼리 지원',
+        '고대비 모드 접근성',
+        '터치 친화적 인터페이스'
+      ],
+      generatedAt: new Date()
+    };
   }
 }

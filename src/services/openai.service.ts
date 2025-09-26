@@ -1,4 +1,5 @@
 import OpenAI from 'openai';
+import type { ResponseCreateParamsNonStreaming } from 'openai/resources/responses/responses';
 import { loadApiKey } from './storage.service';
 
 export class OpenAIService {
@@ -44,25 +45,32 @@ export class OpenAIService {
   }
 
   async validateKey(apiKey: string): Promise<boolean> {
+    const targetModel = this.model ?? 'gpt-5';
+
+    const requestPayload: ResponseCreateParamsNonStreaming = {
+      model: targetModel,
+      input: [
+        {
+          role: 'user',
+          content: 'ping',
+          type: 'message'
+        }
+      ],
+      max_output_tokens: 32
+    };
+
+    if (targetModel.startsWith('gpt-5')) {
+      requestPayload.reasoning = { effort: 'low' };
+    }
+
     try {
       const tempClient = new OpenAI({
         apiKey,
         dangerouslyAllowBrowser: true
       });
-      
-      // Simple validation call with minimal token usage
-      const response = await tempClient.responses.create({
-        model: this.model,
-        input: [
-          {
-            role: 'user',
-            content: 'ping'
-          }
-        ],
-        max_output_tokens: 8
-      });
 
-      return !!response?.id;
+      const response = await tempClient.responses.create(requestPayload as any);
+      return typeof response?.id === 'string' && response.id.length > 0;
     } catch (error) {
       console.error('API key validation failed:', error);
       return false;

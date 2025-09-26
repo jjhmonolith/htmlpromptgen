@@ -247,6 +247,7 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
   const [loadingMessage, setLoadingMessage] = useState('');
 
   const lastStep3HashRef = useRef<string>('');
+  const hasInitialized = useRef(false); // 초기화 상태 추적
 
   // 생성 상태 변경을 부모로 전달
   useEffect(() => {
@@ -278,24 +279,25 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
     }
   }, [step3Data, onDataChange, isDataLoaded]);
 
-  // 컴포넌트 마운트 시 자동 생성 여부 결정
+  // 컴포넌트 마운트 시 자동 생성 여부 결정 (StrictMode 대응)
   useEffect(() => {
-    if (step3Data) {
-      // 이미 Step3 데이터가 있으면 자동 생성하지 않음
-      console.log('✅ Step3: 기존 데이터 발견, 재생성 건너뜀');
-      setShouldAutoGenerate(false);
-      setIsDataLoaded(true);
-    } else if (initialData) {
-      // initialData가 있으면 사용하고 자동 생성하지 않음
+    // StrictMode에서 중복 실행을 방지하기 위한 초기화 체크
+    if (hasInitialized.current) {
+      return;
+    }
+
+    if (initialData && !step3Data) {
+      // initialData가 있고 step3Data가 아직 없는 경우 (최초 로드)
       console.log('✅ Step3: 초기 데이터 로드됨, 재생성 건너뜀');
       setShouldAutoGenerate(false);
-      setIsDataLoaded(true);
-    } else {
+      hasInitialized.current = true;
+    } else if (!initialData && !step3Data) {
       // 데이터가 전혀 없으면 자동 생성
       console.log('🔄 Step3: 데이터 없음, 자동 생성 예정');
       setShouldAutoGenerate(true);
+      hasInitialized.current = true;
     }
-  }, [step3Data, initialData]);
+  }, [initialData, step3Data]);
 
   // 자동 생성 실행
   useEffect(() => {

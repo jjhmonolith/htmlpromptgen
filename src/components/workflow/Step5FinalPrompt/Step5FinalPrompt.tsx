@@ -71,16 +71,28 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
 
     try {
       console.log(`🔄 ${isRegenerate ? '재생성' : '최초 생성'} 시작 - Step4-5 통합 프로세스`);
+      console.log('📊 현재 데이터 상태:', {
+        step1있음: !!projectData,
+        step2있음: !!visualIdentity,
+        step3있음: !!step3Result,
+        step3페이지수: step3Result?.pages?.length
+      });
 
       // Step4-5 통합 서비스 사용
+      console.log('📦 서비스 모듈 import 중...');
       const { IntegratedStep4And5Service } = await import('../../../services/integrated-step4-5.service');
       const { OpenAIService } = await import('../../../services/openai.service');
+      console.log('✅ 서비스 모듈 import 완료');
 
       // OpenAI 서비스 싱글톤 인스턴스 사용
       const openAIService = OpenAIService.getInstance();
+      console.log('🔑 OpenAI 서비스 인스턴스 생성 완료');
 
       // API 키 재로드 시도 (Step5에서 새로 시작할 때)
+      console.log('🔍 API 키 확인 중...');
       const hasApiKey = openAIService.reloadApiKey();
+      console.log('🔑 API 키 확인 결과:', { hasApiKey });
+
       if (!hasApiKey) {
         console.warn('⚠️ API 키가 설정되지 않았습니다. 폴백 모드로 진행합니다.');
         // API 키가 없으면 바로 폴백 모드로
