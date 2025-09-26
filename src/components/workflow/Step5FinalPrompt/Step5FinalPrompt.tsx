@@ -15,6 +15,7 @@ interface Step5FinalPromptProps {
   onComplete: (data: FinalPrompt) => void;
   onDataChange?: (data: Partial<FinalPrompt>) => void;
   onBack?: () => void;
+  onGeneratingChange?: (isGenerating: boolean) => void;
 }
 
 export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
@@ -26,7 +27,8 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
   step4Result,
   onComplete,
   onDataChange,
-  onBack
+  onBack,
+  onGeneratingChange
 }) => {
   const [finalPrompt, setFinalPrompt] = useState<FinalPrompt>({ htmlPrompt: '' });
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -36,31 +38,58 @@ export const Step5FinalPrompt: React.FC<Step5FinalPromptProps> = ({
   const [step4ResultData, setStep4ResultData] = useState<Step4DesignResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const hasLoadedInitialData = useRef(false);
+  // 초기화 완료 여부를 추적하는 ref (무한루프 방지)
+  const initializationRef = useRef<{
+    hasInitialized: boolean;
+    lastInitialDataState: any;
+  }>({
+    hasInitialized: false,
+    lastInitialDataState: undefined
+  });
 
-  // 초기 데이터 로딩
+  // 단순화된 초기 데이터 로딩 로직
   useEffect(() => {
-    if (initialData && !hasLoadedInitialData.current) {
-      console.log('📝 Step5: 기존 초기 데이터 로드됨');
-      setFinalPrompt(initialData);
-      hasLoadedInitialData.current = true;
-      setIsDataLoaded(true);
-    } else if (!initialData && !hasLoadedInitialData.current) {
-      // 초기 데이터가 없으면 바로 생성 (최초 생성)
-      console.log('🚀 Step5: 초기 데이터 없음 - 새로 생성 시작');
-      generateFinalPrompt(false);
-      hasLoadedInitialData.current = true;
-    } else if (!initialData && hasLoadedInitialData.current) {
-      // 이전에 데이터가 있었지만 지금은 null인 경우 (이전 스텝 변경으로 초기화됨)
-      console.log('🔄 Step5: 이전 스텝 변경으로 초기화됨 - 재생성 시작');
-      hasLoadedInitialData.current = false; // 플래그 초기화
-      setIsDataLoaded(false);
-      setFinalPrompt({ htmlPrompt: '' }); // 기존 데이터 초기화
-      setStep4ResultData(null); // Step4 결과도 초기화
-      generateFinalPrompt(false); // 새로 생성
-      hasLoadedInitialData.current = true;
+    const currentDataState = initialData ? 'hasData' : 'noData';
+
+    // 초기화 상태가 변경되었거나 아직 초기화되지 않은 경우에만 실행
+    if (!initializationRef.current.hasInitialized ||
+        initializationRef.current.lastInitialDataState !== currentDataState) {
+
+      console.log('🔄 Step5: 초기화 상태 변경 감지', {
+        이전상태: initializationRef.current.lastInitialDataState,
+        현재상태: currentDataState,
+        초기화완료: initializationRef.current.hasInitialized,
+        initialData존재: !!initialData
+      });
+
+      if (initialData) {
+        // 기존 데이터가 있는 경우 - 로드
+        console.log('📝 Step5: 기존 데이터 로드');
+        setFinalPrompt(initialData);
+        setIsDataLoaded(true);
+      } else {
+        // 데이터가 없는 경우 - 즉시 Step4-5 통합 프로세스 시작
+        console.log('🚀 Step5: 데이터 없음 → Step4-5 통합 프로세스 즉시 시작');
+        setIsDataLoaded(false);
+        setFinalPrompt({ htmlPrompt: '' });
+        setStep4ResultData(null);
+
+        // 즉시 생성 시작
+        generateFinalPrompt(false);
+      }
+
+      // 상태 업데이트
+      initializationRef.current.hasInitialized = true;
+      initializationRef.current.lastInitialDataState = currentDataState;
     }
   }, [initialData]);
+
+  // 생성 상태 변경 알림 (GNB 애니메이션용)
+  useEffect(() => {
+    if (onGeneratingChange) {
+      onGeneratingChange(isGenerating);
+    }
+  }, [isGenerating, onGeneratingChange]);
 
   // 실시간 데이터 변경 알림
   useEffect(() => {

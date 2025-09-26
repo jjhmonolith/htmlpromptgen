@@ -506,10 +506,13 @@ ${projectData.pages.length > 3 ? `├── page4.html          # 네 번째 페
       const prompt = this.createStep4Prompt(step3PageData, projectData, visualIdentity);
 
       // AI 호출 (원본 방식 사용)
-      const response = await this._openAIService.generateResponse(prompt);
+      const { content } = await this._openAIService.generateCompletion(
+        prompt,
+        'Step4-Design-Spec'
+      );
 
       // JSON 응답 파싱
-      const parsedData = this.parseJsonResponse(response);
+      const parsedData = this.parseJsonResponse(content || '');
       console.log('✅ Step4 파싱 완료:', parsedData);
 
       // 결과 어셈블리 (원본 로직)

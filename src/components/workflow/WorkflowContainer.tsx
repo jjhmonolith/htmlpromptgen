@@ -236,6 +236,12 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   };
 
   const handleStep3Complete = (data: any) => {
+    console.log('🎯 Step3 완료 처리 시작:', {
+      step3데이터: !!data,
+      step3페이지수: data?.pages?.length,
+      현재단계: currentStep
+    });
+
     // Step3 완료 시 바로 Step4(통합된 최종 단계)로 이동
     const newWorkflowData = {
       ...workflowData,
@@ -248,6 +254,12 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     };
     setWorkflowData(newWorkflowData);
     setCurrentStep(4);
+
+    console.log('✅ Step3 완료 → Step4 전환 완료:', {
+      새로운단계: 4,
+      step3완료상태: true,
+      워크플로우데이터업데이트: '완료'
+    });
 
     // 부모에게 워크플로우 데이터 변경 알림
     onWorkflowDataChange?.(newWorkflowData);
@@ -420,6 +432,7 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
             onComplete={handleIntegratedStep4Complete}
             onDataChange={handleStep5DataChange}
             onBack={() => setCurrentStep(3)} // Step 3으로 돌아가기 (Step 4는 더 이상 없음)
+            onGeneratingChange={setIsGenerating} // GNB 애니메이션 상태 전달
           />
         );
 
