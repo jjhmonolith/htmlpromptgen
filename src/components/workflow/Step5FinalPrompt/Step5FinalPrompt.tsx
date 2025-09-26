@@ -500,6 +500,13 @@ ${pageSpecs.join('\n\n')}`;
 
   // 이미지 배치 명세 생성 (Step3 이미지 데이터 기반)
   const generateImageSpecification = (step3Page: any, _step4Page: any, pageIndex: number): string => {
+    console.log(`🖼️ 페이지 ${pageIndex + 1} 이미지 생성 시작:`, {
+      step3Page존재: !!step3Page,
+      mediaAssets: step3Page?.mediaAssets?.length || 0,
+      contentImages: step3Page?.content?.images?.length || 0,
+      step4Page존재: !!_step4Page
+    });
+
     const imageSpecs: string[] = [];
 
     // mediaAssets 먼저 확인
@@ -570,9 +577,11 @@ ${pageSpecs.join('\n\n')}`;
     }
 
     if (imageSpecs.length === 0) {
+      console.log(`⚠️ 페이지 ${pageIndex + 1}: 이미지 없음`);
       return '이미지가 없습니다.';
     }
 
+    console.log(`✅ 페이지 ${pageIndex + 1}: 이미지 명세 ${imageSpecs.length}개 생성 완료`);
     return imageSpecs.join('\n\n');
   };
 
@@ -917,6 +926,11 @@ ${step4Page.interactionDescription}
   const generateImagePromptSection = (): string => {
     if (!step3Result) return '';
 
+    console.log('🖼️ 전체 이미지 명세서 생성 시작:', {
+      totalPages: step3Result.pages?.length || 0,
+      step3Result존재: !!step3Result
+    });
+
     const imagePrompts: string[] = [];
 
     step3Result.pages.forEach((page, pageIndex) => {
@@ -992,12 +1006,14 @@ ${image.aiPrompt || `${projectData.targetAudience}를 위한 ${image.purpose || 
     });
 
     if (imagePrompts.length === 0) {
+      console.log('⚠️ 전체 이미지 명세서: 이미지 없음');
       return `## 6. 이미지 생성 명세서
 
 이 프로젝트는 HTML/CSS 기반 시각화로 설계되어 별도의 이미지가 필요하지 않습니다.
 모든 시각적 요소는 CSS로 구현되도록 설계되었습니다.`;
     }
 
+    console.log(`✅ 전체 이미지 명세서: ${imagePrompts.length}개 이미지 생성 완료`);
     return `## 6. 이미지 생성 명세서
 
 아래의 이미지들을 AI 이미지 생성 도구(DALL-E, Midjourney, Stable Diffusion 등)를 사용하여 생성하고,
