@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { validateApiKey, saveApiKey, loadApiKey, clearApiKey } from '../../services/storage.service';
+import { validateApiKey, saveApiKey, loadApiKey, clearApiKey, normalizeApiKey } from '../../services/storage.service';
 import { Button, Input, Card } from '../common';
 
 interface ApiKeyManagerProps {
@@ -25,20 +25,22 @@ export const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ onKeyValidated, on
   }, []);
 
   const handleValidation = async (key: string) => {
+    const normalizedKey = normalizeApiKey(key);
+
     setIsValidating(true);
     setError(null);
     setSuccess(null);
     
     try {
-      const isValid = await validateApiKey(key);
+      const isValid = await validateApiKey(normalizedKey);
       if (isValid) {
-        saveApiKey(key);
+        saveApiKey(normalizedKey);
         setSuccess('API 키가 성공적으로 검증되었습니다.');
         setHasExistingKey(true);
         
         // 1초 후 자동으로 완료 처리
         setTimeout(() => {
-          onKeyValidated(key);
+          onKeyValidated(normalizedKey);
         }, 1000);
       } else {
         setError('유효하지 않은 API 키입니다. 다시 확인해주세요.');
@@ -60,7 +62,7 @@ export const ApiKeyManager: React.FC<ApiKeyManagerProps> = ({ onKeyValidated, on
 
   const handleUseExistingKey = () => {
     if (apiKey) {
-      onKeyValidated(apiKey);
+      onKeyValidated(normalizeApiKey(apiKey));
     }
   };
 

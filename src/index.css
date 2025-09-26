@@ -59,7 +59,7 @@ html, body {
 
 /* Fixed background matching the provided curved image */
 html {
-  background: url('/dreamy-lines-8k-2560x1600.jpg');
+  background: url('/fixed.png');
   background-attachment: fixed;
   background-size: cover;
   background-position: center;

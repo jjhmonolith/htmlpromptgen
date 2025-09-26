@@ -44,28 +44,44 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   // 앞선 단계 수정 시 뒷 단계 초기화하는 함수 (4단계 기준으로 수정)
   const resetLaterSteps = (fromStep: number) => {
     const updatedData = { ...workflowData };
+    const resetSteps: string[] = [];
+
     // 4단계까지만 초기화 (Step4-5가 통합되어 실질적으로 4단계)
     for (let i = fromStep + 1; i <= 4; i++) {
       if (i === 4) {
         // Step4가 통합된 최종 단계이므로 step4와 step5 모두 초기화
-        updatedData.step4 = null;
-        updatedData.step5 = null;
-        // stepCompletion도 함께 초기화
-        updatedData.stepCompletion = {
-          ...updatedData.stepCompletion,
-          step4: false,
-          step5: false
-        };
+        if (updatedData.step4 || updatedData.step5) {
+          updatedData.step4 = null;
+          updatedData.step5 = null;
+          resetSteps.push('Step4', 'Step5');
+          // stepCompletion도 함께 초기화
+          updatedData.stepCompletion = {
+            ...updatedData.stepCompletion,
+            step4: false,
+            step5: false
+          };
+        }
       } else {
-        updatedData[`step${i}` as keyof typeof updatedData] = null;
-        // stepCompletion도 함께 초기화
-        updatedData.stepCompletion = {
-          ...updatedData.stepCompletion,
-          [`step${i}`]: false
-        };
+        // Step 2, 3 초기화
+        const stepKey = `step${i}` as keyof typeof updatedData;
+        if (updatedData[stepKey]) {
+          updatedData[stepKey] = null;
+          resetSteps.push(`Step${i}`);
+          // stepCompletion도 함께 초기화
+          updatedData.stepCompletion = {
+            ...updatedData.stepCompletion,
+            [`step${i}`]: false
+          };
+        }
       }
     }
-    console.log(`🗑️ Step${fromStep} 수정으로 Step${fromStep + 1}~4 초기화됨`);
+
+    if (resetSteps.length > 0) {
+      console.log(`🗑️ Step${fromStep} 수정으로 ${resetSteps.join(', ')} 데이터 초기화됨`);
+    } else {
+      console.log(`✅ Step${fromStep} 수정 - 초기화할 뒷 단계 없음`);
+    }
+
     return updatedData;
   };
 
@@ -78,24 +94,35 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         const savedWorkflowData = projectService.loadWorkflowData(projectId);
         
         if (savedWorkflowData) {
-          // 워크플로우 데이터 복원 로그 간소화
-          
+          // 워크플로우 데이터 복원 시 stepCompletion도 함께 복원
           const restoredData = {
             step1: savedWorkflowData.step1 || null,
             step2: savedWorkflowData.step2 || null,
             step3: savedWorkflowData.step3 || null,
             step4: savedWorkflowData.step4 || null,
-            step5: savedWorkflowData.step5 || null
+            step5: savedWorkflowData.step5 || null,
+            currentStep: savedWorkflowData.currentStep || 1,
+            stepCompletion: {
+              step1: !!savedWorkflowData.step1,
+              step2: !!savedWorkflowData.step2,
+              step3: !!savedWorkflowData.step3,
+              step4: !!savedWorkflowData.step4,
+              step5: !!savedWorkflowData.step5
+            }
           };
-          
+
+          console.log('📂 워크플로우 데이터 복원:', {
+            currentStep: restoredData.currentStep,
+            completedSteps: Object.entries(restoredData.stepCompletion)
+              .filter(([_, isCompleted]) => isCompleted)
+              .map(([step, _]) => step)
+          });
+
           setWorkflowData(restoredData);
           setCurrentStep(savedWorkflowData.currentStep || 1);
-          
+
           // 부모에게도 복원된 데이터 전달
-          onWorkflowDataChange?.({
-            ...restoredData,
-            currentStep: savedWorkflowData.currentStep || 1
-          });
+          onWorkflowDataChange?.(restoredData);
           
           // Step1 초기 데이터 로그 제거
         } else {
@@ -257,8 +284,24 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
     onWorkflowDataChange?.(updatedWorkflowData);
   };
 
+  // Step5 실시간 데이터 변경 처리 (마지막 스텝이므로 뒷 단계 초기화 불필요)
+  const handleStep5DataChange = (partialData: any) => {
+    console.log('🔄 Step5 데이터 변경:', { partialData });
+
+    const updatedWorkflowData = {
+      ...workflowData,
+      step5: partialData,
+      currentStep: currentStep
+    };
+
+    setWorkflowData(updatedWorkflowData);
+    onWorkflowDataChange?.(updatedWorkflowData);
+  };
+
   // 통합된 Step4 완료 핸들러 (기존 Step4+Step5 데이터 모두 처리)
   const handleIntegratedStep4Complete = (data: any) => {
+    console.log('🎉 Step4-5 통합 완료 데이터:', data);
+
     // 통합 서비스에서 step4Result와 step5Result 모두 반환
     const { step4Result, step5Result } = data;
 
@@ -375,16 +418,7 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
             step3Result={workflowData.step3}
             step4Result={workflowData.step4} // 통합 서비스에서 생성된 Step4 결과
             onComplete={handleIntegratedStep4Complete}
-            onDataChange={(data) => {
-              // Step5 데이터 변경 시에도 기존 로직 유지
-              const updatedWorkflowData = {
-                ...workflowData,
-                step5: data,
-                currentStep: currentStep
-              };
-              setWorkflowData(updatedWorkflowData);
-              onWorkflowDataChange?.(updatedWorkflowData);
-            }}
+            onDataChange={handleStep5DataChange}
             onBack={() => setCurrentStep(3)} // Step 3으로 돌아가기 (Step 4는 더 이상 없음)
           />
         );

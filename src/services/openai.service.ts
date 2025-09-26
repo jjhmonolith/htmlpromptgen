@@ -1,6 +1,6 @@
 import OpenAI from 'openai';
 import type { ResponseCreateParamsNonStreaming } from 'openai/resources/responses/responses';
-import { loadApiKey } from './storage.service';
+import { loadApiKey, normalizeApiKey } from './storage.service';
 
 export class OpenAIService {
   private static instance: OpenAIService | null = null;
@@ -27,8 +27,16 @@ export class OpenAIService {
   }
 
   initialize(apiKey: string): void {
+    const sanitizedKey = normalizeApiKey(apiKey);
+
+    if (!sanitizedKey) {
+      console.warn('⚠️ 제공된 API 키가 비어있거나 허용되지 않는 문자만 포함합니다.');
+      this.openai = null;
+      return;
+    }
+
     this.openai = new OpenAI({
-      apiKey,
+      apiKey: sanitizedKey,
       dangerouslyAllowBrowser: true
     });
   }
@@ -45,6 +53,12 @@ export class OpenAIService {
   }
 
   async validateKey(apiKey: string): Promise<boolean> {
+    const sanitizedKey = normalizeApiKey(apiKey);
+    if (!sanitizedKey) {
+      console.warn('⚠️ API 키에 허용되지 않는 문자가 포함되어 검증을 진행할 수 없습니다.');
+      return false;
+    }
+
     const targetModel = this.model ?? 'gpt-5';
 
     const requestPayload: ResponseCreateParamsNonStreaming = {
@@ -65,7 +79,7 @@ export class OpenAIService {
 
     try {
       const tempClient = new OpenAI({
-        apiKey,
+        apiKey: sanitizedKey,
         dangerouslyAllowBrowser: true
       });
 
