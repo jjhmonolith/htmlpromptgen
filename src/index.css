@@ -2,8 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Highlight.js theme for code syntax highlighting */
-@import 'highlight.js/styles/github.css';
+/* Highlight.js theme for code syntax highlighting is imported in src/main.tsx */
 
 /* Apple Design System CSS Variables */
 :root {
