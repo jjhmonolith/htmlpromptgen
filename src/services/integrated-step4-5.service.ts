@@ -788,102 +788,193 @@ ${step3Result ? step3Result.pages.map((page, pageIndex) => {
   }
 
   /**
-   * Step4 프롬프트 생성 (원본 로직)
+   * Step4 프롬프트 생성 (템플릿 기반 4가지 조합 지원)
    */
   private createStep4Prompt(
     step3PageData: any,
     projectData: ProjectData,
     visualIdentity: VisualIdentity
   ): string {
+    // 기본 변수 추출
+    const variables = this.extractPromptVariables(step3PageData, projectData, visualIdentity);
+
+    // 레이아웃 모드와 콘텐츠 모드 조합에 따른 템플릿 선택
+    const layoutMode = projectData.layoutMode; // 'fixed' | 'scrollable'
+    const contentMode = this.normalizeContentMode(projectData.contentMode); // 'restricted' | 'enhanced'
+
+    return this.generatePromptFromTemplate(variables, layoutMode, contentMode);
+  }
+
+  /**
+   * 콘텐츠 모드 정규화
+   */
+  private normalizeContentMode(contentMode: 'original' | 'enhanced' | 'restricted'): 'restricted' | 'enhanced' {
+    // 'original'과 'restricted'는 모두 원본 유지 모드로 처리
+    return contentMode === 'enhanced' ? 'enhanced' : 'restricted';
+  }
+
+  /**
+   * 프롬프트 변수 추출
+   */
+  private extractPromptVariables(
+    step3PageData: any,
+    projectData: ProjectData,
+    visualIdentity: VisualIdentity
+  ): any {
     const moodAndTone = Array.isArray(visualIdentity.moodAndTone)
       ? visualIdentity.moodAndTone.join(', ')
       : visualIdentity.moodAndTone;
 
-    // 전체 프로젝트 구성
-    const allPages = projectData.pages.map((p, index) =>
-      `페이지 ${p.pageNumber} (${p.topic}${p.description ? ` - ${p.description}` : ''}): ${step3PageData.pageNumber === p.pageNumber ? step3PageData.structure?.sections?.[0]?.hint || '현재 페이지' : '...'}`
-    ).join('\n');
+    // 전체 페이지 구성 개요 (step3 앞 100자 요약)
+    const allPages = projectData.pages.map((p, index) => {
+      if (step3PageData.pageNumber === p.pageNumber) {
+        const preview = step3PageData.fullDescription
+          ? step3PageData.fullDescription.substring(0, 100) + '...'
+          : '현재 페이지';
+        return `페이지 ${p.pageNumber} (${p.topic}): ${preview}`;
+      }
+      return `페이지 ${p.pageNumber} (${p.topic}): ...`;
+    }).join('\n');
 
-    // Step3 결과 사용 (fullDescription만 사용)
+    // Step3 결과 전문
     const pageContent = step3PageData.fullDescription || `페이지 ${step3PageData.pageNumber}: ${step3PageData.pageTitle}`;
 
-    // 레이아웃 모드에 따른 프롬프트 분기 (원본 로직)
-    if (projectData.layoutMode === 'fixed') {
-      // 스크롤 금지 + 내용 제한 모드
-      return `당신은 최고 수준의 UI/UX 디자이너입니다. 주어진 페이지 구성안과 '비주얼 아이덴티티'를 바탕으로, 학습자의 몰입도를 높이는 동적 효과를 제안해주세요.
+    return {
+      moodAndTone,
+      primaryColor: visualIdentity.colorPalette?.primary || '#3B82F6',
+      componentStyle: visualIdentity.componentStyle || '기본 컴포넌트 스타일',
+      projectTitle: projectData.projectTitle,
+      targetAudience: projectData.targetAudience,
+      additionalRequirements: projectData.additionalRequirements || '기본적인 교육용 디자인',
+      currentPageNumber: step3PageData.pageNumber,
+      currentPageTitle: step3PageData.pageTitle,
+      allPages,
+      pageContent
+    };
+  }
 
-### ⚠️ 원본 유지 모드
-이 프로젝트는 사용자가 제공한 내용만을 사용합니다. 하지만 애니메이션과 상호작용은 반드시 제안해야 합니다! 기존 내용을 효과적으로 전달하기 위한 애니메이션과 인터랙션을 상세히 설명하세요. 추가 콘텐츠 생성은 제한되지만, 시각적 효과와 상호작용은 풍부하게 제안하세요.
+  /**
+   * 4가지 조합 템플릿 생성
+   */
+  private generatePromptFromTemplate(
+    variables: any,
+    layoutMode: 'fixed' | 'scrollable',
+    contentMode: 'restricted' | 'enhanced'
+  ): string {
+    // 공통 섹션들
+    const commonSections = {
+      intro: `당신은 최고 수준의 UI/UX 디자이너입니다. 주어진 페이지 구성안과 '비주얼 아이덴티티'를 바탕으로, 학습자의 몰입도를 높이는 동적 효과를 제안해주세요.`,
 
-### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
-- **분위기**: ${moodAndTone}
-- **색상**: Primary-${visualIdentity.colorPalette?.primary || '#3B82F6'}
-- **컴포넌트 스타일**: ${visualIdentity.componentStyle}
-- **핵심 디자인 원칙**: 효율적인 공간을 활용하고, 빈 공간이 많다면 이를 채울 아이디어를 적극적으로 제안하라
+      visualIdentity: `### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${variables.moodAndTone}
+- **색상**: Primary-${variables.primaryColor}
+- **컴포넌트 스타일**: ${variables.componentStyle}
+- **핵심 디자인 원칙**: 효율적인 공간을 활용하고, 빈 공간이 많다면 이를 채울 아이디어를 적극적으로 제안하라`,
 
-### 📍 전체 페이지 구성 개요
-${allPages}
+      pageOverview: `### 📍 전체 페이지 구성 개요
+${variables.allPages}`,
 
-### 📝 프로젝트 정보
-- 프로젝트: ${projectData.projectTitle}
-- 대상: ${projectData.targetAudience}
-- 전체적인 분위기 및 스타일 제안: ${projectData.additionalRequirements || '기본적인 교육용 디자인'}
-- 현재 페이지 ${step3PageData.pageNumber}: ${step3PageData.pageTitle}
+      projectInfo: `### 📝 프로젝트 정보
+- 프로젝트: ${variables.projectTitle}
+- 대상: ${variables.targetAudience}
+- 전체적인 분위기 및 스타일 제안: ${variables.additionalRequirements}
+- 현재 페이지 ${variables.currentPageNumber}: ${variables.currentPageTitle}`,
 
-### 페이지 구성안:
-${pageContent}
+      pageContent: `### 페이지 구성안:
+${variables.pageContent}`,
 
-### 🚫 절대 금지 사항 (매우 중요!)
+      guidelines: `### 제안 가이드라인
+- **목적 지향적 제안**: "애니메이션을 추가하라"가 아니라, "콘텐츠의 스토리를 강화하고, 사용자의 이해를 돕는 점진적 정보 공개(Progressive Disclosure)를 위한 애니메이션을 제안하라."
+- **미세 상호작용**: 버튼 호버 효과와 같은 미세 상호작용(Micro-interaction)으로 페이지에 생동감을 불어넣는 아이디어를 포함하세요.
+- **분위기 일관성**: 제안하는 모든 효과는 정의된 '분위기'(${variables.moodAndTone})와 일치해야 합니다.
+- **전체 일관성**: 다른 페이지들과 일관된 애니메이션 스타일을 유지하되, 각 페이지의 특색을 살려주세요.`,
+
+      restrictions: `### 🚫 절대 금지 사항 (매우 중요!)
 - **네비게이션 금지**: 페이지 간 이동을 위한 버튼, 링크, 화살표, 네비게이션 바 등을 절대 만들지 마세요.
 - **페이지 연결 금지**: "다음 페이지로", "이전으로 돌아가기" 같은 상호작용을 절대 제안하지 마세요.
 - **독립적 페이지**: 각 페이지는 완전히 독립적인 HTML 파일로, 다른 페이지와 연결되지 않습니다.
-- **최소 폰트 크기 강제**: 모든 텍스트 애니메이션과 효과에서도 18pt 이상 유지를 명시하세요.
+- **최소 폰트 크기 강제**: 모든 텍스트 애니메이션과 효과에서도 18pt 이상 유지를 명시하세요.`,
 
-### 제안 항목 (JSON 형식으로 출력)
+      output: `### 제안 항목 (JSON 형식으로 출력)
 반드시 다음 JSON 형식으로 응답해주세요:
 {
     "animationDescription": "페이지 로드 시 제목이 위에서 부드럽게 내려오고, 콘텐츠 요소들이 순차적으로 페이드인되는 효과를 적용합니다.",
     "interactionDescription": "카드에 호버하면 살짝 확대되고 그림자가 진해지며, 클릭 가능한 요소들은 호버 시 색상이 밝아집니다."
-}`;
+}`
+    };
 
-    } else {
-      // 스크롤 허용 + AI 내용 보강 모드
-      return `당신은 최고 수준의 UI/UX 디자이너입니다. 주어진 페이지 구성안과 '비주얼 아이덴티티'를 바탕으로, 학습자의 몰입도를 높이는 동적 효과를 제안해주세요.
+    // 모드별 특화 섹션
+    const modeSpecificSections = this.getModeSpecificSections(layoutMode, contentMode);
 
-### ✨ AI 보강 모드
-창의적인 애니메이션과 상호작용을 자유롭게 제안하세요. 학습 효과를 높이는 추가적인 시각 효과나 인터랙션을 적극적으로 제안할 수 있습니다.
+    // 템플릿 조합
+    return [
+      commonSections.intro,
+      modeSpecificSections.modeDescription,
+      commonSections.visualIdentity,
+      commonSections.pageOverview,
+      commonSections.projectInfo,
+      commonSections.pageContent,
+      commonSections.guidelines,
+      commonSections.restrictions,
+      commonSections.output
+    ].join('\n\n');
+  }
 
-### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
-- **분위기**: ${moodAndTone}
-- **색상**: Primary-${visualIdentity.colorPalette?.primary || '#3B82F6'}
-- **컴포넌트 스타일**: ${visualIdentity.componentStyle}
-- **핵심 디자인 원칙**: 효율적인 공간을 활용하고, 빈 공간이 많다면 이를 채울 아이디어를 적극적으로 제안하라
+  /**
+   * 레이아웃 모드와 콘텐츠 모드 조합별 특화 섹션
+   */
+  private getModeSpecificSections(
+    layoutMode: 'fixed' | 'scrollable',
+    contentMode: 'restricted' | 'enhanced'
+  ): { modeDescription: string } {
+    const combinations = {
+      'fixed-restricted': {
+        modeDescription: `### ⚠️ 고정 크기 + 원본 유지 모드
+이 프로젝트는 1600×1000px 고정 화면에서 사용자가 제공한 내용만을 사용합니다. 스크롤은 절대 금지되며, 모든 콘텐츠는 주어진 크기 안에 완벽히 수납되어야 합니다. 하지만 애니메이션과 상호작용은 반드시 제안해야 합니다! 제한된 공간과 콘텐츠를 효과적으로 전달하기 위한 창의적인 애니메이션과 인터랙션을 상세히 설명하세요.
 
-### 📍 전체 페이지 구성 개요
-${allPages}
+**레이아웃 제약사항:**
+- 절대로 스크롤 허용 금지 (overflow: hidden 필수)
+- 모든 요소는 1600×1000px 안에 완벽 배치
+- 콘텐츠 양 조절을 통한 공간 최적화
+- 추가 콘텐츠 생성 제한, 시각적 효과로 풍부함 연출`
+      },
 
-### 📝 프로젝트 정보
-- 프로젝트: ${projectData.projectTitle}
-- 대상: ${projectData.targetAudience}
-- 전체적인 분위기 및 스타일 제안: ${projectData.additionalRequirements || '기본적인 교육용 디자인'}
-- 현재 페이지 ${step3PageData.pageNumber}: ${step3PageData.pageTitle}
+      'fixed-enhanced': {
+        modeDescription: `### ✨ 고정 크기 + AI 보강 모드
+이 프로젝트는 1600×1000px 고정 화면에서 AI가 콘텐츠를 창의적으로 확장할 수 있습니다. 스크롤은 금지되지만, 제한된 공간 안에서 학습 효과를 높이는 추가적인 시각 효과나 인터랙션을 적극적으로 제안할 수 있습니다.
 
-### 페이지 구성안:
-${pageContent}
+**레이아웃 제약사항:**
+- 절대로 스크롤 허용 금지 (overflow: hidden 필수)
+- 모든 요소는 1600×1000px 안에 완벽 배치
+- AI 보강을 통한 창의적 콘텐츠 확장 허용
+- 공간 효율성과 학습 효과 극대화`
+      },
 
-### 🚫 절대 금지 사항 (매우 중요!)
-- **네비게이션 금지**: 페이지 간 이동을 위한 버튼, 링크, 화살표, 네비게이션 바 등을 절대 만들지 마세요.
-- **페이지 연결 금지**: "다음 페이지로", "이전으로 돌아가기" 같은 상호작용을 절대 제안하지 마세요.
-- **독립적 페이지**: 각 페이지는 완전히 독립적인 HTML 파일로, 다른 페이지와 연결되지 않습니다.
-- **최소 폰트 크기 강제**: 모든 텍스트 애니메이션과 효과에서도 18pt 이상 유지를 명시하세요.
+      'scrollable-restricted': {
+        modeDescription: `### ⚠️ 스크롤 가능 + 원본 유지 모드
+이 프로젝트는 1600px 고정 너비에서 세로 스크롤이 가능하며, 사용자가 제공한 내용만을 사용합니다. 추가 콘텐츠 생성은 제한되지만, 주어진 내용을 효과적으로 전달하기 위한 풍부한 애니메이션과 인터랙션을 제안하세요.
 
-### 제안 항목 (JSON 형식으로 출력)
-반드시 다음 JSON 형식으로 응답해주세요:
-{
-    "animationDescription": "페이지 로드 시 제목이 위에서 부드럽게 내려오고, 콘텐츠 요소들이 순차적으로 페이드인되는 효과를 적용합니다.",
-    "interactionDescription": "카드에 호버하면 살짝 확대되고 그림자가 진해지며, 클릭 가능한 요소들은 호버 시 색상이 밝아집니다."
-}`;
-    }
+**레이아웃 제약사항:**
+- 가로 1600px 고정, 세로 자유 확장 (스크롤 허용)
+- 자연스러운 콘텐츠 흐름 유지
+- 원본 콘텐츠 충실 구현, 시각적 효과로 보완
+- 스크롤 경험을 고려한 애니메이션 설계`
+      },
+
+      'scrollable-enhanced': {
+        modeDescription: `### ✨ 스크롤 가능 + AI 보강 모드
+이 프로젝트는 1600px 고정 너비에서 세로 스크롤이 가능하며, AI가 콘텐츠를 창의적으로 확장할 수 있습니다. 창의적인 애니메이션과 상호작용을 자유롭게 제안하세요. 학습 효과를 높이는 추가적인 시각 효과나 인터랙션을 적극적으로 제안할 수 있습니다.
+
+**레이아웃 제약사항:**
+- 가로 1600px 고정, 세로 자유 확장 (스크롤 허용)
+- AI 보강을 통한 창의적 콘텐츠 확장 허용
+- 풍부한 학습 경험과 상호작용 설계
+- 스크롤 내러티브를 활용한 점진적 정보 공개`
+      }
+    };
+
+    const key = `${layoutMode}-${contentMode}` as keyof typeof combinations;
+    return combinations[key] || combinations['fixed-restricted'];
   }
 
   /**
