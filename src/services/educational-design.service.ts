@@ -115,24 +115,8 @@ export class EducationalDesignService {
 
     const response = await this.openAIService.generateCompletion(prompt, 'Educational Design');
 
-    // Fixed 모드일 때 높이 검증 및 자동 조정
     let finalResponse = response.content;
     let layoutValidation = { isValid: true, suggestions: [] };
-
-    if (projectData.layoutMode === 'fixed') {
-      const heightCheck = this.validateContentHeight(finalResponse, page);
-
-      if (!heightCheck.withinBounds) {
-        console.log(`⚠️ 페이지 ${page.pageNumber} 높이 초과 감지: ${heightCheck.estimatedHeight}px`);
-
-        // 자동 조정 시도
-        finalResponse = this.adjustContentForFixed(finalResponse, heightCheck);
-        layoutValidation = {
-          isValid: false,
-          suggestions: [`높이 ${heightCheck.estimatedHeight}px로 자동 조정됨`] as any
-        };
-      }
-    }
 
     return this.parseEducationalDesign(finalResponse, page, projectData, emotionalContext, prompt, finalResponse, layoutValidation);
   }
@@ -271,14 +255,16 @@ ${this.formatNewProjectInfoSection(projectData)}
 
     return `당신은 주어진 '비주얼 아이덴티티'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 가로 1600px 고정, 세로는 콘텐츠에 맞게 자유롭게 확장되는 스크롤 가능한 레이아웃을 구성해주세요.
 
-### 📍 콘텐츠 생성 방침
+### :압정: 콘텐츠 생성 방침
 ${contentPolicy}
 
-${this.formatNewVisualIdentitySection(visualIdentity)}
+### :반짝임: 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${visualIdentity.moodAndTone.join(', ')}
+- **핵심 디자인 원칙**: 콘텐츠의 중요도에 따라 시각적 계층(Visual Hierarchy)을 만드세요. 사용자의 시선이 자연스럽게 흐르도록 유도하고, 콘텐츠를 단순히 박스에 넣는 것이 아니라 콘텐츠 자체의 형태에 맞는 맞춤형 디자인을 하세요.
 
 ${this.formatNewProjectContextSection(projectData, page, pageIndex, totalPages)}
 
-### 📜 핵심 규칙
+### :스크롤: 핵심 규칙
 1.  **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.
 2.  **콘텐츠 우선**: 콘텐츠의 완전한 전달을 우선시하고, 적절한 여백으로 가독성을 확보하세요.
 3.  **이미지 최소화**: 학습에 필수적인 이미지만 사용하고, 장식용 이미지는 피하세요.
@@ -298,24 +284,27 @@ ${this.formatNewProjectContextSection(projectData, page, pageIndex, totalPages)}
 5.  **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.
 6.  **전체 일관성**: 프로젝트 전체의 흐름과 일관성을 유지하면서 현재 페이지의 특색을 살려주세요.
 
-### 🚫 절대 금지 사항
+### :출입금지_기호: 절대 금지 사항
 - **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.
 - **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.
 - **최소 폰트 크기**: 모든 텍스트는 반드시 18pt 이상으로 설정하세요. 본문은 18-20pt, 제목은 24pt 이상을 권장합니다.
 - **이미지 파일명 규칙**: 이미지 파일명은 "1.png", "2.png", "3.png"만 사용하세요. hero.png, diagram.png, icon.png 같은 설명적 이름은 금지입니다!
 
-${this.formatNewProjectInfoSection(projectData)}
+### :메모: 프로젝트 정보
+- 프로젝트: ${projectData.projectTitle}
+- 대상: ${projectData.targetAudience}
+- 사용자 추가 제안사항: ${projectData.additionalRequirements || '특별한 요구사항 없음'}
 
 이제 위의 가이드라인에 맞춰 페이지 레이아웃을 상세히 서술해주세요. 반드시 레이아웃 구조와 디자인을 구체적으로 설명해야 합니다.
 
-⚠️ **파일명 규칙 재확인**: 이미지 파일명은 절대 "1.png", "2.png", "3.png" 외에는 사용하지 마세요.
-  - ✅ 올바른 예: "1.png", "2.png"
-  - ❌ 잘못된 예: "hero.png", "diagram.png", "main-image.png", "icon.png"`;
+:경고: **파일명 규칙 재확인**: 이미지 파일명은 절대 "1.png", "2.png", "3.png" 외에는 사용하지 마세요.
+   - :흰색_확인_표시: 올바른 예: "1.png", "2.png"
+   - :x: 잘못된 예: "hero.png", "diagram.png", "main-image.png", "icon.png"`;
   }
 
   // 새로운 비주얼 아이덴티티 섹션 포맷터
   private formatNewVisualIdentitySection(visualIdentity: VisualIdentity): string {
-    return `### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+    return `### :반짝임: 비주얼 아이덴티티 (반드시 준수할 것)
 - **분위기**: ${visualIdentity.moodAndTone.join(', ')}
 - **핵심 디자인 원칙**: 콘텐츠의 중요도에 따라 시각적 계층(Visual Hierarchy)을 만드세요. 사용자의 시선이 자연스럽게 흐르도록 유도하고, 콘텐츠를 단순히 박스에 넣는 것이 아니라 콘텐츠 자체의 형태에 맞는 맞춤형 디자인을 하세요.`;
   }
@@ -341,10 +330,10 @@ ${this.formatNewProjectInfoSection(projectData)}
       ? `다음 페이지: ${projectData.pages[pageIndex + 1]?.topic || '없음'}`
       : '마지막 페이지입니다';
 
-    return `### 📍 전체 프로젝트 구성
+    return `### :둥근_압핀: 전체 프로젝트 구성
 ${projectOverview}
 
-### 📍 페이지 컨텍스트
+### :둥근_압핀: 페이지 컨텍스트
 - ${pageContext}
 - **현재 페이지 ${page.pageNumber}: ${page.topic}**
 - ${nextPageInfo}`;
@@ -1383,118 +1372,6 @@ Create a comprehensive educational image that combines all these elements effect
   }
 
   // 높이 계산 알고리즘
-  private validateContentHeight(response: string, page: any): {
-    withinBounds: boolean;
-    estimatedHeight: number;
-    breakdown: {
-      title: number;
-      body: number;
-      images: number;
-      cards: number;
-      margins: number;
-    };
-    suggestions: string[];
-  } {
-    // 기본 높이 계산 (텍스트 기반 추정)
-    const titleLines = this.estimateTitleLines(response);
-    const bodyLines = this.estimateBodyLines(response);
-    const imageCount = this.countImages(response);
-    const cardCount = this.countCards(response);
-
-    const breakdown = {
-      title: titleLines * 45,      // 28pt + 여백 = 45px/줄
-      body: bodyLines * 30,        // 18pt + 여백 = 30px/줄
-      images: imageCount * 150,    // 각 이미지 150px
-      cards: cardCount * 80,       // 각 카드/박스 80px
-      margins: 110                 // 기본 여백 및 간격
-    };
-
-    const estimatedHeight = Object.values(breakdown).reduce((sum, height) => sum + height, 0);
-    const withinBounds = estimatedHeight <= 900; // 900px 제한
-
-    const suggestions: string[] = [];
-    if (!withinBounds) {
-      if (bodyLines > 20) suggestions.push('본문 텍스트 줄이기');
-      if (imageCount > 2) suggestions.push('이미지 개수 감소');
-      if (cardCount > 3) suggestions.push('카드/박스 요소 통합');
-    }
-
-    return {
-      withinBounds,
-      estimatedHeight,
-      breakdown,
-      suggestions
-    };
-  }
-
-  // 텍스트에서 제목 줄 수 추정
-  private estimateTitleLines(response: string): number {
-    const titleMatches = response.match(/제목|타이틀|heading|h1|h2/gi);
-    return Math.min(titleMatches ? titleMatches.length * 2 : 2, 4); // 최대 4줄
-  }
-
-  // 텍스트에서 본문 줄 수 추정
-  private estimateBodyLines(response: string): number {
-    const textContent = response.replace(/[^\가-힣a-zA-Z\s]/g, '');
-    const approximateLines = Math.ceil(textContent.length / 60); // 60자/줄 추정
-    return Math.min(approximateLines, 20); // 최대 20줄
-  }
-
-  // 이미지 개수 계산
-  private countImages(response: string): number {
-    const imageMatches = response.match(/\[IMAGE:|이미지|그림/gi);
-    return Math.min(imageMatches ? imageMatches.length : 1, 2); // 최대 2개
-  }
-
-  // 카드/박스 요소 개수 계산
-  private countCards(response: string): number {
-    const cardMatches = response.match(/카드|박스|섹션|영역/gi);
-    return Math.min(cardMatches ? Math.ceil(cardMatches.length / 3) : 2, 3); // 최대 3개
-  }
-
-  // Fixed 모드용 콘텐츠 자동 조정
-  private adjustContentForFixed(response: string, heightCheck: any): string {
-    let adjustedResponse = response;
-
-    // 1단계: 텍스트 줄이기
-    if (heightCheck.breakdown.body > 480) {
-      adjustedResponse = this.reduceTextContent(adjustedResponse);
-    }
-
-    // 2단계: 이미지 크기 조정
-    if (heightCheck.breakdown.images > 300) {
-      adjustedResponse = this.optimizeImages(adjustedResponse);
-    }
-
-    // 3단계: 요소 병합/제거
-    if (heightCheck.breakdown.cards > 240) {
-      adjustedResponse = this.consolidateElements(adjustedResponse);
-    }
-
-    return adjustedResponse + '\n\n⚠️ 자동 조정: Fixed 레이아웃 제약에 맞춰 콘텐츠가 최적화되었습니다.';
-  }
-
-  // 텍스트 내용 줄이기
-  private reduceTextContent(response: string): string {
-    return response.replace(/([.!?])\s+([가-힣a-zA-Z])/g, (match, punct, _nextChar, _offset, s: string) => {
-      // 문장 사이의 불필요한 설명 줄이기
-      const sentences = s.split(/[.!?]/).filter(s => s.trim());
-      if (sentences.length > 5) {
-        return `${punct} `;
-      }
-      return match;
-    });
-  }
-
-  // 이미지 최적화
-  private optimizeImages(response: string): string {
-    return response.replace(/150px/g, '120px').replace(/400×300px/g, '320×240px');
-  }
-
-  // 요소 통합
-  private consolidateElements(response: string): string {
-    return response.replace(/(\d+\.\s[^\n]+)\n+(\d+\.\s[^\n]+)/g, '$1, $2');
-  }
 
   private createFallbackPageDesign(page: any): EducationalPageDesign {
     return {
