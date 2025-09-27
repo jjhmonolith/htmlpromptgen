@@ -191,146 +191,171 @@ export class EducationalDesignService {
     // 콘텐츠 모드 전략을 미리 계산
     const contentModeStrategy = getContentModeStrategy(projectData.contentMode);
 
-    // Fixed 모드와 Scrollable 모드별 프롬프트
+    // 새로운 사용자 제시 프롬프트 방식 적용
     if (projectData.layoutMode === 'fixed') {
-      const visualIdentitySection = this.formatStep2VisualIdentityForPrompt(emotionalContext.visualIdentity);
-      const projectContextSection = this.formatProjectContextForPrompt(projectData, page, pageIndex, totalPages);
-
-      const contentAnalysisSection = page.contentAnalysis ?
-        `\n\n### 📊 콘텐츠 분석 결과\n` +
-        `- **예상 구성**: ${page.contentAnalysis.outline ? page.contentAnalysis.outline.join(', ') : '정보 없음'}\n` +
-        `- **예상 섹션 수**: ${page.contentAnalysis.estimatedSections}개\n` +
-        `- **콘텐츠 밀도**: ${page.contentAnalysis.densityScore >= 0.8 ? '높음 (분할 권장)' : page.contentAnalysis.densityScore >= 0.6 ? '적정' : '여유'}\n`
-        : '';
-
-      return '당신은 주어진 \'비주얼 아이덴티티\'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 스크롤 없는 1600x1000px 화면에 들어갈 콘텐츠 레이아웃을 **자유롭게, 상세하게, 창의적으로 서술**해주세요.\n\n' +
-        '### 🔴 FIXED 레이아웃 필수 준수사항 (절대 위반 금지)\n\n' +
-        '1. **전체 높이 제한**: 900px 이내 (여백 100px 제외)\n' +
-        '2. **콘텐츠 예산**:\n' +
-        '   - 제목: 최대 2줄 (80px)\n' +
-        '   - 본문: 최대 20줄 (480px)\n' +
-        '   - 이미지: 최대 2개, 각 150px 높이\n' +
-        '   - 카드/박스: 최대 3개, 각 80px 높이\n' +
-        '   - 여백 및 간격: 총 110px\n\n' +
-        '3. **폰트 크기 고려 계산**:\n' +
-        '   - 제목: 28pt = 37px + 여백 = 45px/줄\n' +
-        '   - 본문: 18pt = 24px + 여백 = 30px/줄\n' +
-        '   - 이미지 캡션: 18pt = 24px\n\n' +
-        '4. **자동 조정 규칙**:\n' +
-        '   - 내용이 많으면: 텍스트 줄이기 → 이미지 크기 축소 → 요소 개수 감소\n' +
-        '   - 절대 스크롤 생성하지 않음\n\n' +
-        visualIdentitySection + '\n\n' +
-        projectContextSection +
-        contentAnalysisSection + '\n\n' +
-        '### 🖼️ 이미지 사용 가이드라인 (중요!)\n\n' +
-        '**이미지가 정말 필요한 경우에만** 다음 **정확한 형식**을 사용하세요:\n\n' +
-        '**✅ 올바른 형식**: `[IMAGE: filename.png | Detailed English AI prompt]`\n\n' +
-        '**📋 형식 규칙**:\n' +
-        '- 대괄호와 IMAGE: 키워드 사용 필수\n' +
-        '- 파일명은 영문+숫자+하이픈만 (공백 금지)\n' +
-        '- 세로바(|) 구분자 사용 필수\n' +
-        '- AI 프롬프트는 영문으로 상세하게 작성\n' +
-        '- 한 줄에 하나의 이미지만 지정\n\n' +
-        '**📝 예시**:\n' +
-        '- `[IMAGE: concept-diagram.png | Educational diagram illustrating the main concepts with clear visual hierarchy using bright blue, soft green, and warm orange tones for educational clarity]`\n' +
-        '- `[IMAGE: process-flow.png | Step by step process flowchart with numbered stages and directional arrows in professional blue and friendly green colors]`\n\n' +
-        '### 📜 핵심 규칙\n' +
-        '1.  **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.\n' +
-        '2.  **공간 최적화**: 콘텐츠를 화면에 효과적으로 배치하여 어색한 빈 공간이 생기지 않도록 하세요.\n' +
-        '3.  **시각화 설계 우선**: 그래프, 차트, 다이어그램, 인포그래픽, 플로우차트, 표 등은 **구체적인 설명으로만** 설계하세요.\n' +
-        '4.  **이미지 최소화**: 이미지는 **실제 사진이나 대체불가능한 일러스트**에만 사용하세요. 데이터 시각화, 구조도, 개념도 등은 설명으로 충분합니다.\n' +
-        '5.  **이미지 사용 기준**: 다음 경우에만 이미지 사용 허용\n' +
-        '   - 실제 인물/장소/사물 사진\n' +
-        '   - 역사적 문서나 예술작품\n' +
-        '   - 복잡한 일러스트레이션 (단순 도형/차트 제외)\n' +
-        '6.  **🚫 HTML/CSS 코드 작성 절대 금지**:\n' +
-        '   ⚠️ **어떤 경우에도 HTML 태그나 CSS 코드를 작성하지 마세요**\n' +
-        '   ⚠️ **`<div>`, `<span>`, CSS 속성 등 모든 코드 예시 금지**\n' +
-        '   ⚠️ **"div + CSS height"와 같은 구현 방법 제시 금지**\n' +
-        '   ✅ **대신 "세로 막대 형태의 그래프"처럼 시각적 설명만 제공**\n' +
-        '7.  **이미지 사용 규칙**: 정말 필요한 경우에만 다음 **정확한 형식**을 사용하세요\n' +
-        '   - **형식**: `[IMAGE: 파일명.png | AI 이미지 생성 프롬프트]`\n' +
-        '   - **예시**: `[IMAGE: diagram1.png | Educational diagram showing the main concept with clear labels using bright blue, soft green, and warm orange colors for clarity]`\n' +
-        '   - **중요**: 파일명은 영문과 숫자만 사용, 프롬프트는 영문으로 상세하게 작성, 한 줄에 하나의 이미지만 지정\n' +
-        '8.  **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.\n\n' +
-        '### 🚫 절대 금지 사항\n' +
-        '- **HTML/CSS 코드 작성 절대 금지**: `<div>`, `<span>`, `class=`, `style=`, CSS 속성 등 모든 코드 예시를 절대 작성하지 마세요\n' +
-        '- **CSS 기술 용어 금지**: flexbox, grid, position, margin, padding 등 CSS 관련 용어 사용 금지\n' +
-        '- **구현 방법 제시 금지**: 기술적 구현 방법 대신 시각적 결과만 설명하세요\n' +
-        '- **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.\n' +
-        '- **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.\n' +
-        '- **최소 폰트 크기**: 모든 텍스트는 반드시 18pt 이상으로 설정하세요. 본문은 18-20pt, 제목은 24pt 이상을 권장합니다.\n\n' +
-        contentModeStrategy + '\n\n' +
-        '이제 위의 가이드라인에 맞춰 페이지 레이아웃을 창의적으로 서술해주세요.';
+      return this.createNewFixedLayoutPrompt(projectData, emotionalContext.visualIdentity, page, pageIndex, totalPages);
     } else {
-      return '당신은 주어진 \'비주얼 아이덴티티\'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. **1600px 너비의 가변 높이 화면**에 들어갈 콘텐츠 레이아웃을 **자유롭게, 상세하게, 창의적으로 서술**해주세요.\n\n' +
-        this.formatStep2VisualIdentityForPrompt(emotionalContext.visualIdentity) + '\n\n' +
-        '### 📜 레이아웃 철학\n' +
-        '- **스크롤 전개**: 세로 스크롤을 통한 자연스러운 콘텐츠 전개\n' +
-        '- **핵심 디자인 원칙**: 콘텐츠의 중요도에 따라 시각적 계층(Visual Hierarchy)을 만드세요. 사용자의 시선이 자연스럽게 위에서 아래로 흐르도록 유도하고, 각 섹션별로 적절한 여백과 구분을 두어 읽기 편안한 경험을 제공하세요.\n\n' +
-        '### 🖼️ 새로운 레이아웃 가능성\n' +
-        '- **자유로운 높이**: 1600px 너비는 고정하되, 높이는 콘텐츠에 따라 자유롭게 확장 가능합니다\n' +
-        '- **풍부한 콘텐츠**: 더 많은 설명, 예시, 단계별 가이드, 상세한 도표 등을 포함할 수 있습니다\n' +
-        '- **창의적 섹션 구성**: 히어로 섹션, 콘텐츠 섹션, 예시 섹션, 실습 섹션, 정리 섹션 등을 자유롭게 조합하세요\n' +
-        '- **시각적 여유**: 각 요소 간 충분한 여백을 두어 답답하지 않은 레이아웃을 만드세요\n\n' +
-        this.formatProjectContextForPrompt(projectData, page, pageIndex, totalPages) + '\n\n' +
-        '### 🖼️ 이미지 사용 가이드라인 (중요!)\n\n' +
-        '**이미지가 정말 필요한 경우에만** 다음 **정확한 형식**을 사용하세요:\n\n' +
-        '**✅ 올바른 형식**: `[IMAGE: filename.png | Detailed English AI prompt]`\n\n' +
-        '**📋 형식 규칙**:\n' +
-        '- 대괄호와 IMAGE: 키워드 사용 필수\n' +
-        '- 파일명은 영문+숫자+하이픈만 (공백 금지)\n' +
-        '- 세로바(|) 구분자 사용 필수\n' +
-        '- AI 프롬프트는 영문으로 상세하게 작성\n' +
-        '- 한 줄에 하나의 이미지만 지정\n\n' +
-        '**📝 예시**:\n' +
-        '- `[IMAGE: hero-visual.png | Inspiring hero image that represents the main topic with modern educational design in soft blue and warm green tones]`\n' +
-        '- `[IMAGE: detailed-chart.png | Complex data visualization chart with multiple data points and clear legends using professional blue, friendly green, and warm orange colors]`\n\n' +
-        '### 📜 핵심 규칙\n' +
-        '1. **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.\n' +
-        '2. **세로 스크롤 친화적**: 사용자가 세로로 스크롤하며 자연스럽게 콘텐츠를 소비할 수 있도록 구성하세요.\n' +
-        '3. **섹션별 구성**: 페이지를 논리적인 섹션들로 나누어 각각의 목적과 내용을 명확히 하세요.\n' +
-        '4. **시각화 설계 우선**: 그래프, 차트, 다이어그램, 인포그래픽, 플로우차트, 표, 타임라인 등은 **구체적인 설명으로만** 설계하세요.\n' +
-        '5. **이미지 최소화**: 이미지는 **실제 사진이나 대체불가능한 일러스트**에만 사용하세요. 데이터 시각화나 구조도는 설명으로 충분합니다.\n' +
-        '6. **이미지 사용 기준**: 다음 경우에만 이미지 사용 허용\n' +
-        '   - 실제 인물/장소/사물/자연현상 사진\n' +
-        '   - 역사적 문서나 예술작품\n' +
-        '   - 복잡한 일러스트레이션 (단순 도형/차트 제외)\n' +
-        '7. **🚫 HTML/CSS 코드 작성 절대 금지**:\n' +
-        '   ⚠️ **어떤 경우에도 HTML 태그나 CSS 코드를 작성하지 마세요**\n' +
-        '   ⚠️ **`<div>`, `<span>`, CSS 속성, 클래스명 등 모든 코드 예시 금지**\n' +
-        '   ⚠️ **"flexbox", "grid", "conic-gradient" 등 CSS 기술 용어 금지**\n' +
-        '   ⚠️ **구현 방법 제시 대신 시각적 결과만 설명하세요**\n' +
-        '   ✅ **예: "3개의 세로 막대가 나란히 배치된 비교 차트"**\n' +
-        '8. **이미지 사용 규칙**: 정말 필요한 경우에만 다음 **정확한 형식**을 사용하세요\n' +
-        '   - **형식**: `[IMAGE: 파일명.png | AI 이미지 생성 프롬프트]`\n' +
-        '   - **예시**: `[IMAGE: timeline1.png | Visual timeline showing historical progression with clear dates and events]`\n' +
-        '   - **중요**: 파일명은 영문과 숫자만 사용, 프롬프트는 영문으로 상세하게 작성, 한 줄에 하나의 이미지만 지정\n' +
-        '9. **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.\n' +
-        '10. **충분한 여백**: 각 섹션과 요소 간 충분한 여백(padding, margin)을 두어 읽기 편안한 경험을 제공하세요.\n\n' +
-        '### 🎯 권장 레이아웃 구조\n' +
-        '```\n' +
-        '[히어로 섹션] - 페이지 제목과 핵심 메시지\n' +
-        '↓ (여백)\n' +
-        '[도입 섹션] - 학습 목표나 개요 소개\n' +
-        '↓ (여백)\n' +
-        '[메인 콘텐츠 섹션] - 핵심 학습 내용\n' +
-        '↓ (여백)\n' +
-        '[예시/실습 섹션] - 구체적 예시나 활동\n' +
-        '↓ (여백)\n' +
-        '[정리 섹션] - 요약 및 핵심 포인트\n' +
-        '```\n\n' +
-        '### 🚫 절대 금지 사항\n' +
-        '- **HTML/CSS 코드 작성 절대 금지**: `<div>`, `<span>`, `class=`, `style=`, CSS 속성 등 모든 코드 예시를 절대 작성하지 마세요\n' +
-        '- **CSS 기술 용어 금지**: flexbox, grid, position, margin, padding, transform 등 CSS 관련 용어 사용 금지\n' +
-        '- **구현 방법 제시 금지**: 기술적 구현 방법 대신 시각적 결과만 설명하세요\n' +
-        '- **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.\n' +
-        '- **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.\n' +
-        '- **최소 폰트 크기**: 모든 텍스트는 반드시 18px 이상으로 설정하세요. 본문은 18-20px, 제목은 24px 이상을 권장합니다.\n' +
-        '- **가로 스크롤 금지**: 너비는 1600px를 넘지 않도록 하여 가로 스크롤이 발생하지 않게 하세요.\n\n' +
-        getContentModeStrategy(projectData.contentMode) + '\n\n' +
-        '이제 위의 가이드라인에 맞춰 **가변 높이를 충분히 활용한** 창의적이고 교육적인 페이지 레이아웃을 상세히 서술해주세요. 각 섹션의 목적, 내용, 시각적 처리 방법을 구체적으로 설명해주세요.';
+      return this.createNewScrollableLayoutPrompt(projectData, emotionalContext.visualIdentity, page, pageIndex, totalPages);
     }
+  }
+
+  // 새로운 Fixed Layout 프롬프트 (사용자 제시 방식)
+  private createNewFixedLayoutPrompt(
+    projectData: ProjectData,
+    visualIdentity: VisualIdentity,
+    page: any,
+    pageIndex: number,
+    totalPages: number
+  ): string {
+    const contentMode = projectData.contentMode === 'enhanced' ? 'original' : 'enhanced';
+    const contentPolicy = contentMode === 'original'
+      ? '사용자가 제공한 페이지 주제의 내용만을 정확히 사용하여 레이아웃을 구성하세요. 추가적인 내용을 생성하지 마시고, 주어진 주제를 효과적으로 시각화하는 레이아웃과 디자인을 상세히 설명하세요. 레이아웃 구성, 섹션 배치, 시각적 요소의 배열은 자세히 서술하되, 내용은 주제에서 벗어나지 마세요.'
+      : '제공된 페이지 주제를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠를 만드세요. 학습자의 이해를 돕는 추가 설명, 예시, 시각 자료 등을 자유롭게 제안하세요.';
+
+    return `당신은 주어진 '비주얼 아이덴티티'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 스크롤 없는 1600x1000px 화면에 들어갈 콘텐츠 레이아웃을 구성해주세요.
+
+### 📌 콘텐츠 생성 방침
+${contentPolicy}
+
+${this.formatNewVisualIdentitySection(visualIdentity)}
+
+${this.formatNewProjectContextSection(projectData, page, pageIndex, totalPages)}
+
+### 📜 핵심 규칙
+1.  **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.
+2.  **공간 최적화**: 콘텐츠를 화면에 효과적으로 배치하여 어색한 빈 공간이 생기지 않도록 하세요.
+3.  **이미지 최소화**: 학습에 필수적인 이미지만 사용하고, 장식용 이미지는 피하세요.
+4.  **구조화된 이미지 섹션**: 이미지가 필요한 경우 응답 끝에 다음 형식으로 분리해주세요:
+
+=== REQUIRED IMAGES ===
+1. filename: "1.png"
+   description: "AI 이미지 생성을 위한 상세한 설명"
+   placement: "이미지가 배치될 위치"
+
+2. filename: "2.png"
+   description: "AI 이미지 생성을 위한 상세한 설명"
+   placement: "이미지가 배치될 위치"
+=== END IMAGES ===
+
+**중요**: filename은 반드시 "1.png", "2.png", "3.png" 형태의 **숫자.png** 형식만 사용하세요. 다른 이름 (예: hero.png, diagram.png)은 절대 사용하지 마세요!
+5.  **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.
+6.  **전체 일관성**: 프로젝트 전체의 흐름과 일관성을 유지하면서 현재 페이지의 특색을 살려주세요.
+
+### 🚫 절대 금지 사항
+- **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.
+- **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.
+- **최소 폰트 크기**: 모든 텍스트는 반드시 18pt 이상으로 설정하세요. 본문은 18-20pt, 제목은 24pt 이상을 권장합니다.
+- **이미지 파일명 규칙**: 이미지 파일명은 "1.png", "2.png", "3.png"만 사용하세요. hero.png, diagram.png, icon.png 같은 설명적 이름은 금지입니다!
+
+${this.formatNewProjectInfoSection(projectData)}
+
+이제 위의 가이드라인에 맞춰 페이지 레이아웃을 상세히 서술해주세요. 반드시 레이아웃 구조와 디자인을 구체적으로 설명해야 합니다.
+
+⚠️ **파일명 규칙 재확인**: 이미지 파일명은 절대 "1.png", "2.png", "3.png" 외에는 사용하지 마세요.
+  - ✅ 올바른 예: "1.png", "2.png"
+  - ❌ 잘못된 예: "hero.png", "diagram.png", "main-image.png", "icon.png"`;
+  }
+
+  // 새로운 Scrollable Layout 프롬프트 (사용자 제시 방식)
+  private createNewScrollableLayoutPrompt(
+    projectData: ProjectData,
+    visualIdentity: VisualIdentity,
+    page: any,
+    pageIndex: number,
+    totalPages: number
+  ): string {
+    const contentMode = projectData.contentMode === 'enhanced' ? 'enhanced' : 'original';
+    const contentPolicy = contentMode === 'enhanced'
+      ? '제공된 페이지 주제를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠를 만드세요. 학습자의 이해를 돕는 추가 설명, 예시, 시각 자료 등을 자유롭게 제안하세요.'
+      : '사용자가 제공한 페이지 주제의 내용만을 정확히 사용하여 레이아웃을 구성하세요. 추가적인 내용을 생성하지 마시고, 주어진 주제를 효과적으로 시각화하는 레이아웃과 디자인을 상세히 설명하세요. 레이아웃 구성, 섹션 배치, 시각적 요소의 배열은 자세히 서술하되, 내용은 주제에서 벗어나지 마세요.';
+
+    return `당신은 주어진 '비주얼 아이덴티티'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 가로 1600px 고정, 세로는 콘텐츠에 맞게 자유롭게 확장되는 스크롤 가능한 레이아웃을 구성해주세요.
+
+### 📍 콘텐츠 생성 방침
+${contentPolicy}
+
+${this.formatNewVisualIdentitySection(visualIdentity)}
+
+${this.formatNewProjectContextSection(projectData, page, pageIndex, totalPages)}
+
+### 📜 핵심 규칙
+1.  **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.
+2.  **콘텐츠 우선**: 콘텐츠의 완전한 전달을 우선시하고, 적절한 여백으로 가독성을 확보하세요.
+3.  **이미지 최소화**: 학습에 필수적인 이미지만 사용하고, 장식용 이미지는 피하세요.
+4.  **구조화된 이미지 섹션**: 이미지가 필요한 경우 응답 끝에 다음 형식으로 분리해주세요:
+
+=== REQUIRED IMAGES ===
+1. filename: "1.png"
+   description: "AI 이미지 생성을 위한 상세한 설명"
+   placement: "이미지가 배치될 위치"
+
+2. filename: "2.png"
+   description: "AI 이미지 생성을 위한 상세한 설명"
+   placement: "이미지가 배치될 위치"
+=== END IMAGES ===
+
+**중요**: filename은 반드시 "1.png", "2.png", "3.png" 형태의 **숫자.png** 형식만 사용하세요. 다른 이름 (예: hero.png, diagram.png)은 절대 사용하지 마세요!
+5.  **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.
+6.  **전체 일관성**: 프로젝트 전체의 흐름과 일관성을 유지하면서 현재 페이지의 특색을 살려주세요.
+
+### 🚫 절대 금지 사항
+- **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.
+- **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.
+- **최소 폰트 크기**: 모든 텍스트는 반드시 18pt 이상으로 설정하세요. 본문은 18-20pt, 제목은 24pt 이상을 권장합니다.
+- **이미지 파일명 규칙**: 이미지 파일명은 "1.png", "2.png", "3.png"만 사용하세요. hero.png, diagram.png, icon.png 같은 설명적 이름은 금지입니다!
+
+${this.formatNewProjectInfoSection(projectData)}
+
+이제 위의 가이드라인에 맞춰 페이지 레이아웃을 상세히 서술해주세요. 반드시 레이아웃 구조와 디자인을 구체적으로 설명해야 합니다.
+
+⚠️ **파일명 규칙 재확인**: 이미지 파일명은 절대 "1.png", "2.png", "3.png" 외에는 사용하지 마세요.
+  - ✅ 올바른 예: "1.png", "2.png"
+  - ❌ 잘못된 예: "hero.png", "diagram.png", "main-image.png", "icon.png"`;
+  }
+
+  // 새로운 비주얼 아이덴티티 섹션 포맷터
+  private formatNewVisualIdentitySection(visualIdentity: VisualIdentity): string {
+    return `### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${visualIdentity.moodAndTone.join(', ')}
+- **핵심 디자인 원칙**: 콘텐츠의 중요도에 따라 시각적 계층(Visual Hierarchy)을 만드세요. 사용자의 시선이 자연스럽게 흐르도록 유도하고, 콘텐츠를 단순히 박스에 넣는 것이 아니라 콘텐츠 자체의 형태에 맞는 맞춤형 디자인을 하세요.`;
+  }
+
+  // 새로운 프로젝트 컨텍스트 섹션 포맷터 (아하모먼트 제거)
+  private formatNewProjectContextSection(
+    projectData: ProjectData,
+    page: any,
+    pageIndex: number,
+    totalPages: number
+  ): string {
+    // 전체 프로젝트 구성 정보 생성
+    const projectOverview = projectData.pages.map((p, idx) =>
+      `페이지 ${p.pageNumber}: ${p.topic}${p.description ? ` - ${p.description}` : ''}`
+    ).join('\n');
+
+    // 페이지 컨텍스트 정보
+    const pageContext = pageIndex === 0
+      ? '첫 페이지입니다'
+      : `이전 페이지: ${projectData.pages[pageIndex - 1]?.topic || '없음'}`;
+
+    const nextPageInfo = pageIndex < totalPages - 1
+      ? `다음 페이지: ${projectData.pages[pageIndex + 1]?.topic || '없음'}`
+      : '마지막 페이지입니다';
+
+    return `### 📍 전체 프로젝트 구성
+${projectOverview}
+
+### 📍 페이지 컨텍스트
+- ${pageContext}
+- **현재 페이지 ${page.pageNumber}: ${page.topic}**
+- ${nextPageInfo}`;
+  }
+
+  // 새로운 프로젝트 정보 섹션 포맷터
+  private formatNewProjectInfoSection(projectData: ProjectData): string {
+    return `### 📝 프로젝트 정보
+- 프로젝트: ${projectData.projectTitle}
+- 대상: ${projectData.targetAudience}
+- 사용자 추가 제안사항: ${projectData.additionalRequirements || '특별한 요구사항 없음'}`;
   }
 
   private parseEducationalDesign(
@@ -529,58 +554,143 @@ export class EducationalDesignService {
     }];
   }
 
-  // AI 응답에서 이미지 정보를 파싱하고 기본 이미지들 생성 (구조화된 파싱 방법)
+  // 새로운 구조화된 이미지 섹션 파싱 (=== REQUIRED IMAGES === 형식)
   private parseAndGenerateImages(response: string, page: any, projectData: ProjectData, emotionalContext: EmotionalContext): any[] {
-    console.log(`🖼️ 페이지 ${page.pageNumber} 이미지 파싱 시작`);
+    console.log(`🖼️ 페이지 ${page.pageNumber} 이미지 파싱 시작 (구조화된 형식)`);
 
-    // Step 1: 빠른 사전 검사
-    if (!response.includes('[IMAGE:')) {
-      console.log(`✅ 이미지 태그 없음 - HTML/CSS 기반 설계`);
-      return [];
-    }
-
-    // Step 2: 구조화된 파싱
-    const imageMatches = this.extractImageTags(response);
+    // 구조화된 이미지 섹션 추출
+    const imageMatches = this.extractStructuredImages(response);
 
     if (imageMatches.length === 0) {
-      console.log(`✅ 유효한 이미지 없음 - HTML/CSS 기반 설계`);
+      console.log(`✅ 구조화된 이미지 섹션 없음 - 텍스트 기반 설계`);
       return [];
     }
 
     console.log(`🎉 총 ${imageMatches.length}개 이미지 파싱 완료`);
 
-    // Step 3: 이미지 객체 생성 (최대 3개 제한)
+    // 이미지 객체 생성 (최대 3개 제한)
     return imageMatches.map((match, index) =>
-      this.createImageObject(match.filename, match.prompt, page, index + 1)
+      this.createImageObjectWithDescription(match.filename, match.description, match.placement, page, index + 1)
     ).slice(0, 3);
   }
 
-  private extractImageTags(response: string): Array<{filename: string, prompt: string}> {
-    const pattern = /\[IMAGE:\s*([^|\]]+?)\s*\|\s*([^\]]+?)\]/g;
+  // 새로운 구조화된 이미지 섹션 파싱 메서드 (유연한 버전)
+  private extractStructuredImages(response: string): Array<{filename: string, description: string, placement: string}> {
+    // === REQUIRED IMAGES === 섹션 찾기
+    const imageSection = response.match(/=== REQUIRED IMAGES ===(.*?)=== END IMAGES ===/s);
+
+    if (!imageSection) {
+      return [];
+    }
+
+    const sectionContent = imageSection[1];
     const matches = [];
+
+    // 다양한 패턴을 시도해서 파싱
+
+    // 패턴 1: 표준 형식 (숫자. filename: "파일명" description: "설명" placement: "위치")
+    let pattern1 = /(\d+)\.\s*filename:\s*"([^"]+)"\s*description:\s*"([^"]+)"\s*placement:\s*"([^"]+)"/gi;
     let match;
+    while ((match = pattern1.exec(sectionContent)) !== null) {
+      const [, number, filename, description, placement] = match;
+      matches.push({
+        filename: this.normalizeFilename(filename, matches.length + 1),
+        description: description.trim(),
+        placement: placement.trim()
+      });
+    }
 
-    while ((match = pattern.exec(response)) !== null) {
-      const filename = match[1].trim();
-      const prompt = match[2].trim();
-
-      // 유효성 검사
-      if (filename && prompt && prompt.length > 10) {
+    // 패턴 2: 줄바꿈이 있는 형식
+    if (matches.length === 0) {
+      const pattern2 = /(\d+)\.\s*filename:\s*"([^"]+)"\s*\n\s*description:\s*"([^"]+)"\s*\n\s*placement:\s*"([^"]+)"/gi;
+      while ((match = pattern2.exec(sectionContent)) !== null) {
+        const [, number, filename, description, placement] = match;
         matches.push({
-          filename: this.sanitizeFilename(filename),
-          prompt: prompt
+          filename: this.normalizeFilename(filename, matches.length + 1),
+          description: description.trim(),
+          placement: placement.trim()
         });
-        console.log(`✅ 이미지 파싱: ${filename} | ${prompt.substring(0, 50)}...`);
       }
+    }
+
+    // 패턴 3: 매우 유연한 형식 (filename과 description만 필수)
+    if (matches.length === 0) {
+      const pattern3 = /filename:\s*"([^"]+)"\s*description:\s*"([^"]+?)"\s*(?:placement:\s*"([^"]*)")?/gi;
+      while ((match = pattern3.exec(sectionContent)) !== null) {
+        const [, filename, description, placement] = match;
+        matches.push({
+          filename: this.normalizeFilename(filename, matches.length + 1),
+          description: description.trim(),
+          placement: placement ? placement.trim() : '메인 영역'
+        });
+      }
+    }
+
+    // 패턴 4: 줄바꿈과 함께 매우 긴 설명이 있는 경우
+    if (matches.length === 0) {
+      const lines = sectionContent.split('\n');
+      let currentImage: any = null;
+
+      for (const line of lines) {
+        // filename 찾기
+        const filenameMatch = line.match(/filename:\s*"([^"]+)"/i);
+        if (filenameMatch) {
+          if (currentImage) {
+            matches.push(currentImage);
+          }
+          currentImage = {
+            filename: this.normalizeFilename(filenameMatch[1], matches.length + 1),
+            description: '',
+            placement: '메인 영역'
+          };
+          continue;
+        }
+
+        // description 찾기 (여러 줄에 걸쳐 있을 수 있음)
+        const descMatch = line.match(/description:\s*"([^"]*.*?)"/i);
+        if (descMatch && currentImage) {
+          currentImage.description = descMatch[1].trim();
+          continue;
+        }
+
+        // placement 찾기
+        const placementMatch = line.match(/placement:\s*"([^"]+)"/i);
+        if (placementMatch && currentImage) {
+          currentImage.placement = placementMatch[1].trim();
+        }
+      }
+
+      // 마지막 이미지 추가
+      if (currentImage && currentImage.description) {
+        matches.push(currentImage);
+      }
+    }
+
+    // 결과 로깅
+    for (const image of matches) {
+      console.log(`✅ 구조화된 이미지 파싱: ${image.filename} | ${image.description.substring(0, 50)}...`);
     }
 
     return matches;
   }
 
-  private sanitizeFilename(filename: string): string {
-    const clean = filename.replace(/[^a-zA-Z0-9._-]/g, '_');
-    return clean.includes('.') ? clean : `${clean}.png`;
+  // 파일명을 1.png, 2.png 형식으로 정규화
+  private normalizeFilename(filename: string, index: number): string {
+    if (this.validateImageFilename(filename)) {
+      return filename;
+    }
+
+    const normalizedFilename = `${index}.png`;
+    console.log(`🔧 파일명 정규화: ${filename} → ${normalizedFilename}`);
+    return normalizedFilename;
   }
+
+  // 이미지 파일명 검증 (숫자.png 형식만 허용)
+  private validateImageFilename(filename: string): boolean {
+    const validPattern = /^\d+\.png$/;
+    return validPattern.test(filename);
+  }
+
 
   private createImageObject(filename: string, aiPrompt: string, page: any, index: number) {
     return {
@@ -602,6 +712,30 @@ export class EducationalDesignService {
         caption: `${page.topic} 시각 자료`
       },
       aiPrompt: aiPrompt
+    };
+  }
+
+  // 파싱된 설명을 사용하는 새로운 이미지 객체 생성 메서드
+  private createImageObjectWithDescription(filename: string, description: string, placement: string, page: any, index: number) {
+    return {
+      id: `page-${page.pageNumber}-${index}`,
+      fileName: filename.startsWith('page') ? filename : `page${page.pageNumber}/${filename}`,
+      path: `~/image/page${page.pageNumber}/${filename}`,
+      type: 'image',
+      category: '교육 시각화',
+      purpose: `교육 시각 자료 ${index}`,
+      description: description || `${page.topic} 관련 교육 이미지`,
+      sizeGuide: '600×400px',
+      placement: {
+        section: placement || '메인 영역',
+        position: index === 1 ? '중앙' : `위치${index}`,
+        size: '600×400px'
+      },
+      accessibility: {
+        altText: `${page.topic} 관련 교육 이미지`,
+        caption: `${page.topic} 시각 자료`
+      },
+      aiPrompt: this.extractAIPromptFromDescription(description, page.topic)
     };
   }
 
@@ -798,136 +932,8 @@ Create an image that serves as an effective educational tool, helping learners g
     }
   }
 
-  // Step2 Visual Identity를 Step3 프롬프트용으로 포맷팅
-  private formatStep2VisualIdentityForPrompt(visualIdentity: any): string {
-    if (!visualIdentity) {
-      return `### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
-- **분위기**: 교육적이고 친근한
-- **핵심 디자인 원칙**: 콘텐츠의 중요도에 따라 시각적 계층(Visual Hierarchy)을 만드세요.`;
-    }
 
-    const vi = visualIdentity;
 
-    return `### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
-
-#### 🎭 무드와 톤
-- **핵심 감성**: ${vi.moodAndTone ? vi.moodAndTone.join(', ') : '교육적, 친근한'}
-- 이 4가지 감성을 레이아웃의 모든 요소(여백, 정렬, 색상 배치, 컴포넌트 형태)에 반영하세요.
-
-#### 🎨 컬러 시스템 (5개 색상)
-- **PRIMARY (${vi.colorPalette?.primary || '#2563EB'})**: 주요 제목, 중요한 버튼, 핵심 강조 요소
-- **SECONDARY (${vi.colorPalette?.secondary || '#F1F5F9'})**: 카드 배경, 섹션 구분, 보조 영역
-- **ACCENT (${vi.colorPalette?.accent || '#F59E0B'})**: 행동 유도, 하이라이트, 주의 집중 요소
-- **BACKGROUND (${vi.colorPalette?.background || '#FFFFFF'})**: 전체 페이지 배경색
-- **TEXT (${vi.colorPalette?.text || '#0F172A'})**: 모든 텍스트의 기본 색상
-
-#### ✍️ 타이포그래피 시스템
-- **헤딩 폰트**: ${vi.typography?.headingFont || 'Pretendard'} (제목, 섹션 헤더에 사용)
-- **본문 폰트**: ${vi.typography?.bodyFont || 'Noto Sans KR'} (일반 텍스트, 설명문에 사용)
-- **기본 크기**: ${vi.typography?.baseSize || '20pt'} (이를 기준으로 제목은 더 크게, 캡션은 더 작게)
-
-#### 🎪 컴포넌트 스타일 가이드
-${vi.componentStyle || '깔끔하고 교육적인 디자인으로 학습자의 집중도를 높이는 컴포넌트 구성을 권장합니다.'}
-
-#### 💡 디자인 적용 지침
-1. **색상 일관성**: 위 5가지 색상만 사용하여 통일된 컬러 팔레트 유지
-2. **폰트 일관성**: 지정된 2가지 폰트만 사용하여 타이포그래피 시스템 준수
-3. **감성 반영**: 4가지 무드를 레이아웃의 전체적인 느낌에 녹여내세요
-4. **컴포넌트 가이드 준수**: 위 스타일 가이드에 맞는 UI 요소들로 구성하세요`;
-  }
-
-  // Step1 프로젝트 정보와 다른 페이지들의 맥락 정보를 포맷팅
-  private formatProjectContextForPrompt(
-    projectData: ProjectData,
-    currentPage: any,
-    pageIndex: number,
-    totalPages: number
-  ): string {
-    const prevPageContext = pageIndex > 0
-      ? `이전 페이지: ${projectData.pages[pageIndex - 1]?.topic || '없음'}`
-      : '첫 번째 페이지입니다';
-
-    const nextPageContext = pageIndex < totalPages - 1
-      ? `다음 페이지: ${projectData.pages[pageIndex + 1]?.topic || '없음'}`
-      : '마지막 페이지입니다';
-
-    // Learning Journey Designer 정보 포함
-    const learningJourneyInfo = this.formatLearningJourneyInfo(projectData);
-
-    // 전체 페이지 구조 개요 (아하 모먼트 포함)
-    const allPagesOverview = projectData.pages.map((page, idx) => {
-      const isCurrent = idx === pageIndex;
-      const status = idx < pageIndex ? '✅ 완료' : idx === pageIndex ? '🔄 현재' : '⏳ 예정';
-      const ahaMoment = projectData.ahaMoments?.[idx] ? ` | 💡 아하 모먼트: ${projectData.ahaMoments[idx]}` : '';
-      return `  ${status} 페이지 ${page.pageNumber}: ${page.topic}${page.description ? ` (${page.description})` : ''}${ahaMoment}`;
-    }).join('\n');
-
-    return `### 📚 프로젝트 전체 정보
-
-#### 🎯 기본 정보
-- **프로젝트 제목**: ${projectData.projectTitle}
-- **대상 학습자**: ${projectData.targetAudience}
-- **레이아웃 모드**: ${projectData.layoutMode === 'fixed' ? 'Fixed (1600×1000px)' : 'Scrollable (1600px 너비)'}
-- **콘텐츠 모드**: ${this.getContentModeDescription(projectData.contentMode)}
-
-${learningJourneyInfo}
-
-#### 📖 전체 페이지 구조 (총 ${totalPages}개 페이지)
-${allPagesOverview}
-
-### 📍 현재 페이지 컨텍스트
-- ${prevPageContext}
-- **🔄 현재 페이지 ${currentPage.pageNumber}: ${currentPage.topic}**
-  ${currentPage.description ? `- **상세 설명**: ${currentPage.description}` : ''}
-  ${projectData.ahaMoments?.[pageIndex] ? `- **💡 이 페이지의 아하 모먼트**: ${projectData.ahaMoments[pageIndex]}` : ''}`;
-  }
-
-  private formatLearningJourneyInfo(projectData: ProjectData): string {
-    if (projectData.learningJourneyMode === 'skip') {
-      return '';
-    }
-
-    let journeyInfo = '#### 🎓 Learning Journey Designer 정보\n';
-
-    if (projectData.emotionalArc) {
-      journeyInfo += `- **감정적 여정**: ${projectData.emotionalArc}\n`;
-    }
-
-    if (projectData.learnerPersona) {
-      journeyInfo += `- **학습자 페르소나**: ${projectData.learnerPersona}\n`;
-    }
-
-    // 페이지별 아하 모먼트 매핑
-    if (projectData.ahaMoments && projectData.ahaMoments.length > 0) {
-      journeyInfo += `- **페이지별 아하 모먼트**:\n`;
-      projectData.ahaMoments.forEach((moment, index) => {
-        const pageNumber = index + 1;
-        const associatedPage = projectData.pages?.[index];
-        const pageTopic = associatedPage ? associatedPage.topic : `페이지 ${pageNumber}`;
-        journeyInfo += `  - 페이지 ${pageNumber} (${pageTopic}): ${moment}\n`;
-      });
-    }
-
-    return journeyInfo;
-  }
-
-  private getContentModeDescription(mode: string): string {
-    switch (mode) {
-      case 'enhanced': return 'Enhanced (AI 보강) - HTML/CSS 시각화 추가';
-      case 'restricted': return 'Restricted (원본 유지) - 주어진 콘텐츠만 사용';
-      case 'original': return 'Original (기본) - 원본 내용 최대한 보존';
-      default: return mode;
-    }
-  }
-
-  private getPageConnectionGuide(page: any, direction: 'prev' | 'next'): string {
-    if (!page) {
-      return direction === 'prev' ? '시작 페이지로서 강력한 도입부 필요' : '마무리 페이지로서 완결성 있는 정리 필요';
-    }
-
-    const verb = direction === 'prev' ? '이어받아' : '준비하여';
-    return `"${page.topic}" 내용을 ${verb} 자연스러운 흐름 유지`;
-  }
 
   // 유틸리티 메서드들
   private createEmotionalContext(visualIdentity: VisualIdentity): EmotionalContext {

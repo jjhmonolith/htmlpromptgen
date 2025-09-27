@@ -153,34 +153,21 @@ export class Step2VisualIdentityService {
   }
 
   private createStep2Prompt(projectData: ProjectData): string {
-    const layoutGuide = this.getLayoutModeGuide(projectData.layoutMode);
-    const contentGuide = this.getContentModeGuide(projectData.contentMode);
-    const audienceGuide = this.getAudienceGuide(projectData.targetAudience);
+    return `당신은 프로젝트의 전체적인 비주얼 컨셉을 잡는 아트 디렉터입니다. 사용자가 제공한 프로젝트 개요를 바탕으로, 프로젝트의 '비주얼 아이덴티티'를 정의해주세요.
 
-    return `당신은 교육 콘텐츠의 비주얼 아이덴티티를 디자인하는 전문 BI 디자이너입니다. 주어진 프로젝트에 맞는 무드, 색상 팔레트, 타이포그래피, 컴포넌트 스타일을 제안해주세요.
-
-### 📚 프로젝트 정보
+### :스크롤: 프로젝트 개요
 - **프로젝트명**: ${projectData.projectTitle}
 - **대상 학습자**: ${projectData.targetAudience}
 - **사용자 추가 제안**: ${projectData.additionalRequirements || '기본적인 교육용 디자인'}
 
-### 📐 레이아웃 제약사항
-${layoutGuide}
-
-### 🎨 콘텐츠 생성 방침
-${contentGuide}
-
-### 👥 대상 학습자 특성
-${audienceGuide}
-
-### 📋 생성할 항목
+### :클립보드: 생성할 항목
 1. **Mood & Tone**: 프로젝트의 전반적인 분위기를 설명하는 핵심 키워드 3-4개를 제시해주세요. (예: "활기찬, 재미있는, 다채로운, 친근한")
 2. **Color Palette**: 분위기에 맞는 색상 팔레트를 HEX 코드로 제안해주세요. (primary, secondary, accent, text, background)
 3. **Typography**: 제목과 본문에 어울리는 폰트 패밀리와 기본 사이즈를 제안해주세요. (headingFont, bodyFont, baseSize)
 4. **Component Style**: 버튼, 카드 등 UI 요소의 전반적인 스타일을 간결하게 설명해주세요. (예: "버튼은 모서리가 둥글고, 카드에는 약간의 그림자 효과를 적용합니다.")
 
-### 💻 출력 형식
-반드시 다음 JSON 형식으로 응답해주세요. 모든 항목을 빠짐없이 채워주세요.
+### :컴퓨터: 출력 형식
+반드시 다음 JSON 형식으로 응답해주세요:
 {
     "moodAndTone": "활기찬, 재미있는, 다채로운, 친근한",
     "colorPalette": {
@@ -191,42 +178,14 @@ ${audienceGuide}
         "background": "#FFFFFF"
     },
     "typography": {
-        "headingFont": "Pretendard, system-ui, sans-serif",
-        "bodyFont": "Noto Sans KR, system-ui, sans-serif",
-        "baseSize": "18px"
+        "headingFont": "Inter, system-ui, sans-serif",
+        "bodyFont": "Inter, system-ui, sans-serif",
+        "baseSize": "16px"
     },
     "componentStyle": "버튼은 모서리가 둥글고 호버 시 살짝 위로 올라가는 효과를 줍니다. 카드는 부드러운 그림자와 함께 깨끗한 흰색 배경을 가집니다."
 }`;
   }
 
-  private getLayoutModeGuide(layoutMode: 'fixed' | 'scrollable'): string {
-    if (layoutMode === 'fixed') {
-      return `**스크롤 없는 1600×1000px 고정 화면**에 최적화된 디자인이 필요합니다. 제한된 공간에서 최대한의 임팩트를 낼 수 있는 간결하고 효율적인 비주얼 요소를 제안하세요. 압축적이면서도 아름다운 디자인을 위해 작은 여백, 미니멀한 컴포넌트, 명확한 색상 구분을 고려하세요.`;
-    } else {
-      return `**1600px 너비 스크롤 가능 화면**에 최적화된 디자인이 필요합니다. 세로로 자유롭게 스크롤할 수 있으므로 호흡감 있는 레이아웃을 위해 넉넉한 여백, 풍부한 시각적 요소, 스토리텔링하듯 자연스러운 흐름을 만드는 디자인을 제안하세요.`;
-    }
-  }
-
-  private getContentModeGuide(contentMode: 'original' | 'enhanced' | 'restricted'): string {
-    if (contentMode === 'enhanced') {
-      return `제공된 프로젝트 정보를 바탕으로 **창의적으로 내용을 보강하고 확장**하여 풍부한 교육 콘텐츠를 만드는 방향입니다. 학습자의 이해를 돕는 다양한 시각적 요소, 흥미로운 색상 조합, 매력적인 컴포넌트 스타일을 자유롭게 제안하세요.`;
-    } else {
-      return `제공된 프로젝트 정보를 **그대로 유지**하면서 추가적인 확장 없이 본질에 집중하는 방향입니다. 심플하고 정돈된 디자인으로 콘텐츠 자체에 집중할 수 있도록 절제된 색상과 깔끔한 컴포넌트 스타일을 제안하세요.`;
-    }
-  }
-
-  private getAudienceGuide(targetAudience: string): string {
-    if (targetAudience.includes('초등') || targetAudience.includes('어린이')) {
-      return `초등학생과 어린이를 대상으로 하므로 밝고 친근하며 호기심을 자극하는 분위기가 중요합니다. 생생한 색상과 둥근 모서리, 재미있는 요소를 고려하세요.`;
-    } else if (targetAudience.includes('중학') || targetAudience.includes('청소년')) {
-      return `중학생을 대상으로 하므로 어리지 않다고 느끼면서도 부담스럽지 않은 세련된 분위기가 효과적입니다. 트렌디하면서도 교육적인 균형을 맞춘 디자인을 고려하세요.`;
-    } else if (targetAudience.includes('고등') || targetAudience.includes('고등학생')) {
-      return `고등학생을 대상으로 하므로 성숙하면서도 지루하지 않은 트렌디한 감성이 효과적입니다. 모던하고 세련된 색상과 깔끔한 타이포그래피를 고려하세요.`;
-    } else if (targetAudience.includes('성인') || targetAudience.includes('대학생')) {
-      return `성인 학습자를 대상으로 하므로 전문적이면서도 접근하기 쉬운 신뢰할 수 있는 분위기가 필요합니다. 차분하고 안정적인 색상과 읽기 편한 타이포그래피를 고려하세요.`;
-    }
-    return `${targetAudience}의 특성을 고려한 적절한 분위기 연출이 중요합니다.`;
-  }
 
   // JSON 스키마 기반 구조화된 응답 - 복잡한 파싱 불필요
 

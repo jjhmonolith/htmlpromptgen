@@ -169,7 +169,8 @@ const convertEducationalDesignToStep3 = (educationalResult: EducationalDesignRes
           { id: 'interaction', type: 'interactive', section: '하단', role: '참여 유도', text: '상호작용 요소', gridSpan: '적절한 크기' }
         ] as any,
         images: (pageDesign.mediaAssets || []).map((media: any) => ({
-          filename: media.fileName || `page${pageDesign.pageNumber}_main.png`,
+          filename: media.fileName || `${pageDesign.pageNumber}.png`,
+          description: media.description || media.aiPrompt || `${pageDesign.pageTitle}의 핵심 개념을 시각적으로 표현한 교육용 자료`,
           purpose: media.purpose || '교육 시각화',
           style: media.type || 'image',
           section: typeof media.placement === 'string' ? media.placement : (media.placement?.section || '메인 영역'),
@@ -178,7 +179,6 @@ const convertEducationalDesignToStep3 = (educationalResult: EducationalDesignRes
           height: parseInt((media.sizeGuide || '400×300px').match(/×(\d+)/)?.[1] || '300'),
           alt: media.accessibility?.altText || `${pageDesign.pageTitle} 관련 교육 이미지`,
           caption: media.accessibility?.caption || `${pageDesign.pageTitle} 시각 자료`,
-          description: media.description || `${pageDesign.pageTitle}의 핵심 개념을 시각적으로 표현한 교육용 자료`,
           aiPrompt: media.aiPrompt || `${pageDesign.pageTitle}에 대한 교육용 시각 자료. 명확하고 이해하기 쉬운 일러스트.`
         })) as any,
         generatedAt: pageDesign.generatedAt
@@ -757,7 +757,7 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
                   <QualityIndicator quality={selectedPage.debugInfo.qualityMetrics} />
                 )}
 
-                {/* 이미지 섹션 - 개선된 파싱 구조 */}
+                {/* 이미지 섹션 - 간단한 파일명과 설명 표시 */}
                 {selectedPage.content && selectedPage.content.images && selectedPage.content.images.length > 0 && (
                   <div className="mt-8">
                     <div className="flex items-center mb-6">
@@ -766,77 +766,22 @@ export const Step3EducationalDesignFC: React.FC<Step3EducationalDesignProps> = (
                       </div>
                       <div>
                         <h5 className="text-xl font-semibold text-gray-900">🖼️ 교육 시각 자료</h5>
-                        <p className="text-sm text-gray-600 mt-1">상세한 AI 프롬프트와 함께 제공되는 이미지</p>
+                        <p className="text-sm text-gray-600 mt-1">파일명과 설명</p>
                       </div>
                     </div>
 
-                    <div className="space-y-6">
+                    <div className="space-y-4">
                       {selectedPage.content.images.map((image, imgIndex) => (
-                        <div key={`${selectedPage.pageId}-img-${imgIndex}`} className="bg-gradient-to-br from-green-50 to-blue-50 rounded-xl p-6 border border-green-200">
-                          <div className="flex items-center justify-between mb-4">
-                            <div className="flex items-center space-x-3">
-                              <span className="text-2xl text-green-600">
-                                {getCircledNumber(image.filename)}
-                              </span>
-                              <div>
-                                <h6 className="font-semibold text-gray-900 text-lg">{image.filename}</h6>
-                                <p className="text-xs text-gray-500 font-mono mt-1">
-                                  ~/image/page{selectedPage.pageNumber}/{image.filename}
-                                </p>
-                              </div>
-                            </div>
-                            <div className="flex space-x-2">
-                              <span className="px-3 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium">
-                                {image.purpose}
-                              </span>
-                              <span className="px-3 py-1 text-xs bg-green-100 text-green-800 rounded-md font-medium">
-                                {image.width}×{image.height}px
-                              </span>
-                            </div>
-                          </div>
-
-                          {/* 8가지 구조화된 이미지 메타데이터 표시 */}
-                          {(image as any).structuredMetadata ? (
-                            <div className="mb-4">
-                              <h6 className="text-sm font-semibold text-gray-900 mb-3">🎨 8가지 이미지 메타데이터</h6>
-                              <div className="grid grid-cols-2 gap-3">
-                                <DetailCard icon="🎨" title="시각 요소" content={(image as any).structuredMetadata.visualElements || '기본 시각 요소'} />
-                                <DetailCard icon="🌈" title="색상 구성" content={(image as any).structuredMetadata.colorScheme || '기본 색상 구성'} />
-                                <DetailCard icon="🔗" title="페이지 맥락" content={(image as any).structuredMetadata.pageContext || '기본 맥락'} />
-                                <DetailCard icon="🎭" title="스타일" content={(image as any).structuredMetadata.styleTexture || '기본 스타일'} />
-                                <DetailCard icon="👥" title="학습자 관점" content={(image as any).structuredMetadata.learnerPerspective || '기본 관점'} />
-                                <DetailCard icon="🔄" title="교육 기능" content={(image as any).structuredMetadata.educationalFunction || '기본 기능'} />
-                                <DetailCard icon="⚡" title="시각 역동성" content={(image as any).structuredMetadata.visualDynamics || '기본 역동성'} className="col-span-2" />
-                              </div>
-                            </div>
-                          ) : (
-                            /* 기존 이미지 상세 정보 */
-                            <div className="bg-white rounded-lg p-4 mb-4">
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div>
-                                  <h6 className="text-sm font-semibold text-gray-900 mb-2">📍 배치 정보</h6>
-                                  <div className="space-y-1 text-xs text-gray-600">
-                                    <div><span className="font-medium">섹션:</span> {image.section}</div>
-                                    <div><span className="font-medium">위치:</span> {image.place}</div>
-                                    <div><span className="font-medium">스타일:</span> {image.style}</div>
-                                  </div>
-                                </div>
-                                <div>
-                                  <h6 className="text-sm font-semibold text-gray-900 mb-2">🔍 접근성</h6>
-                                  <div className="space-y-1 text-xs text-gray-600">
-                                    <div><span className="font-medium">대체텍스트:</span> {image.alt}</div>
-                                    <div><span className="font-medium">캡션:</span> {image.caption}</div>
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {/* AI 생성 프롬프트 (영문만) */}
-                          <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
-                            <h6 className="text-sm font-semibold text-blue-900 mb-2">🤖 AI 생성 프롬프트</h6>
-                            <div className="text-sm text-blue-800 leading-relaxed bg-white rounded p-3 border font-mono">
-                              {image.aiPrompt || 'AI 프롬프트를 생성 중입니다...'}
+                        <div key={`${selectedPage.pageId}-img-${imgIndex}`} className="bg-gradient-to-br from-green-50 to-blue-50 rounded-lg p-4 border border-green-200">
+                          <div className="flex items-start space-x-3">
+                            <span className="text-lg text-green-600 mt-1">
+                              {getCircledNumber(image.filename)}
+                            </span>
+                            <div className="flex-1">
+                              <h6 className="font-semibold text-gray-900 text-base mb-2">{image.filename}</h6>
+                              <p className="text-sm text-gray-700 leading-relaxed">
+                                {image.description || image.alt || `${selectedPage.pageTitle}에 대한 교육용 시각 자료`}
+                              </p>
                             </div>
                           </div>
                         </div>
