@@ -807,8 +807,8 @@ ${step3Result ? step3Result.pages.map((page, pageIndex) => {
   /**
    * 콘텐츠 모드 정규화
    */
-  private normalizeContentMode(contentMode: 'original' | 'enhanced' | 'restricted'): 'restricted' | 'enhanced' {
-    // 'original'과 'restricted'는 모두 원본 유지 모드로 처리
+  private normalizeContentMode(contentMode: 'enhanced' | 'restricted'): 'restricted' | 'enhanced' {
+    // enhanced와 restricted 두 모드만 지원
     return contentMode === 'enhanced' ? 'enhanced' : 'restricted';
   }
 

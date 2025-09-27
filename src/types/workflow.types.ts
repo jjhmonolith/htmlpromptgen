@@ -5,7 +5,7 @@ export interface ProjectData {
   projectTitle: string;
   targetAudience: string;
   layoutMode: 'fixed' | 'scrollable';
-  contentMode: 'original' | 'enhanced' | 'restricted';
+  contentMode: 'enhanced' | 'restricted';
   pages: PageData[];
   suggestions?: string[];
   additionalRequirements?: string;

@@ -148,32 +148,7 @@ export class EducationalDesignService {
         : '한 화면에 모든 내용을 효과적으로 배치'
     };
 
-    // 콘텐츠 모드별 차별화 전략
-    const getContentModeStrategy = (mode: string): string => {
-      switch (mode) {
-        case 'enhanced':
-          return `
-### 🎯 Enhanced 모드 (AI 보강)
-- **시각적 요소 추가**: 차트, 그래프, 다이어그램을 시각적 설명으로 설계
-- 텍스트 요약하고 인포그래픽 형태로 구성 설명
-- 여백과 타이포그래피로 시각적 완성도 향상
-- 동적 요소와 인터랙션으로 학습 효과 극대화
-- **이미지 사용 최소화**: 실제 사진이 아닌 모든 시각화는 설명으로 처리`;
-        case 'restricted':
-          return `
-### 🎯 Restricted 모드 (그대로 사용)
-- 주어진 콘텐츠만 사용, 추가 생성 금지
-- 레이아웃 최적화에만 집중
-- 긴 텍스트는 여러 컬럼으로 분할
-- 기존 내용의 가독성 최대화
-- **시각적 설명만 사용**: 어떤 시각화도 이미지로 대체하지 않음`;
-        default:
-          return '';
-      }
-    };
-
-    // 콘텐츠 모드 전략을 미리 계산
-    const contentModeStrategy = getContentModeStrategy(projectData.contentMode);
+    // 사용되지 않는 콘텐츠 모드 전략 코드 제거됨
 
     // 새로운 사용자 제시 프롬프트 방식 적용
     if (projectData.layoutMode === 'fixed') {
@@ -191,10 +166,20 @@ export class EducationalDesignService {
     pageIndex: number,
     totalPages: number
   ): string {
-    const contentMode = projectData.contentMode === 'enhanced' ? 'original' : 'enhanced';
-    const contentPolicy = contentMode === 'original'
-      ? '사용자가 제공한 페이지 주제의 내용만을 정확히 사용하여 레이아웃을 구성하세요. 추가적인 내용을 생성하지 마시고, 주어진 주제를 효과적으로 시각화하는 레이아웃과 디자인을 상세히 설명하세요. 레이아웃 구성, 섹션 배치, 시각적 요소의 배열은 자세히 서술하되, 내용은 주제에서 벗어나지 마세요.'
-      : '제공된 페이지 주제를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠를 만드세요. 학습자의 이해를 돕는 추가 설명, 예시, 시각 자료 등을 자유롭게 제안하세요.';
+    const contentMode = projectData.contentMode; // 직접 사용 - 레이아웃 모드와 독립적
+
+    // 콘텐츠 정책 결정 (Fixed Layout - 명확한 분기)
+    let contentPolicy: string;
+    switch (contentMode) {
+      case 'enhanced':
+        contentPolicy = '제공된 페이지 주제를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠를 만드세요. 학습자의 이해를 돕는 추가 설명, 예시, 시각 자료 등을 자유롭게 제안하세요.';
+        break;
+      case 'restricted':
+        contentPolicy = '사용자가 제공한 페이지 주제의 내용만을 정확히 사용하여 레이아웃을 구성하세요. 추가적인 내용을 생성하지 마시고, 주어진 주제를 효과적으로 시각화하는 레이아웃과 디자인을 상세히 설명하세요. 레이아웃 구성, 섹션 배치, 시각적 요소의 배열은 자세히 서술하되, 내용은 주제에서 벗어나지 마세요.';
+        break;
+      default:
+        contentPolicy = '제공된 페이지 주제를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠를 만드세요. 학습자의 이해를 돕는 추가 설명, 예시, 시각 자료 등을 자유롭게 제안하세요.';
+    }
 
     return `당신은 주어진 '비주얼 아이덴티티'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 스크롤 없는 1600x1000px 화면에 들어갈 콘텐츠 레이아웃을 구성해주세요.
 
@@ -248,10 +233,20 @@ ${this.formatNewProjectInfoSection(projectData)}
     pageIndex: number,
     totalPages: number
   ): string {
-    const contentMode = projectData.contentMode === 'enhanced' ? 'enhanced' : 'original';
-    const contentPolicy = contentMode === 'enhanced'
-      ? '제공된 페이지 주제를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠를 만드세요. 학습자의 이해를 돕는 추가 설명, 예시, 시각 자료 등을 자유롭게 제안하세요.'
-      : '사용자가 제공한 페이지 주제의 내용만을 정확히 사용하여 레이아웃을 구성하세요. 추가적인 내용을 생성하지 마시고, 주어진 주제를 효과적으로 시각화하는 레이아웃과 디자인을 상세히 설명하세요. 레이아웃 구성, 섹션 배치, 시각적 요소의 배열은 자세히 서술하되, 내용은 주제에서 벗어나지 마세요.';
+    const contentMode = projectData.contentMode; // 직접 사용 - 레이아웃 모드와 독립적
+
+    // 콘텐츠 정책 결정 (Scrollable Layout - 명확한 분기)
+    let contentPolicy: string;
+    switch (contentMode) {
+      case 'enhanced':
+        contentPolicy = '제공된 페이지 주제를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠를 만드세요. 학습자의 이해를 돕는 추가 설명, 예시, 시각 자료 등을 자유롭게 제안하세요.';
+        break;
+      case 'restricted':
+        contentPolicy = '사용자가 제공한 페이지 주제의 내용만을 정확히 사용하여 레이아웃을 구성하세요. 추가적인 내용을 생성하지 마시고, 주어진 주제를 효과적으로 시각화하는 레이아웃과 디자인을 상세히 설명하세요. 레이아웃 구성, 섹션 배치, 시각적 요소의 배열은 자세히 서술하되, 내용은 주제에서 벗어나지 마세요.';
+        break;
+      default:
+        contentPolicy = '제공된 페이지 주제를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠를 만드세요. 학습자의 이해를 돕는 추가 설명, 예시, 시각 자료 등을 자유롭게 제안하세요.';
+    }
 
     return `당신은 주어진 '비주얼 아이덴티티'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 가로 1600px 고정, 세로는 콘텐츠에 맞게 자유롭게 확장되는 스크롤 가능한 레이아웃을 구성해주세요.
 
@@ -914,8 +909,6 @@ Create an image that serves as an effective educational tool, helping learners g
         return 'AI 보강 - 시각적 요소와 설명 추가';
       case 'restricted':
         return '그대로 사용 - 기존 콘텐츠만 활용';
-      case 'original':
-        return '원본 보존 - 내용 변경 없이 레이아웃만 최적화';
       default:
         return '기본 전략';
     }
