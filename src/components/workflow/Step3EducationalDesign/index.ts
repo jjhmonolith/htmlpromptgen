@@ -1,1 +1,0 @@
-export { Step3EducationalDesign } from './Step3EducationalDesign';

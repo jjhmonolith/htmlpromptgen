@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Step1BasicInfo } from './Step1BasicInfo';
-import { Step2VisualIdentity } from './Step2VisualIdentity/Step2VisualIdentity';
-import { Step3EducationalDesign } from './Step3EducationalDesign';
-import { Step5FinalPrompt } from './Step5FinalPrompt';
+import { Step2Integrated } from './Step2Integrated';
+import { Step3LayoutOnly } from './Step3LayoutOnly';
+import { Step4IntegratedResult } from './Step4IntegratedResult';
 import { GNB } from '../common';
 // import { loadFromStorage, saveToStorage } from '../../services/storage.service';
 
@@ -26,10 +26,10 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
   const [isGenerating, setIsGenerating] = useState(false);
   const [workflowData, setWorkflowData] = useState<any>({
     step1: null,
-    step2: null,
-    step3: null,
-    step4: null,
-    step5: null,
+    step2: null, // Step2NewResult
+    step3: null, // Step3LayoutOnlyResult
+    step4: null, // Step4DesignResult
+    step5: null, // FinalPrompt
     currentStep: 1,
     stepCompletion: {
       step1: false,
@@ -344,8 +344,8 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
 
   const getWorkflowSteps = () => [
     { num: 1, title: '학습 여정 설계', isCompleted: !!workflowData.step1 },
-    { num: 2, title: '감성 무드 지휘', isCompleted: !!workflowData.step2 },
-    { num: 3, title: '교육 콘텐츠 설계', isCompleted: !!workflowData.step3 },
+    { num: 2, title: '비주얼 + 교안 통합', isCompleted: !!workflowData.step2 },
+    { num: 3, title: '레이아웃 설계', isCompleted: !!workflowData.step3 },
     { num: 4, title: '창작 브리프 생성', isCompleted: !!workflowData.step5 }
   ];
 
@@ -363,7 +363,7 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
       
       case 2:
         return (
-          <Step2VisualIdentity
+          <Step2Integrated
             initialData={workflowData.step2}
             projectData={workflowData.step1}
             apiKey={apiKey || ''}
@@ -395,10 +395,10 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
         }
         
         return (
-          <Step3EducationalDesign
+          <Step3LayoutOnly
             initialData={workflowData.step3}
-            projectData={workflowData.step1}
-            visualIdentity={workflowData.step2.visualIdentity}
+            step2Result={workflowData.step2}
+            layoutMode={workflowData.step1?.layoutMode || 'scrollable'}
             apiKey={apiKey || ''}
             onComplete={handleStep3Complete}
             onDataChange={handleStep3DataChange}
@@ -428,15 +428,16 @@ export const WorkflowContainer: React.FC<WorkflowContainerProps> = ({
           );
         }
 
-        // 통합된 Step5 컴포넌트를 사용하되, 내부적으로는 Step4-5 로직이 모두 실행됨
+        // 통합된 Step4 컴포넌트를 사용하되, 내부적으로는 Step4-5 로직이 모두 실행됨
         return (
-          <Step5FinalPrompt
+          <Step4IntegratedResult
             initialData={workflowData.step5}
             projectData={workflowData.step1}
             visualIdentity={workflowData.step2.visualIdentity}
             designTokens={workflowData.step2.designTokens}
             step3Result={workflowData.step3}
             step4Result={workflowData.step4} // 통합 서비스에서 생성된 Step4 결과
+            apiKey={apiKey || ''}
             onComplete={handleIntegratedStep4Complete}
             onDataChange={handleStep5DataChange}
             onBack={() => setCurrentStep(3)} // Step 3으로 돌아가기 (Step 4는 더 이상 없음)

@@ -1,0 +1,1 @@
+export { Step4IntegratedResult } from './Step4IntegratedResult';
