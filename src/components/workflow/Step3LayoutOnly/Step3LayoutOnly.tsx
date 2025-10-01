@@ -33,6 +33,7 @@ export const Step3LayoutOnly: React.FC<Step3LayoutOnlyProps> = ({
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [currentPageIndex, setCurrentPageIndex] = useState(0);
+  const [expandedPages, setExpandedPages] = useState<Set<string>>(new Set());
 
   // 생성 상태 변경을 부모로 전달
   useEffect(() => {
@@ -170,6 +171,18 @@ export const Step3LayoutOnly: React.FC<Step3LayoutOnlyProps> = ({
       console.log('✅ Step3 레이아웃 완료 - 데이터 전달:', step3Data);
       onComplete(step3Data);
     }
+  };
+
+  const togglePageExpansion = (pageId: string) => {
+    setExpandedPages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pageId)) {
+        newSet.delete(pageId);
+      } else {
+        newSet.add(pageId);
+      }
+      return newSet;
+    });
   };
 
   if (isGenerating) {
@@ -378,13 +391,45 @@ export const Step3LayoutOnly: React.FC<Step3LayoutOnlyProps> = ({
 
                     {/* 우측: 레이아웃 설계 */}
                     <div>
-                      <h4 className="text-lg font-bold text-gray-900 mb-4">🎨 레이아웃 설계</h4>
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-lg font-bold text-gray-900">🎨 레이아웃 설계</h4>
+                        <button
+                          onClick={() => togglePageExpansion(page.pageId)}
+                          className="flex items-center gap-2 px-3 py-1.5 text-sm text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-lg transition-all"
+                        >
+                          {expandedPages.has(page.pageId) ? (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+                              </svg>
+                              접기
+                            </>
+                          ) : (
+                            <>
+                              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+                              </svg>
+                              펼치기
+                            </>
+                          )}
+                        </button>
+                      </div>
 
-                      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6">
+                      <div
+                        className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 transition-all duration-300 overflow-hidden relative"
+                        style={{
+                          height: expandedPages.has(page.pageId) ? 'auto' : '550px'
+                        }}
+                      >
                         <h5 className="text-lg font-semibold text-indigo-800 mb-4">창의적 레이아웃 설계</h5>
                         <div className="text-indigo-700 text-sm leading-relaxed whitespace-pre-line">
                           {page.layoutNarrative}
                         </div>
+
+                        {/* 접힌 상태일 때 그라데이션 오버레이 */}
+                        {!expandedPages.has(page.pageId) && (
+                          <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-indigo-50 to-transparent pointer-events-none rounded-b-xl"></div>
+                        )}
                       </div>
                     </div>
                   </div>

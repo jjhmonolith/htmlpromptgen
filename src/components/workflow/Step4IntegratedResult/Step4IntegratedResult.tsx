@@ -497,32 +497,53 @@ export const Step4IntegratedResult: React.FC<Step4IntegratedResultProps> = ({
 // Step3LayoutOnlyResult를 Step3IntegratedResult로 변환하는 헬퍼 함수
 function convertStep3LayoutToIntegrated(step3Layout: Step3LayoutOnlyResult): Step3IntegratedResult {
   const pages = step3Layout.pages.map((page): Step3IntegratedResult['pages'][number] => {
+    const normalize = (value: string) => value.replace(/\s+/g, ' ').trim().toLowerCase();
+    const seen = new Set<string>();
+
+    const script = (page.textContent.fullTextContent || '').trim();
     const layoutStory = (page.layoutNarrative || '').trim();
     const visualGuide = (page.visualGuidelines || '').trim();
     const implementation = (page.implementationNotes || '').trim();
 
-    const descriptionSections = [
-      page.textContent.fullTextContent && `### 교안 본문\n${page.textContent.fullTextContent}`,
-      layoutStory && `### 레이아웃 스토리\n${layoutStory}`,
-      visualGuide && `### 비주얼 가이드\n${visualGuide}`,
-      implementation && `### 구현 노트\n${implementation}`
-    ].filter(Boolean);
+    const sections: Array<{ key: 'script' | 'layout' | 'visual' | 'implementation'; heading: string; text: string }> = [];
+    const addSection = (
+      key: 'script' | 'layout' | 'visual' | 'implementation',
+      heading: string,
+      text: string
+    ) => {
+      if (!text) {
+        return false;
+      }
+      const canonical = normalize(text);
+      if (!canonical || seen.has(canonical)) {
+        return false;
+      }
+      seen.add(canonical);
+      sections.push({ key, heading, text });
+      return true;
+    };
+    const scriptIncluded = addSection('script', '교안 본문', script);
+    const layoutIncluded = addSection('layout', '레이아웃 스토리', layoutStory);
+    const visualIncluded = addSection('visual', '비주얼 가이드', visualGuide);
+    const implementationIncluded = addSection('implementation', '구현 노트', implementation);
+
+    const descriptionSections = sections.map((section) => `### ${section.heading}\n${section.text}`);
 
     const fullDescription = descriptionSections.join('\n\n')
-      || page.textContent.fullTextContent
+      || script
       || `${page.pageTitle} 페이지 구성 개요`;
 
     const componentLines: ComponentLine[] = [];
-    if (page.textContent.fullTextContent) {
+    if (scriptIncluded && script) {
       componentLines.push({
         id: `script_${page.pageNumber}`,
         type: 'paragraph',
         section: 'script',
         role: 'content',
-        text: page.textContent.fullTextContent
+        text: script
       });
     }
-    if (layoutStory) {
+    if (layoutIncluded && layoutStory) {
       componentLines.push({
         id: `layout_story_${page.pageNumber}`,
         type: 'paragraph',
@@ -531,7 +552,7 @@ function convertStep3LayoutToIntegrated(step3Layout: Step3LayoutOnlyResult): Ste
         text: layoutStory
       });
     }
-    if (visualGuide) {
+    if (visualIncluded && visualGuide) {
       componentLines.push({
         id: `visual_guide_${page.pageNumber}`,
         type: 'paragraph',
@@ -540,7 +561,7 @@ function convertStep3LayoutToIntegrated(step3Layout: Step3LayoutOnlyResult): Ste
         text: visualGuide
       });
     }
-    if (implementation) {
+    if (implementationIncluded && implementation) {
       componentLines.push({
         id: `implementation_${page.pageNumber}`,
         type: 'paragraph',
@@ -550,50 +571,52 @@ function convertStep3LayoutToIntegrated(step3Layout: Step3LayoutOnlyResult): Ste
       });
     }
 
-    const imageFileName = `page${page.pageNumber}-main.png`;
-    const baseImage: ImageLine = {
-      id: `page${page.pageNumber}_image_1`,
-      fileName: imageFileName,
-      path: `./image/page${page.pageNumber}/${imageFileName}`,
-      description: page.textContent.imageDescription,
-      purpose: 'illustration',
-      sizeGuide: '600x400',
-      placement: {
-        section: 'visual',
-        position: step3Layout.layoutMode === 'fixed' ? 'right column' : 'in-flow',
-        size: 'medium'
-      },
-      accessibility: {
-        altText: page.textContent.imageDescription,
-        caption: page.textContent.imageDescription
-      },
-      aiPrompt: page.textContent.imageDescription
-    };
+    const imageDescription = (page.textContent.imageDescription || '').trim();
+    const baseImage: ImageLine | null = imageDescription
+      ? {
+          id: `page${page.pageNumber}_image_1`,
+          fileName: `page${page.pageNumber}-main.png`,
+          path: `./image/page${page.pageNumber}/page${page.pageNumber}-main.png`,
+          description: imageDescription,
+          purpose: 'illustration',
+          sizeGuide: '600x400',
+          placement: {
+            section: 'visual',
+            position: step3Layout.layoutMode === 'fixed' ? 'right column' : 'in-flow',
+            size: 'medium'
+          },
+          accessibility: {
+            altText: imageDescription,
+            caption: imageDescription
+          },
+          aiPrompt: imageDescription
+        }
+      : null;
 
     return {
       pageId: page.pageId,
       pageTitle: page.pageTitle,
       pageNumber: page.pageNumber,
       fullDescription,
-      layoutNarrative: layoutStory,
-      visualGuidelines: visualGuide,
-      implementationNotes: implementation,
-      originalScript: page.textContent.fullTextContent,
+      layoutNarrative: layoutIncluded ? layoutStory : undefined,
+      visualGuidelines: visualIncluded ? visualGuide : undefined,
+      implementationNotes: implementationIncluded ? implementation : undefined,
+      originalScript: scriptIncluded ? script : undefined,
       phase1Complete: true,
       phase2Complete: true,
       isGenerating: false,
       generatedAt: page.generatedAt,
       structure: {
         sections: [],
-        flow: layoutStory || page.textContent.fullTextContent,
-        imgBudget: 1
+        flow: layoutIncluded ? layoutStory : script,
+        imgBudget: baseImage ? 1 : 0
       },
       content: {
         components: componentLines,
-        images: [{ ...baseImage }],
+        images: baseImage ? [{ ...baseImage }] : [],
         generatedAt: page.generatedAt
       },
-      mediaAssets: [{ ...baseImage }]
+      mediaAssets: baseImage ? [{ ...baseImage }] : []
     };
   });
 

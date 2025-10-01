@@ -379,12 +379,30 @@ ${projectData.suggestions && projectData.suggestions.length > 0
       const implementationNotes = step3Page?.implementationNotes?.trim();
       const originalScript = step3Page?.originalScript?.trim();
 
+      const normalize = (value: string) => value.replace(/\s+/g, ' ').trim().toLowerCase();
+      const seenSections = new Set<string>();
+      const addBlock = (heading: string, text?: string) => {
+        if (!text) {
+          return undefined;
+        }
+        const trimmed = text.trim();
+        if (!trimmed) {
+          return undefined;
+        }
+        const canonical = normalize(trimmed);
+        if (!canonical || seenSections.has(canonical)) {
+          return undefined;
+        }
+        seenSections.add(canonical);
+        return `**${heading}**\n${trimmed}`;
+      };
+
       const sectionBlocks = [
-        originalScript && `**교안 본문**\n${originalScript}`,
-        layoutNarrative && `**레이아웃 스토리**\n${layoutNarrative}`,
-        visualGuidelines && `**비주얼 가이드**\n${visualGuidelines}`,
-        implementationNotes && `**구현 노트**\n${implementationNotes}`
-      ].filter(Boolean);
+        addBlock('교안 본문', originalScript),
+        addBlock('레이아웃 스토리', layoutNarrative),
+        addBlock('비주얼 가이드', visualGuidelines),
+        addBlock('구현 노트', implementationNotes)
+      ].filter(Boolean) as string[];
 
       const pageContent = sectionBlocks.length > 0
         ? sectionBlocks.join('\n\n')
