@@ -99,6 +99,9 @@ export const Step3LayoutOnly: React.FC<Step3LayoutOnlyProps> = ({
       setLoadingMessage(layoutMessages[0].message);
 
       console.log('🎨 Step3 레이아웃: 모든 페이지 레이아웃 설계 시작');
+      console.log('📝 API Key 존재:', !!apiKey);
+      console.log('📋 Step2 결과:', step2Result);
+      console.log('🎯 레이아웃 모드:', layoutMode);
 
       // 진행률 애니메이션 시뮬레이션
       let currentMessageIndex = 0;
@@ -136,6 +139,8 @@ export const Step3LayoutOnly: React.FC<Step3LayoutOnlyProps> = ({
       // 잠시 완료 메시지를 보여주고 결과 표시
       setTimeout(() => {
         console.log('✅ Step3 레이아웃 설계 완료:', result);
+        console.log('📊 생성된 페이지 수:', result?.pages?.length || 0);
+        console.log('📝 첫 번째 페이지 내용:', result?.pages?.[0]?.layoutNarrative?.substring(0, 200));
         setStep3Data(result);
         setIsDataLoaded(true);
       }, 800);
@@ -375,20 +380,10 @@ export const Step3LayoutOnly: React.FC<Step3LayoutOnlyProps> = ({
                     <div>
                       <h4 className="text-lg font-bold text-gray-900 mb-4">🎨 레이아웃 설계</h4>
 
-                      <div className="space-y-6">
-                        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4">
-                          <h5 className="text-sm font-semibold text-indigo-800 mb-2">레이아웃 스토리</h5>
-                          <p className="text-indigo-700 text-sm leading-relaxed whitespace-pre-line">{page.layoutNarrative}</p>
-                        </div>
-
-                        <div className="bg-green-50 rounded-xl p-4">
-                          <h5 className="text-sm font-semibold text-green-800 mb-2">비주얼 가이드</h5>
-                          <p className="text-green-700 text-xs leading-relaxed whitespace-pre-line">{page.visualGuidelines}</p>
-                        </div>
-
-                        <div className="bg-yellow-50 rounded-xl p-4">
-                          <h5 className="text-sm font-semibold text-yellow-800 mb-2">구현 노트</h5>
-                          <p className="text-yellow-800 text-xs leading-relaxed whitespace-pre-line">{page.implementationNotes}</p>
+                      <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6">
+                        <h5 className="text-lg font-semibold text-indigo-800 mb-4">창의적 레이아웃 설계</h5>
+                        <div className="text-indigo-700 text-sm leading-relaxed whitespace-pre-line">
+                          {page.layoutNarrative}
                         </div>
                       </div>
                     </div>

@@ -26,21 +26,20 @@ class Step3LayoutFallbackProvider implements FallbackProvider<Step3LayoutOnlyRes
     const visual = step2Result.visualIdentity;
 
     const pages: PageLayoutResult[] = step2Result.pageContents.map((pageContent) => {
-      const layoutNarrative = [
-        `${pageContent.pageTitle} 페이지는 ${layoutMode === 'fixed' ? '한 화면 안에서' : '세로 스크롤 흐름을 따라'} ${pageContent.keyMessage}를 자연스럽게 강조하도록 구성합니다.`,
-        `학습자는 ${pageContent.learningGoal} 목표를 따라가며 핵심 문장을 단계적으로 확인할 수 있도록 본문과 이미지, 참여 요소를 분명하게 구분합니다.`
-      ].join(' ');
+      // 더 창의적이고 구체적인 폴백 레이아웃 설계
+      const creativeLayoutDescription = `
+${pageContent.pageTitle} 페이지는 "${pageContent.keyMessage}"라는 핵심 메시지를 중심으로 ${layoutMode === 'fixed' ? '1600×1000px 고정 화면에서 모든 요소가 조화롭게 배치되어' : '자연스러운 세로 스크롤을 통해 단계적으로 정보가 전개되어'} 학습자의 시선을 효과적으로 유도합니다.
 
-      const visualGuidelines = [
-        `${visual.moodAndTone.join(', ')} 분위기를 유지하면서 ${visual.componentStyle} 특징을 반영해 헤더와 본문을 분리하고,`,
-        `주요 색상 ${visual.colorPalette.primary}는 제목과 구분선에, ${visual.colorPalette.accent}는 체크포인트 강조에 사용합니다.`
-      ].join(' ');
+화면 상단에는 "${pageContent.pageTitle}"이라는 제목이 ${visual.typography.headingFont} 폰트로 32px 크기에 ${visual.colorPalette.primary} 색상을 사용하여 강력한 첫인상을 만들어냅니다. 이어서 "${pageContent.learningGoal}"라는 학습 목표가 작은 배지 형태로 제목 하단에 배치되어 학습자가 명확한 방향성을 가질 수 있도록 안내합니다.
 
-      const implementationNotes = [
-        `${layoutMode === 'fixed' ? '12컬럼 기준 8:4 분할로 본문과 이미지를 병렬 배치하고,' : '본문은 전체 폭을 활용하고 이미지와 상호작용 영역을 분리하여 순차적으로 배치합니다.'}`,
-        `${pageContent.imageDescription} 이미지는 본문과 24px 이상 떨어뜨리고, ${pageContent.interactionHint} 활동을 하단에 배치해 학습 흐름을 마무리합니다.`,
-        '모바일에서는 단일 컬럼으로 재배치하고 주요 텍스트 블록 간에는 24px 간격을 유지합니다.'
-      ].join(' ');
+메인 콘텐츠 영역은 ${visual.moodAndTone.join(', ')} 분위기를 반영한 ${visual.componentStyle} 스타일로 디자인되어, 교안 본문인 "${pageContent.fullTextContent}"이 ${visual.typography.bodyFont} 폰트 18px 크기로 가독성 높게 표현됩니다. 텍스트는 단순한 나열이 아니라 중요도에 따라 시각적 계층을 만들어, 핵심 키워드는 ${visual.colorPalette.accent} 색상으로 강조하고, 부연 설명은 ${visual.colorPalette.secondary} 색상을 활용하여 정보의 우선순위를 명확히 구분합니다.
+
+"${pageContent.imageDescription}"에 해당하는 시각 자료는 ${layoutMode === 'fixed' ? '화면 우측 30% 영역에 배치되어 텍스트와 균형을 이루며' : '본문 중간중간에 적절히 삽입되어 이해를 돕는 역할을 하며'}, 단순한 장식이 아닌 학습 내용과 직접적으로 연결된 교육적 목적을 가진 비주얼로 구성됩니다. 이미지 주변에는 24px 이상의 여백을 확보하여 시각적 답답함을 해소하고, 필요한 경우 간단한 캡션을 추가하여 학습 효과를 극대화합니다.
+
+"${pageContent.interactionHint}"라는 상호작용 요소는 ${layoutMode === 'fixed' ? '화면 하단 중앙에' : '콘텐츠 마지막 부분에'} 배치되어 학습자의 능동적 참여를 유도합니다. 이 영역은 ${visual.colorPalette.primary} 색상의 미묘한 그라데이션 배경과 함께 약간의 그림자 효과를 적용하여 클릭 가능함을 직관적으로 알려주며, 호버 시에는 ${visual.colorPalette.accent} 색상으로 변화하여 반응성을 표현합니다.
+
+전체적인 레이아웃은 F-패턴 시선 흐름을 고려하여 설계되었으며, ${layoutMode === 'fixed' ? '한 화면 내에서 모든 정보가 효율적으로 전달되도록 공간 활용을 최적화하고' : '스크롤하면서 자연스럽게 정보를 흡수할 수 있도록 적절한 섹션 구분과 여백을 적용하며'}, 모바일 환경에서는 단일 컬럼으로 재배치되어 어떤 기기에서도 일관된 학습 경험을 제공합니다. 접근성을 위해 모든 텍스트는 최소 18pt 이상의 크기를 유지하고, 색상 대비는 WCAG 기준을 만족하도록 설계되어 모든 학습자가 편안하게 콘텐츠를 소비할 수 있도록 배려했습니다.
+      `.trim();
 
       return {
         pageId: pageContent.pageId,
@@ -53,9 +52,9 @@ class Step3LayoutFallbackProvider implements FallbackProvider<Step3LayoutOnlyRes
           imageDescription: pageContent.imageDescription,
           interactionHint: pageContent.interactionHint
         },
-        layoutNarrative,
-        visualGuidelines,
-        implementationNotes,
+        layoutNarrative: creativeLayoutDescription,
+        visualGuidelines: creativeLayoutDescription,
+        implementationNotes: creativeLayoutDescription,
         generatedAt: new Date()
       };
     });
@@ -110,9 +109,9 @@ export class Step3LayoutOnlyService {
           STEP_NAME,
           {
             model: 'gpt-5',
-            reasoningEffort: 'low',
-            maxOutputTokens: 4000,
-            temperature: layoutMode === 'fixed' ? 0.5 : 0.6
+            reasoningEffort: 'medium',
+            maxOutputTokens: 6000,
+            temperature: layoutMode === 'fixed' ? 0.6 : 0.8
           }
         );
 
@@ -179,62 +178,205 @@ export class Step3LayoutOnlyService {
     const currentPage = step2Result.pageContents[pageIndex];
     const visual = step2Result.visualIdentity;
 
-    const layoutDescriptor = layoutMode === 'fixed'
-      ? '1600×1000px 고정 화면, 스크롤 금지, 한 화면 내에서 모든 정보 제공'
-      : '1600px 너비, 세로 스크롤 허용, 자연스러운 위에서 아래로 흐름';
+    // 전체 프로젝트 구성 정보 생성
+    const projectOverview = step2Result.pageContents.map((p, idx) =>
+      `페이지 ${p.pageNumber}: ${p.pageTitle}${p.keyMessage ? ` - ${p.keyMessage}` : ''}`
+    ).join('\n');
 
-    const prevPage = pageIndex > 0
-      ? `${step2Result.pageContents[pageIndex - 1].pageTitle} 이후에 이어지는 페이지`
-      : '이 프로젝트의 첫 페이지';
+    // 페이지 컨텍스트 정보
+    const pageContext = pageIndex === 0
+      ? '첫 페이지입니다'
+      : `이전 페이지: ${step2Result.pageContents[pageIndex - 1]?.pageTitle || '없음'}`;
 
-    const nextPage = pageIndex < pageCount - 1
-      ? `${step2Result.pageContents[pageIndex + 1].pageTitle}로 이어집니다`
-      : '이후에 이어지는 페이지가 없습니다';
+    const nextPageInfo = pageIndex < pageCount - 1
+      ? `다음 페이지: ${step2Result.pageContents[pageIndex + 1]?.pageTitle || '없음'}`
+      : '마지막 페이지입니다';
 
-    return `당신은 교육용 디지털 교안을 설계하는 시니어 레이아웃 디자이너입니다.
-Step2에서 작성된 교안 텍스트를 수정하지 않고, 해당 페이지가 어떤 화면 구성으로 구현되어야 할지 서술형으로 설명하세요.
+    // 콘텐츠 생성 방침 설정
+    const contentPolicy = '제공된 Step2 교안 콘텐츠를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠 레이아웃을 만드세요. 학습자의 이해를 돕는 시각적 배치, 정보 구조화, 상호작용 요소 등을 자유롭게 제안하세요.';
 
-[페이지 메타 정보]
-- 전체 페이지 수: ${pageCount}
-- 현재 페이지: ${pageIndex + 1} (${currentPage.pageTitle})
-- 이전 흐름: ${prevPage}
-- 다음 흐름: ${nextPage}
-- 레이아웃 모드: ${layoutDescriptor}
+    // 이전 커밋의 프롬프트 방식을 기반으로 수정
+    if (layoutMode === 'fixed') {
+      return this.createNewFixedLayoutPrompt(step2Result, visual, currentPage, pageIndex, pageCount);
+    } else {
+      return this.createNewScrollableLayoutPrompt(step2Result, visual, currentPage, pageIndex, pageCount);
+    }
+  }
 
-[비주얼 아이덴티티 가이드]
-- 분위기 키워드: ${visual.moodAndTone.join(', ')}
-- 주요 색상: ${visual.colorPalette.primary}, 보조 색상: ${visual.colorPalette.secondary}, 강조 색상: ${visual.colorPalette.accent}
-- 타이포그래피: 제목 ${visual.typography.headingFont}, 본문 ${visual.typography.bodyFont}
-- 컴포넌트 스타일: ${visual.componentStyle}
+  // 새로운 Fixed Layout 프롬프트 (이전 커밋 기반)
+  private createNewFixedLayoutPrompt(
+    step2Result: Step2NewResult,
+    visual: any,
+    page: any,
+    pageIndex: number,
+    totalPages: number
+  ): string {
+    const contentPolicy = '제공된 Step2 교안 콘텐츠를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠를 만드세요. 학습자의 이해를 돕는 추가 설명, 예시, 시각 자료 등을 자유롭게 제안하세요.';
 
-[페이지 학습 정보]
-- 학습 목표: ${currentPage.learningGoal}
-- 핵심 메시지: ${currentPage.keyMessage}
-- 이미지 설명: ${currentPage.imageDescription}
-- 상호작용 아이디어: ${currentPage.interactionHint}
+    return `당신은 주어진 '비주얼 아이덴티티'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 스크롤 없는 1600x1000px 화면에 들어갈 콘텐츠 레이아웃을 구성해주세요.
 
-[교안 본문]
+### 📌 콘텐츠 생성 방침
+${contentPolicy}
+
+${this.formatNewVisualIdentitySection(visual)}
+
+${this.formatNewProjectContextSection(step2Result, page, pageIndex, totalPages)}
+
+### 📜 핵심 규칙
+1.  **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.
+2.  **공간 최적화**: 콘텐츠를 화면에 효과적으로 배치하여 어색한 빈 공간이 생기지 않도록 하세요.
+3.  **이미지 최소화**: 학습에 필수적인 이미지만 사용하고, 장식용 이미지는 피하세요.
+4.  **구조화된 이미지 섹션**: 이미지가 필요한 경우 응답 끝에 다음 형식으로 분리해주세요:
+
+=== REQUIRED IMAGES ===
+1. filename: "1.png"
+   description: "AI 이미지 생성을 위한 상세한 설명"
+   placement: "이미지가 배치될 위치"
+
+2. filename: "2.png"
+   description: "AI 이미지 생성을 위한 상세한 설명"
+   placement: "이미지가 배치될 위치"
+=== END IMAGES ===
+
+**중요**: filename은 반드시 "1.png", "2.png", "3.png" 형태의 **숫자.png** 형식만 사용하세요. 다른 이름 (예: hero.png, diagram.png)은 절대 사용하지 마세요!
+5.  **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.
+6.  **전체 일관성**: 프로젝트 전체의 흐름과 일관성을 유지하면서 현재 페이지의 특색을 살려주세요.
+
+### 🚫 절대 금지 사항
+- **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.
+- **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.
+- **최소 폰트 크기**: 모든 텍스트는 반드시 18pt 이상으로 설정하세요. 본문은 18-20pt, 제목은 24pt 이상을 권장합니다.
+- **이미지 파일명 규칙**: 이미지 파일명은 "1.png", "2.png", "3.png"만 사용하세요. hero.png, diagram.png, icon.png 같은 설명적 이름은 금지입니다!
+
+### 📖 Step2에서 생성된 교안 콘텐츠
+**학습 목표**: ${page.learningGoal}
+**핵심 메시지**: ${page.keyMessage}
+**교안 본문**:
 """
-${currentPage.fullTextContent}
+${page.fullTextContent}
 """
 
-[작성 규칙]
-- Step2 텍스트를 그대로 복사하지 말고, 화면 배치와 구조, 흐름을 설명하는 서술형 문단을 작성하세요.
-- 불릿 리스트, 표, 코드 블록을 사용하지 말고 문장 단위로 작성하세요.
-- 학습자의 시선 흐름, 주요 영역의 역할, 이미지와 상호작용 배치까지 언급하세요.
-- 레이아웃 모드가 fixed이면 한 화면에 들어오도록 배치 전략을, scrollable이면 스크롤 흐름을 명확히 설명하세요.
-- 모바일 대응과 접근성 관련 고려 사항도 간단히 포함하세요.
+**필요한 이미지**: ${page.imageDescription}
+**상호작용 아이디어**: ${page.interactionHint}
 
-[출력 형식]
-레이아웃_스토리: [2-3문단으로 전체 화면 흐름과 배치를 설명]
-비주얼_가이드: [1-2문단으로 색상, 타이포그래피, 이미지 사용법 설명]
-구현_노트: [1-2문단으로 CSS/그리드 전략, 반응형, 접근성을 정리]
-`
-      .trim();
+이제 위의 가이드라인에 맞춰 페이지 레이아웃을 상세히 서술해주세요. 반드시 레이아웃 구조와 디자인을 구체적으로 설명해야 합니다.
+
+⚠️ **파일명 규칙 재확인**: 이미지 파일명은 절대 "1.png", "2.png", "3.png" 외에는 사용하지 마세요.
+  - ✅ 올바른 예: "1.png", "2.png"
+  - ❌ 잘못된 예: "hero.png", "diagram.png", "main-image.png", "icon.png"`;
+  }
+
+  // 새로운 Scrollable Layout 프롬프트 (이전 커밋 기반)
+  private createNewScrollableLayoutPrompt(
+    step2Result: Step2NewResult,
+    visual: any,
+    page: any,
+    pageIndex: number,
+    totalPages: number
+  ): string {
+    const contentPolicy = '제공된 Step2 교안 콘텐츠를 바탕으로 창의적으로 내용을 보강하고 확장하여 풍부한 교육 콘텐츠를 만드세요. 학습자의 이해를 돕는 추가 설명, 예시, 시각 자료 등을 자유롭게 제안하세요.';
+
+    return `당신은 주어진 '비주얼 아이덴티티'를 바탕으로 교육 콘텐츠 레이아웃을 구성하는 전문 UI 디자이너입니다. 가로 1600px 고정, 세로는 콘텐츠에 맞게 자유롭게 확장되는 스크롤 가능한 레이아웃을 구성해주세요.
+
+### 📌 콘텐츠 생성 방침
+${contentPolicy}
+
+### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${visual.moodAndTone.join(', ')}
+- **핵심 디자인 원칙**: 콘텐츠의 중요도에 따라 시각적 계층(Visual Hierarchy)을 만드세요. 사용자의 시선이 자연스럽게 흐르도록 유도하고, 콘텐츠를 단순히 박스에 넣는 것이 아니라 콘텐츠 자체의 형태에 맞는 맞춤형 디자인을 하세요.
+
+${this.formatNewProjectContextSection(step2Result, page, pageIndex, totalPages)}
+
+### 📏 핵심 규칙
+1.  **자유 서술**: 정해진 키워드 없이, 개발자가 이해하기 쉽도록 레이아웃을 상세히 설명해주세요.
+2.  **콘텐츠 우선**: 콘텐츠의 완전한 전달을 우선시하고, 적절한 여백으로 가독성을 확보하세요.
+3.  **이미지 최소화**: 학습에 필수적인 이미지만 사용하고, 장식용 이미지는 피하세요.
+4.  **구조화된 이미지 섹션**: 이미지가 필요한 경우 응답 끝에 다음 형식으로 분리해주세요:
+
+=== REQUIRED IMAGES ===
+1. filename: "1.png"
+   description: "AI 이미지 생성을 위한 상세한 설명"
+   placement: "이미지가 배치될 위치"
+
+2. filename: "2.png"
+   description: "AI 이미지 생성을 위한 상세한 설명"
+   placement: "이미지가 배치될 위치"
+=== END IMAGES ===
+
+**중요**: filename은 반드시 "1.png", "2.png", "3.png" 형태의 **숫자.png** 형식만 사용하세요. 다른 이름 (예: hero.png, diagram.png)은 절대 사용하지 마세요!
+5.  **페이지 간 연결성**: 이전/다음 페이지와의 자연스러운 흐름을 고려하세요.
+6.  **전체 일관성**: 프로젝트 전체의 흐름과 일관성을 유지하면서 현재 페이지의 특색을 살려주세요.
+
+### 🚫 절대 금지 사항
+- **페이지 네비게이션 금지**: 절대로 페이지 간 이동 버튼, 링크, 네비게이션 메뉴를 만들지 마세요. 각 페이지는 완전히 독립적인 HTML 파일입니다.
+- **페이지 번호 표시 금지**: "1/5", "다음", "이전" 같은 페이지 표시나 버튼을 절대 만들지 마세요.
+- **최소 폰트 크기**: 모든 텍스트는 반드시 18pt 이상으로 설정하세요. 본문은 18-20pt, 제목은 24pt 이상을 권장합니다.
+- **이미지 파일명 규칙**: 이미지 파일명은 "1.png", "2.png", "3.png"만 사용하세요. hero.png, diagram.png, icon.png 같은 설명적 이름은 금지입니다!
+
+### 📖 Step2에서 생성된 교안 콘텐츠
+**학습 목표**: ${page.learningGoal}
+**핵심 메시지**: ${page.keyMessage}
+**교안 본문**:
+"""
+${page.fullTextContent}
+"""
+
+**필요한 이미지**: ${page.imageDescription}
+**상호작용 아이디어**: ${page.interactionHint}
+
+이제 위의 가이드라인에 맞춰 페이지 레이아웃을 상세히 서술해주세요. 반드시 레이아웃 구조와 디자인을 구체적으로 설명해야 합니다.
+
+⚠️ **파일명 규칙 재확인**: 이미지 파일명은 절대 "1.png", "2.png", "3.png" 외에는 사용하지 마세요.
+   - ✅ 올바른 예: "1.png", "2.png"
+   - ❌ 잘못된 예: "hero.png", "diagram.png", "main-image.png", "icon.png"`;
+  }
+
+  // 새로운 비주얼 아이덴티티 섹션 포맷터
+  private formatNewVisualIdentitySection(visual: any): string {
+    return `### ✨ 비주얼 아이덴티티 (반드시 준수할 것)
+- **분위기**: ${visual.moodAndTone.join(', ')}
+- **핵심 디자인 원칙**: 콘텐츠의 중요도에 따라 시각적 계층(Visual Hierarchy)을 만드세요. 사용자의 시선이 자연스럽게 흐르도록 유도하고, 콘텐츠를 단순히 박스에 넣는 것이 아니라 콘텐츠 자체의 형태에 맞는 맞춤형 디자인을 하세요.`;
+  }
+
+  // 새로운 프로젝트 컨텍스트 섹션 포맷터
+  private formatNewProjectContextSection(
+    step2Result: Step2NewResult,
+    page: any,
+    pageIndex: number,
+    totalPages: number
+  ): string {
+    // 전체 프로젝트 구성 정보 생성
+    const projectOverview = step2Result.pageContents.map((p, idx) =>
+      `페이지 ${p.pageNumber}: ${p.pageTitle}${p.keyMessage ? ` - ${p.keyMessage}` : ''}`
+    ).join('\n');
+
+    // 페이지 컨텍스트 정보
+    const pageContext = pageIndex === 0
+      ? '첫 페이지입니다'
+      : `이전 페이지: ${step2Result.pageContents[pageIndex - 1]?.pageTitle || '없음'}`;
+
+    const nextPageInfo = pageIndex < totalPages - 1
+      ? `다음 페이지: ${step2Result.pageContents[pageIndex + 1]?.pageTitle || '없음'}`
+      : '마지막 페이지입니다';
+
+    return `### 📚 전체 프로젝트 구성
+${projectOverview}
+
+### 📍 페이지 컨텍스트
+- ${pageContext}
+- **현재 페이지 ${page.pageNumber}: ${page.pageTitle}**
+- ${nextPageInfo}`;
   }
 
   private buildPageLayoutResult(pageContent: Step2PageContent, rawContent: string): PageLayoutResult {
-    const segments = this.extractNarrativeSegments(rawContent);
+    console.log('🎓 Step3 AI 원문 응답 처리');
+    console.log(`📋 대상 페이지: ${pageContent.pageTitle}`);
+    console.log(`📝 AI 응답 길이: ${rawContent?.length || 0}자`);
+
+    // AI 원문 응답을 그대로 사용 (파싱하지 않음)
+    const aiRawResponse = (rawContent || '').trim();
+
+    console.log(`✅ 페이지 ${pageContent.pageNumber} AI 원문 처리 완료`);
 
     return {
       pageId: pageContent.pageId,
@@ -247,11 +389,162 @@ ${currentPage.fullTextContent}
         imageDescription: pageContent.imageDescription,
         interactionHint: pageContent.interactionHint
       },
-      layoutNarrative: segments.layoutNarrative,
-      visualGuidelines: segments.visualGuidelines,
-      implementationNotes: segments.implementationNotes,
+      // AI 생성 원문 응답을 그대로 표시 (파싱 없음)
+      layoutNarrative: aiRawResponse || 'AI 응답을 받지 못했습니다.',
+      visualGuidelines: aiRawResponse || 'AI 응답을 받지 못했습니다.',
+      implementationNotes: aiRawResponse || 'AI 응답을 받지 못했습니다.',
       generatedAt: new Date()
     };
+  }
+
+  // 이전 커밋의 educational design 파싱 방식 (간소화 버전)
+  private parseEducationalDesign(response: string, pageContent: Step2PageContent): any {
+    console.log(`✅ 페이지 ${pageContent.pageNumber} 간소화된 파싱 시작`);
+
+    // 전체 응답을 fullDescription으로 저장하고 기본 구조만 제공
+    return {
+      pageId: pageContent.pageId,
+      pageTitle: pageContent.pageTitle,
+      pageNumber: pageContent.pageNumber,
+
+      // 📋 AI의 전체 창의적 레이아웃 설명 (새 프롬프트 결과)
+      fullDescription: response.trim(),
+
+      // 📋 기본 구조 (안정성 보장)
+      learningObjectives: [`${pageContent.pageTitle} 이해`, '핵심 개념 파악', '실용적 적용'],
+      educationalStrategy: '창의적 레이아웃 기반 학습',
+
+      layoutStructure: {
+        areas: [
+          {
+            id: 'creative-layout',
+            description: 'AI가 제안한 창의적 레이아웃',
+            purpose: '비주얼 아이덴티티 기반 교육 콘텐츠',
+            sizeGuide: '1600×1000px 또는 1600×가변px'
+          }
+        ]
+      },
+
+      content: {
+        heading: pageContent.pageTitle,
+        bodyText: pageContent.fullTextContent || `${pageContent.pageTitle}에 대한 창의적 교육 콘텐츠`,
+        keyPoints: ['시각적 계층', '창의적 디자인', '교육 효과']
+      },
+
+      // 새로운 구조화된 이미지 섹션 파싱 (=== REQUIRED IMAGES === 형식)
+      mediaAssets: this.parseAndGenerateImages(response, pageContent),
+
+      designRationale: '비주얼 아이덴티티 기반 창의적 교육 설계',
+      implementationHints: 'AI 제안 레이아웃을 그대로 구현',
+      uxConsiderations: '자유로운 창의적 사용자 경험',
+
+      isComplete: true,
+      generatedAt: new Date()
+    };
+  }
+
+  // 새로운 구조화된 이미지 섹션 파싱 (=== REQUIRED IMAGES === 형식)
+  private parseAndGenerateImages(response: string, pageContent: Step2PageContent): any[] {
+    console.log(`🖼️ 페이지 ${pageContent.pageNumber} 이미지 파싱 시작 (구조화된 형식)`);
+
+    // 구조화된 이미지 섹션 추출
+    const imageMatches = this.extractStructuredImages(response);
+
+    if (imageMatches.length === 0) {
+      console.log(`✅ 구조화된 이미지 섹션 없음 - 텍스트 기반 설계`);
+      return [];
+    }
+
+    console.log(`🎉 총 ${imageMatches.length}개 이미지 파싱 완료`);
+
+    // 이미지 객체 생성 (최대 3개 제한)
+    return imageMatches.map((match, index) =>
+      this.createImageObjectWithDescription(match.filename, match.description, match.placement, pageContent, index + 1)
+    ).slice(0, 3);
+  }
+
+  // 구조화된 이미지 섹션 파싱 메서드
+  private extractStructuredImages(response: string): Array<{filename: string, description: string, placement: string}> {
+    // === REQUIRED IMAGES === 섹션 찾기
+    const imageSection = response.match(/=== REQUIRED IMAGES ===(.*?)=== END IMAGES ===/s);
+
+    if (!imageSection) {
+      return [];
+    }
+
+    const sectionContent = imageSection[1];
+    const matches = [];
+
+    // 표준 형식 파싱 (숫자. filename: "파일명" description: "설명" placement: "위치")
+    let pattern = /(\d+)\.\s*filename:\s*"([^"]+)"\s*description:\s*"([^"]+)"\s*placement:\s*"([^"]+)"/gi;
+    let match;
+    while ((match = pattern.exec(sectionContent)) !== null) {
+      const [, number, filename, description, placement] = match;
+      matches.push({
+        filename: this.normalizeFilename(filename, matches.length + 1),
+        description: description.trim(),
+        placement: placement.trim()
+      });
+    }
+
+    // 결과 로깅
+    for (const image of matches) {
+      console.log(`✅ 구조화된 이미지 파싱: ${image.filename} | ${image.description.substring(0, 50)}...`);
+    }
+
+    return matches;
+  }
+
+  // 파일명을 1.png, 2.png 형식으로 정규화
+  private normalizeFilename(filename: string, index: number): string {
+    if (this.validateImageFilename(filename)) {
+      return filename;
+    }
+
+    const normalizedFilename = `${index}.png`;
+    console.log(`🔧 파일명 정규화: ${filename} → ${normalizedFilename}`);
+    return normalizedFilename;
+  }
+
+  // 이미지 파일명 검증 (숫자.png 형식만 허용)
+  private validateImageFilename(filename: string): boolean {
+    const validPattern = /^\d+\.png$/;
+    return validPattern.test(filename);
+  }
+
+  // 파싱된 설명을 사용하는 이미지 객체 생성 메서드
+  private createImageObjectWithDescription(filename: string, description: string, placement: string, pageContent: Step2PageContent, index: number) {
+    return {
+      id: `page-${pageContent.pageNumber}-${index}`,
+      fileName: filename.startsWith('page') ? filename : `page${pageContent.pageNumber}/${filename}`,
+      path: `~/image/page${pageContent.pageNumber}/${filename}`,
+      type: 'image',
+      category: '교육 시각화',
+      purpose: `교육 시각 자료 ${index}`,
+      description: description || `${pageContent.pageTitle} 관련 교육 이미지`,
+      sizeGuide: '600×400px',
+      placement: {
+        section: placement || '메인 영역',
+        position: index === 1 ? '중앙' : `위치${index}`,
+        size: '600×400px'
+      },
+      accessibility: {
+        altText: `${pageContent.pageTitle} 관련 교육 이미지`,
+        caption: `${pageContent.pageTitle} 시각 자료`
+      },
+      aiPrompt: this.extractAIPromptFromDescription(description, pageContent.pageTitle)
+    };
+  }
+
+  // 이미지 설명에서 AI 프롬프트 추출 또는 생성
+  private extractAIPromptFromDescription(description: string, topic: string): string {
+    // 설명이 영어로 시작하면 그대로 사용
+    if (/^[A-Za-z]/.test(description.trim())) {
+      return description.trim();
+    }
+
+    // 한국어 설명을 기반으로 영문 프롬프트 생성
+    return `Educational illustration for ${topic}, detailed and clear visual representation with bright blue, soft green, and warm orange colors and simple design elements, suitable for students`;
   }
 
   private extractNarrativeSegments(content: string): NarrativeSegments {
