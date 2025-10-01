@@ -1,5 +1,14 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { ProjectData, VisualIdentity, DesignTokens, FinalPrompt, Step4DesignResult } from '../../../types/workflow.types';
+import {
+  ProjectData,
+  VisualIdentity,
+  DesignTokens,
+  FinalPrompt,
+  Step4DesignResult,
+  Step3IntegratedResult,
+  ComponentLine,
+  ImageLine
+} from '../../../types/workflow.types';
 import { Step3LayoutOnlyResult } from '../../../types/step3-layout-only.types';
 import { IntegratedStep4And5Service } from '../../../services/integrated-step4-5.service';
 import { OpenAIService } from '../../../services/openai.service';
@@ -486,31 +495,111 @@ export const Step4IntegratedResult: React.FC<Step4IntegratedResultProps> = ({
 };
 
 // Step3LayoutOnlyResult를 Step3IntegratedResult로 변환하는 헬퍼 함수
-function convertStep3LayoutToIntegrated(step3Layout: Step3LayoutOnlyResult): any {
-  return {
-    layoutMode: step3Layout.layoutMode,
-    pages: step3Layout.pages.map(page => ({
+function convertStep3LayoutToIntegrated(step3Layout: Step3LayoutOnlyResult): Step3IntegratedResult {
+  const pages = step3Layout.pages.map((page): Step3IntegratedResult['pages'][number] => {
+    const layoutStory = (page.layoutNarrative || '').trim();
+    const visualGuide = (page.visualGuidelines || '').trim();
+    const implementation = (page.implementationNotes || '').trim();
+
+    const descriptionSections = [
+      page.textContent.fullTextContent && `### 교안 본문\n${page.textContent.fullTextContent}`,
+      layoutStory && `### 레이아웃 스토리\n${layoutStory}`,
+      visualGuide && `### 비주얼 가이드\n${visualGuide}`,
+      implementation && `### 구현 노트\n${implementation}`
+    ].filter(Boolean);
+
+    const fullDescription = descriptionSections.join('\n\n')
+      || page.textContent.fullTextContent
+      || `${page.pageTitle} 페이지 구성 개요`;
+
+    const componentLines: ComponentLine[] = [];
+    if (page.textContent.fullTextContent) {
+      componentLines.push({
+        id: `script_${page.pageNumber}`,
+        type: 'paragraph',
+        section: 'script',
+        role: 'content',
+        text: page.textContent.fullTextContent
+      });
+    }
+    if (layoutStory) {
+      componentLines.push({
+        id: `layout_story_${page.pageNumber}`,
+        type: 'paragraph',
+        section: 'layout',
+        role: 'content',
+        text: layoutStory
+      });
+    }
+    if (visualGuide) {
+      componentLines.push({
+        id: `visual_guide_${page.pageNumber}`,
+        type: 'paragraph',
+        section: 'visual',
+        role: 'content',
+        text: visualGuide
+      });
+    }
+    if (implementation) {
+      componentLines.push({
+        id: `implementation_${page.pageNumber}`,
+        type: 'paragraph',
+        section: 'implementation',
+        role: 'content',
+        text: implementation
+      });
+    }
+
+    const imageFileName = `page${page.pageNumber}-main.png`;
+    const baseImage: ImageLine = {
+      id: `page${page.pageNumber}_image_1`,
+      fileName: imageFileName,
+      path: `./image/page${page.pageNumber}/${imageFileName}`,
+      description: page.textContent.imageDescription,
+      purpose: 'illustration',
+      sizeGuide: '600x400',
+      placement: {
+        section: 'visual',
+        position: step3Layout.layoutMode === 'fixed' ? 'right column' : 'in-flow',
+        size: 'medium'
+      },
+      accessibility: {
+        altText: page.textContent.imageDescription,
+        caption: page.textContent.imageDescription
+      },
+      aiPrompt: page.textContent.imageDescription
+    };
+
+    return {
       pageId: page.pageId,
       pageTitle: page.pageTitle,
       pageNumber: page.pageNumber,
-      fullDescription: page.textContent.fullTextContent,
+      fullDescription,
+      layoutNarrative: layoutStory,
+      visualGuidelines: visualGuide,
+      implementationNotes: implementation,
+      originalScript: page.textContent.fullTextContent,
       phase1Complete: true,
       phase2Complete: true,
       isGenerating: false,
       generatedAt: page.generatedAt,
-      // 미디어 자산은 텍스트 콘텐츠를 기반으로 생성
-      mediaAssets: [{
-        fileName: `${page.pageNumber}.png`,
-        description: page.textContent.imageDescription,
-        path: `./image/page${page.pageNumber}/${page.pageNumber}.png`,
-        purpose: 'illustration',
-        sizeGuide: '600x400',
-        accessibility: {
-          altText: page.textContent.imageDescription,
-          caption: page.textContent.imageDescription
-        }
-      }]
-    })),
+      structure: {
+        sections: [],
+        flow: layoutStory || page.textContent.fullTextContent,
+        imgBudget: 1
+      },
+      content: {
+        components: componentLines,
+        images: [{ ...baseImage }],
+        generatedAt: page.generatedAt
+      },
+      mediaAssets: [{ ...baseImage }]
+    };
+  });
+
+  return {
+    layoutMode: step3Layout.layoutMode,
+    pages,
     designTokens: step3Layout.designTokens,
     processingTime: step3Layout.processingTime,
     generatedAt: step3Layout.generatedAt

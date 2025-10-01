@@ -1,5 +1,5 @@
 import { ProjectData, VisualIdentity, DesignTokens } from '../types/workflow.types';
-import { Step2NewResult, PageContentResult, ParsedPageContent } from '../types/step2-new.types';
+import { Step2NewResult, PageContentResult } from '../types/step2-new.types';
 
 export class Step2ResponseParser {
   parseResponse(
@@ -84,16 +84,7 @@ export class Step2ResponseParser {
     );
 
     missingPages.forEach(page => {
-      pages.push({
-        pageId: page.id,
-        pageNumber: page.pageNumber,
-        pageTitle: page.topic,
-        fullTextContent: `${page.topic}에 대한 핵심 학습 내용을 다룹니다. ${page.description || '이 주제에 대해 자세히 알아보며 실용적인 지식을 습득할 수 있습니다.'} 단계적으로 접근하여 이해도를 높이고, 실제 적용 가능한 내용으로 구성되어 있습니다.`,
-        learningGoal: `${page.topic}의 핵심 개념을 이해하고 활용할 수 있다`,
-        keyMessage: `${page.topic}에 대한 실용적 지식 습득`,
-        imageDescription: `${page.topic}을 시각적으로 설명하는 교육용 자료`,
-        interactionHint: `${page.topic} 관련 퀴즈나 체크리스트`
-      });
+      pages.push(this.buildFallbackPageContent(page));
     });
 
     // 페이지 번호 순으로 정렬
@@ -121,7 +112,7 @@ export class Step2ResponseParser {
         componentStyle: this.extractByPattern(response, /컴포넌트스타일: (.+)/)
       };
     } catch (error) {
-      console.warn('⚠️ 비주얼 아이덴티티 파싱 실패, 기본값 사용');
+      console.warn('⚠️ 비주얼 아이덴티티 파싱 실패, 기본값 사용', error);
       return this.createFallbackVisualIdentity();
     }
   }
@@ -153,16 +144,7 @@ export class Step2ResponseParser {
   }
 
   private createFallbackPageContents(projectData: ProjectData): PageContentResult[] {
-    return projectData.pages.map(page => ({
-      pageId: page.id,
-      pageNumber: page.pageNumber,
-      pageTitle: page.topic,
-      fullTextContent: `${page.topic}에 대한 핵심 학습 내용을 다룹니다. ${page.description || '이 주제에 대해 자세히 알아보며 실용적인 지식을 습득할 수 있습니다.'} 단계적으로 접근하여 이해도를 높이고, 실제 적용 가능한 내용으로 구성되어 있습니다.`,
-      learningGoal: `${page.topic}의 핵심 개념을 이해하고 활용할 수 있다`,
-      keyMessage: `${page.topic}에 대한 실용적 지식 습득`,
-      imageDescription: `${page.topic}을 시각적으로 설명하는 교육용 자료`,
-      interactionHint: `${page.topic} 관련 퀴즈나 체크리스트`
-    }));
+    return projectData.pages.map(page => this.buildFallbackPageContent(page));
   }
 
   private createFallbackVisualIdentity(): VisualIdentity {
@@ -182,7 +164,98 @@ export class Step2ResponseParser {
         headingStyle: '명료하고 신뢰할 수 있는',
         bodyStyle: '편안하게 읽기 쉬운'
       },
-      componentStyle: '라운드 20–28px와 낮은 그림자，정보를 칩으로 층위화하고 본문 가독성을 우선'
+      componentStyle: '라운드 20-28px와 낮은 그림자, 정보 칩 구성으로 본문 가독성을 우선'
     };
+  }
+
+  private buildFallbackPageContent(page: ProjectData['pages'][number]): PageContentResult {
+    const description = this.sanitiseText(page.description || `${page.topic} 핵심을 짧게 정리`);
+    const fullTextContent = this.buildFallbackFullText(page.topic, description);
+
+    return {
+      pageId: page.id,
+      pageNumber: page.pageNumber,
+      pageTitle: page.topic,
+      fullTextContent,
+      learningGoal: `${page.topic} 핵심을 자신의 말로 설명한다`,
+      keyMessage: `${page.topic}에서 반드시 기억할 메시지를 정리한다`,
+      imageDescription: `${page.topic} 흐름을 표현하는 시각 자료`,
+      interactionHint: `${page.topic}에 대해 한 문장으로 정리하도록 질문`
+    };
+  }
+
+  private buildFallbackFullText(topic: string, description: string): string {
+    const bullets = this.createBullets(description, 3, 60);
+    const summary = bullets[0] || description;
+    return [
+      `**${topic}**`,
+      ...bullets.map((line) => `• ${line}`),
+      '',
+      `**요약**: ${summary}`
+    ].join('\n');
+  }
+
+  private createBullets(text: string, count: number, maxPerLine: number): string[] {
+    const sentences = this.splitSentences(text);
+    const bullets: string[] = [];
+
+    for (const sentence of sentences) {
+      if (bullets.length === count) {
+        break;
+      }
+      const trimmed = this.limitText(sentence, maxPerLine);
+      if (trimmed) {
+        bullets.push(trimmed);
+      }
+    }
+
+    if (bullets.length < count) {
+      const words = this.sanitiseText(text).split(/\s+/).filter(Boolean);
+      const chunkSize = Math.ceil(words.length / count);
+      for (let i = 0; i < count && bullets.length < count; i += 1) {
+        const chunkWords = words.slice(i * chunkSize, (i + 1) * chunkSize);
+        const chunk = chunkWords.join(' ');
+        const trimmed = this.limitText(chunk, maxPerLine);
+        if (trimmed) {
+          bullets.push(trimmed);
+        }
+      }
+    }
+
+    while (bullets.length < count) {
+      const fallbackLine = this.limitText(text, maxPerLine);
+      bullets.push(fallbackLine || '핵심 내용을 짧게 정리');
+    }
+
+    return bullets.slice(0, count);
+  }
+
+  private splitSentences(text: string): string[] {
+    return text
+      .split(/(?<=[.!?。？！])\s+/)
+      .map((line) => this.sanitiseText(line))
+      .filter(Boolean);
+  }
+
+  private limitText(text: string, maxLength: number): string {
+    const trimmed = this.sanitiseText(text);
+    if (!trimmed) {
+      return '';
+    }
+    if (trimmed.length <= maxLength) {
+      return trimmed;
+    }
+
+    let truncated = trimmed.slice(0, maxLength);
+    const lastSpace = truncated.lastIndexOf(' ');
+    if (lastSpace > maxLength * 0.5) {
+      truncated = truncated.slice(0, lastSpace);
+    }
+    truncated = truncated.trim();
+    return truncated || trimmed.slice(0, maxLength).trim();
+  }
+
+  private sanitiseText(text: string): string {
+    return text.replace(/\s+/g, ' ').trim();
   }
 }

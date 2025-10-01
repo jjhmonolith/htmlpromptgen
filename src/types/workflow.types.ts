@@ -233,6 +233,10 @@ export interface Step3IntegratedResult {
 
     // Step3에서 추가된 필드들
     fullDescription?: string;
+    layoutNarrative?: string;
+    visualGuidelines?: string;
+    implementationNotes?: string;
+    originalScript?: string;
     phase1Complete?: boolean;
     phase2Complete?: boolean;
 

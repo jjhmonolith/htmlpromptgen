@@ -101,32 +101,38 @@ export class OpenAIService {
   async generateCompletion(
     prompt: string,
     context?: string,
-    overrideModel?: string
+    override?: string | {
+      model?: string;
+      maxOutputTokens?: number;
+      reasoningEffort?: 'low' | 'medium' | 'high';
+      temperature?: number;
+    }
   ): Promise<{ content: string; usage?: any }> {
     const client = this.getClient();
-    const targetModel = overrideModel ?? this.model;
-    
+    const options = typeof override === 'string' ? { model: override } : override ?? {};
+    const targetModel = options.model ?? this.model;
+
     const allowsSampling = this.supportsSamplingControls(targetModel);
-    let maxOutputTokens = 4000;
-    if (targetModel?.startsWith('gpt-5-mini')) {
-      maxOutputTokens = 1200;
-    } else if (targetModel?.startsWith('gpt-5')) {
-      maxOutputTokens = 8000;
-    }
+    const maxOutputTokens = options.maxOutputTokens ?? this.resolveMaxOutputTokens(targetModel);
+    const reasoningEffort = targetModel?.startsWith('gpt-5')
+      ? options.reasoningEffort ?? 'medium'
+      : undefined;
+
     const request: any = {
       model: targetModel,
       input: [
         {
           role: 'user',
-          content: prompt
+          content: prompt,
+          type: 'message'
         }
       ],
       max_output_tokens: maxOutputTokens,
-      reasoning: targetModel?.startsWith('gpt-5') ? { effort: 'medium' } : undefined
+      reasoning: reasoningEffort ? { effort: reasoningEffort } : undefined
     };
 
     if (allowsSampling) {
-      request.temperature = 0.8; // maintain creativity when supported
+      request.temperature = options.temperature ?? 0.8; // maintain creativity when supported
     }
 
     const response: any = await client.responses.create(request);

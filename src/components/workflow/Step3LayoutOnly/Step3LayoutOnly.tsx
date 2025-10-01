@@ -376,52 +376,19 @@ export const Step3LayoutOnly: React.FC<Step3LayoutOnlyProps> = ({
                       <h4 className="text-lg font-bold text-gray-900 mb-4">🎨 레이아웃 설계</h4>
 
                       <div className="space-y-6">
-                        {/* 레이아웃 컨셉 */}
                         <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-4">
-                          <h5 className="text-sm font-semibold text-indigo-800 mb-2">전체 레이아웃 컨셉</h5>
-                          <p className="text-indigo-700 text-sm leading-relaxed">{page.layoutStructure.concept}</p>
+                          <h5 className="text-sm font-semibold text-indigo-800 mb-2">레이아웃 스토리</h5>
+                          <p className="text-indigo-700 text-sm leading-relaxed whitespace-pre-line">{page.layoutNarrative}</p>
                         </div>
 
-                        {/* 섹션 구성 */}
-                        <div className="bg-gray-50 rounded-xl p-4">
-                          <h5 className="text-sm font-semibold text-gray-800 mb-3">섹션별 구성</h5>
-                          <div className="space-y-2">
-                            {page.layoutStructure.sections.map((section, sectionIndex) => (
-                              <div key={section.id} className="flex items-center text-xs">
-                                <div className="w-2 h-2 bg-blue-400 rounded-full mr-2"></div>
-                                <span className="font-medium text-gray-700 mr-2">{section.name}</span>
-                                <span className="text-gray-500">({section.gridSpan})</span>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-
-                        {/* 이미지 배치 */}
                         <div className="bg-green-50 rounded-xl p-4">
-                          <h5 className="text-sm font-semibold text-green-800 mb-2">이미지 배치 전략</h5>
-                          <div className="space-y-2 text-xs">
-                            <p><span className="font-medium">위치:</span> {page.imageLayout.placement}</p>
-                            <p><span className="font-medium">크기:</span> {page.imageLayout.sizing}</p>
-                            <p><span className="font-medium">통합:</span> {page.imageLayout.integration}</p>
-                          </div>
+                          <h5 className="text-sm font-semibold text-green-800 mb-2">비주얼 가이드</h5>
+                          <p className="text-green-700 text-xs leading-relaxed whitespace-pre-line">{page.visualGuidelines}</p>
                         </div>
 
-                        {/* 디자인 가이드 */}
                         <div className="bg-yellow-50 rounded-xl p-4">
-                          <h5 className="text-sm font-semibold text-yellow-800 mb-2">디자인 가이드</h5>
-                          <div className="space-y-1 text-xs">
-                            <p><span className="font-medium">타이포그래피:</span> {page.designGuide.typography}</p>
-                            <p><span className="font-medium">색상 적용:</span> {page.designGuide.colorApplication}</p>
-                          </div>
-                        </div>
-
-                        {/* 구현 가이드 */}
-                        <div className="bg-red-50 rounded-xl p-4">
-                          <h5 className="text-sm font-semibold text-red-800 mb-2">구현 가이드라인</h5>
-                          <div className="space-y-1 text-xs">
-                            <p><span className="font-medium">CSS 구조:</span> {page.implementationGuide.cssStructure}</p>
-                            <p><span className="font-medium">반응형:</span> {page.implementationGuide.responsiveStrategy}</p>
-                          </div>
+                          <h5 className="text-sm font-semibold text-yellow-800 mb-2">구현 노트</h5>
+                          <p className="text-yellow-800 text-xs leading-relaxed whitespace-pre-line">{page.implementationNotes}</p>
                         </div>
                       </div>
                     </div>

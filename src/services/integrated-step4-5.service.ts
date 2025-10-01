@@ -374,9 +374,22 @@ ${projectData.suggestions && projectData.suggestions.length > 0
       const step3Page = step3Result.pages[index];
       const step4Page = step4Result?.pages?.find(p => p.pageNumber === page.pageNumber);
 
-      // Step3에서 생성된 fullDescription을 우선적으로 사용
-      const pageContent = step3Page?.fullDescription ||
-        `${page.topic}에 대한 기본 교육 내용입니다.\n- 주제: ${page.topic}\n- 설명: ${page.description || '페이지 설명'}`;
+      const layoutNarrative = step3Page?.layoutNarrative?.trim();
+      const visualGuidelines = step3Page?.visualGuidelines?.trim();
+      const implementationNotes = step3Page?.implementationNotes?.trim();
+      const originalScript = step3Page?.originalScript?.trim();
+
+      const sectionBlocks = [
+        originalScript && `**교안 본문**\n${originalScript}`,
+        layoutNarrative && `**레이아웃 스토리**\n${layoutNarrative}`,
+        visualGuidelines && `**비주얼 가이드**\n${visualGuidelines}`,
+        implementationNotes && `**구현 노트**\n${implementationNotes}`
+      ].filter(Boolean);
+
+      const pageContent = sectionBlocks.length > 0
+        ? sectionBlocks.join('\n\n')
+        : (step3Page?.fullDescription
+          || `${page.topic}에 대한 기본 교육 내용입니다.\n- 주제: ${page.topic}\n- 설명: ${page.description || '페이지 설명'}`);
 
       const isEnhanced = projectData.contentMode === 'enhanced';
 
