@@ -16,11 +16,7 @@ import {
  * 모든 기능을 완전히 보존합니다.
  */
 export class IntegratedStep4And5Service {
-  // private step4Service: Step4DesignSpecificationService;
-
-  constructor(private _openAIService: OpenAIService) {
-    // this.step4Service = new Step4DesignSpecificationService(openAIService);
-  }
+  constructor(private _openAIService: OpenAIService) {}
 
   /**
    * Step 4-5 통합 처리
@@ -168,11 +164,48 @@ ${projectData.suggestions && projectData.suggestions.length > 0
   }
 
 
-  // 나머지 헬퍼 메서드들 (기존 Step5FinalPrompt 로직 그대로)
+  // 공통 규칙 템플릿
+  private generateCommonRules(): string {
+    return `**:red_circle: 최소 폰트 크기 규칙 (매우 중요!) :red_circle:**
+    *   **모든 텍스트는 최소 18pt(24px) 이상**
+    *   본문: 18-20pt (24-27px)
+    *   부제목: 22-24pt (29-32px)
+    *   제목: 28-36pt (37-48px)
+    *   작은 주석이나 캡션도 최소 18pt 유지
+    *   **가독성을 위해 절대 18pt 미만 사용 금지**
+
+**:no_entry_sign: 페이지 독립성 규칙 (절대 위반 금지!) :no_entry_sign:**
+    *   **네비게이션 요소 완전 금지**: 다음/이전 버튼, 페이지 번호, 진행률 표시 등 절대 금지
+    *   **페이지 간 링크 금지**: 다른 HTML 파일로의 링크나 참조 절대 금지
+    *   **각 페이지는 완전히 독립적**: 다른 페이지의 존재를 암시하는 요소 금지
+    *   **페이지 표시 금지**: "1/5", "페이지 1", "다음으로" 같은 표현 절대 사용 금지`;
+  }
+
+  private generateTechnicalRules(isEnhanced: boolean): string {
+    const baseRules = `### :hammer_and_wrench: 기술적 개발 규칙
+1.  **프로젝트 폴더 구조**: 체계적인 폴더 구조로 결과물 구성
+2.  **하이브리드 스타일링**: css/style.css(공통) + 각 HTML의 <style>(페이지별)
+3.  **완전히 독립된 페이지**: 각 페이지는 완결된 독립 웹페이지
+4.  **이미지 관리**: 페이지별 하위 폴더에 저장, 상대 경로 사용`;
+
+    if (isEnhanced) {
+      return baseRules + `
+
+### :sparkles: 디자인 및 애니메이션 가이드라인
+1.  **디자인 시스템 준수**: 색상, 타이포그래피, 스타일 가이드 일관 적용
+2.  **이미지 사용 최소화**: 필수 이미지만 사용, 여백과 타이포그래피 활용
+3.  **애니메이션**: 자연스러운 시선 흐름 유도, ease 함수 사용`;
+    }
+    return baseRules + `\n**간결하고 효율적인 구현을 우선시합니다.**`;
+  }
+
+  // 리팩토링된 핵심 요구사항 생성
   private generateCoreRequirements(isScrollable: boolean, isEnhanced: boolean): string {
-    if (isScrollable && isEnhanced) {
-      // 스크롤 가능 + AI 보강 모드
-      return `## 3. 핵심 개발 요구사항
+    const commonRules = this.generateCommonRules();
+    const technicalRules = this.generateTechnicalRules(isEnhanced);
+
+    if (isScrollable) {
+      const scrollableSection = `## 3. 핵심 개발 요구사항
 
 ### :scroll: 스크롤 가능 레이아웃 규칙
 **콘텐츠 우선 접근으로 자연스러운 흐름을 만듭니다.**
@@ -181,7 +214,10 @@ ${projectData.suggestions && projectData.suggestions.length > 0
     *   가로: 1600px 고정
     *   세로: 콘텐츠 양에 따라 자유롭게 확장
     *   \`overflow-x: hidden; overflow-y: auto;\` 적용
-    *   최소 높이 1000px 유지
+    *   최소 높이 1000px 유지`;
+
+      if (isEnhanced) {
+        return scrollableSection + `
 
 2.  **콘텐츠 우선 배치**
     *   콘텐츠의 자연스러운 흐름 유지
@@ -194,81 +230,21 @@ ${projectData.suggestions && projectData.suggestions.length > 0
     *   긴 콘텐츠는 섹션별로 구분
     *   스크롤 진행에 따른 애니메이션 고려 가능
 
-4.  **:red_circle: 최소 폰트 크기 규칙 (매우 중요!) :red_circle:**
-    *   **모든 텍스트는 최소 18pt(24px) 이상**
-    *   본문: 18-20pt (24-27px)
-    *   부제목: 22-24pt (29-32px)
-    *   제목: 28-36pt (37-48px)
-    *   작은 주석이나 캡션도 최소 18pt 유지
-    *   **가독성을 위해 절대 18pt 미만 사용 금지**
+4.  ${commonRules}
 
-5.  **:no_entry_sign: 페이지 독립성 규칙 (절대 위반 금지!) :no_entry_sign:**
-    *   **네비게이션 요소 완전 금지**: 다음/이전 버튼, 페이지 번호, 진행률 표시 등 절대 금지
-    *   **페이지 간 링크 금지**: 다른 HTML 파일로의 링크나 참조 절대 금지
-    *   **각 페이지는 완전히 독립적**: 다른 페이지의 존재를 암시하는 요소 금지
-    *   **페이지 표시 금지**: "1/5", "페이지 1", "다음으로" 같은 표현 절대 사용 금지
+${technicalRules}`;
+      } else {
+        return scrollableSection + `
 
-### :hammer_and_wrench: 기술적 개발 규칙
-1.  **프로젝트 폴더 구조**: 다음과 같은 체계적인 폴더 구조로 결과물을 구성해주세요.
-    *   \`/\` (root)
-        *   \`page1.html\`, \`page2.html\`, ...
-        *   \`css/\`
-            *   \`style.css\` (폰트, 색상 등 모든 공통 스타일)
-        *   \`js/\`
-            *   \`script.js\` (모든 상호작용 관련 JavaScript)
-        *   \`images/\`
-            *   \`page1/\`
-                *   \`1.png\`
-            *   \`README.md\`
-2.  **하이브리드 스타일링**:
-    *   **공통 스타일**: \`css/style.css\`에는 폰트, 색상 변수, 공통 버튼 스타일 등 프로젝트 전반에 사용될 스타일을 정의하세요.
-    *   **페이지 전용 스타일**: 각 HTML 파일의 \`<head>\` 안에 \`<style>\` 태그를 사용하여, 해당 페이지에만 적용되는 복잡하고 창의적인 레이아웃(Grid, Flexbox 등)을 자유롭게 작성하세요. 이를 통해 각 페이지의 디자인 품질을 극대화하세요.
-3.  **완전히 독립된 페이지**: 각 페이지는 그 자체로 완결된 하나의 독립적인 웹페이지입니다. **절대로** 다른 페이지로 이동하는 링크, '다음'/'이전' 버튼, 메뉴, 또는 외부 사이트로 나가는 하이퍼링크를 포함해서는 안 됩니다.
-4.  **이미지 관리**:
-    *   **경로**: 이미지는 반드시 페이지별 하위 폴더에 저장하고, HTML에서는 \`<img src="./images/page1/1.png">\` 와 같은 상대 경로를 사용해야 합니다.
-    *   **파일명 규칙**: 각 페이지별로 \`1.png\`, \`2.png\` 형태로 순차적으로 번호를 부여합니다"
+2.  ${commonRules}
 
-### :sparkles: 디자인 및 애니메이션 가이드라인
-1.  **디자인 시스템 준수**: 아래에 정의된 '디자인 시스템'의 색상, 타이포그래피, 스타일 가이드를 모든 페이지에서 일관되게 적용해주세요.
-2.  **이미지 사용 최소화**: 학습 내용에 필수적인 이미지만 사용하세요. 의미 없는 장식용 이미지는 피하고, 여백과 타이포그래피를 활용해 디자인을 완성하세요.
-3.  **애니메이션**:
-    *   **방향성**: 모든 애니메이션은 학습자의 시선 흐름을 자연스럽게 유도해야 합니다. (예: 왼쪽에서 오른쪽으로, 위에서 아래로)
-    *   **자연스러움**: \`transition: all 0.5s ease-in-out;\` 과 같이 부드러운 \`ease\` 함수를 사용하세요. 너무 빠르거나 갑작스러운 움직임은 피해주세요.`;
-    } else if (isScrollable && !isEnhanced) {
-      // 스크롤 가능 + 원본 유지 모드
-      return `## 3. 핵심 개발 요구사항
+${technicalRules}`;
+      }
+    } else {
+      const fixedSection = `## 3. 핵심 개발 요구사항
 
-### :scroll: 스크롤 가능 레이아웃 규칙
-**콘텐츠 우선 접근으로 자연스러운 흐름을 만듭니다.**
-
-1.  **가로 고정, 세로 유연**
-    *   가로: 1600px 고정
-    *   세로: 콘텐츠 양에 따라 자유롭게 확장
-    *   \`overflow-x: hidden; overflow-y: auto;\` 적용
-    *   최소 높이 1000px 유지
-
-2.  **:red_circle: 최소 폰트 크기 규칙 (매우 중요!) :red_circle:**
-    *   **모든 텍스트는 최소 18pt(24px) 이상**
-    *   본문: 18-20pt (24-27px)
-    *   부제목: 22-24pt (29-32px)
-    *   제목: 28-36pt (37-48px)
-    *   작은 주석이나 캡션도 최소 18pt 유지
-    *   **가독성을 위해 절대 18pt 미만 사용 금지**
-
-3.  **:no_entry_sign: 페이지 독립성 규칙 (절대 위반 금지!) :no_entry_sign:**
-    *   **네비게이션 요소 완전 금지**: 다음/이전 버튼, 페이지 번호, 진행률 표시 등 절대 금지
-    *   **페이지 간 링크 금지**: 다른 HTML 파일로의 링크나 참조 절대 금지
-    *   **각 페이지는 완전히 독립적**: 다른 페이지의 존재를 암시하는 요소 금지
-    *   **페이지 표시 금지**: "1/5", "페이지 1", "다음으로" 같은 표현 절대 사용 금지
-
-### :hammer_and_wrench: 기술적 개발 규칙
-**간결하고 효율적인 구현을 우선시합니다.**`;
-    } else if (!isScrollable && isEnhanced) {
-      // 고정 크기 + AI 보강 모드
-      return `## 3. 핵심 개발 요구사항
-
-### :triangular_ruler: 고정 크기 레이아웃 규칙 + AI 창의적 확장
-**1600x1000px 고정 크기 내에서 AI가 창의적으로 콘텐츠를 확장합니다.**
+### :triangular_ruler: 고정 크기 레이아웃 규칙${isEnhanced ? ' + AI 창의적 확장' : ''}
+**1600x1000px 고정 크기 내에서${isEnhanced ? ' AI가 창의적으로 콘텐츠를 확장합니다.' : ' 모든 콘텐츠를 수납해야 합니다.'}**
 
 1.  **:no_entry: 스크롤 절대 금지 규칙**
     *   \`overflow: hidden !important;\` 필수 적용
@@ -276,66 +252,29 @@ ${projectData.suggestions && projectData.suggestions.length > 0
     *   모든 콘텐츠는 1600x1000px 안에 완벽히 수납되어야 함
 
 2.  **콘텐츠 양 조절 필수**
-    *   AI가 확장한 텍스트가 길면 요약하고 핵심만 유지
+    *   ${isEnhanced ? 'AI가 확장한 텍스트가 길면 요약하고 핵심만 유지' : '텍스트가 길면 줄이고 요약하라'}
     *   이미지 크기를 조절하라
     *   여백과 패딩을 최적화하라
-    *   **절대로 스크롤로 해결하려 하지 마라**
+    *   **절대로 스크롤로 해결하려 하지 마라**`;
 
-3.  **:red_circle: 최소 폰트 크기 규칙 (매우 중요!) :red_circle:**
-    *   **모든 텍스트는 최소 18pt(24px) 이상**
-    *   본문: 18-20pt (24-27px)
-    *   부제목: 22-24pt (29-32px)
-    *   제목: 28-36pt (37-48px)
-    *   작은 주석이나 캡션도 최소 18pt 유지
-    *   **가독성을 위해 절대 18pt 미만 사용 금지**
-
-4.  **:no_entry_sign: 페이지 독립성 규칙 (절대 위반 금지!) :no_entry_sign:**
-    *   **네비게이션 요소 완전 금지**: 다음/이전 버튼, 페이지 번호, 진행률 표시 등 절대 금지
-    *   **페이지 간 링크 금지**: 다른 HTML 파일로의 링크나 참조 절대 금지
-    *   **각 페이지는 완전히 독립적**: 다른 페이지의 존재를 암시하는 요소 금지
-    *   **페이지 표시 금지**: "1/5", "페이지 1", "다음으로" 같은 표현 절대 사용 금지
-
-### :hammer_and_wrench: 기술적 개발 규칙
-**크기 제한을 엄격히 준수하면서도 창의적인 확장을 수행합니다.**`;
-    } else {
-      // 고정 크기 + 원본 유지 모드
-      return `## 3. 핵심 개발 요구사항
-
-### :no_entry: 스크롤 절대 금지 규칙
-**이것은 가장 중요한 규칙입니다. 어떤 경우에도 타협 불가!**
-
-1.  **컨테이너 내부 스크롤 완전 금지**
-    *   \`overflow: hidden !important;\` 필수 적용
-    *   절대로 \`overflow: auto\`, \`overflow: scroll\`, \`overflow-y: auto\` 사용 금지
-    *   모든 콘텐츠는 1600x1000px 안에 완벽히 수납되어야 함
-
-2.  **콘텐츠 양 조절 필수**
-    *   텍스트가 길면 줄이고 요약하라
-    *   이미지 크기를 조절하라
-    *   여백과 패딩을 최적화하라
-    *   **절대로 스크롤로 해결하려 하지 마라**
+      if (!isEnhanced) {
+        return fixedSection + `
 
 3.  **레이아웃 최적화**
     *   모든 요소의 높이를 계산하여 1000px를 초과하지 않도록 조정
     *   padding은 컨테이너 크기 내에서 계산 (box-sizing: border-box 필수)
     *   콘텐츠가 많으면 그리드나 컬럼을 활용하여 가로로 배치
 
-4.  **:red_circle: 최소 폰트 크기 규칙 (매우 중요!) :red_circle:**
-    *   **모든 텍스트는 최소 18pt(24px) 이상**
-    *   본문: 18-20pt (24-27px)
-    *   부제목: 22-24pt (29-32px)
-    *   제목: 28-36pt (37-48px)
-    *   작은 주석이나 캡션도 최소 18pt 유지
-    *   **가독성을 위해 절대 18pt 미만 사용 금지**
+4.  ${commonRules}
 
-5.  **:no_entry_sign: 페이지 독립성 규칙 (절대 위반 금지!) :no_entry_sign:**
-    *   **네비게이션 요소 완전 금지**: 다음/이전 버튼, 페이지 번호, 진행률 표시 등 절대 금지
-    *   **페이지 간 링크 금지**: 다른 HTML 파일로의 링크나 참조 절대 금지
-    *   **각 페이지는 완전히 독립적**: 다른 페이지의 존재를 암시하는 요소 금지
-    *   **페이지 표시 금지**: "1/5", "페이지 1", "다음으로" 같은 표현 절대 사용 금지
+${technicalRules}`;
+      } else {
+        return fixedSection + `
 
-### :hammer_and_wrench: 기술적 개발 규칙
-**간결하고 효율적인 구현을 우선시합니다.**`;
+3.  ${commonRules}
+
+${technicalRules}`;
+      }
     }
   }
 
@@ -453,7 +392,7 @@ ${this.generateInteractionAndAnimationSpecification(step4Page)}`;
       }
     });
 
-    return `## 4. 페이지별 상세 구현 가이드
+    return `## 5. 페이지별 상세 구현 가이드
 
 ${pageSpecs.join('\n\n')}`;
   }
@@ -509,7 +448,7 @@ ${pageSpecs.join('\n\n')}`;
   }
 
   private generateCSSSpecification(): string {
-    return `## 5. CSS 및 JavaScript 구현 가이드
+    return `## 6. CSS 및 JavaScript 구현 가이드
 
 ### CSS 구현 지침
 - **공통 스타일 파일**: css/style.css에 색상 변수, 폰트, 공통 컴포넌트 스타일 정의
@@ -552,13 +491,13 @@ ${image.aiPrompt || '기본 이미지 생성 프롬프트'}
     });
 
     if (imagePrompts.length === 0) {
-      return `## 6. 이미지 생성 명세서
+      return `## 7. 이미지 생성 명세서
 
 이 프로젝트는 HTML/CSS 기반 시각화로 설계되어 별도의 이미지가 필요하지 않습니다.
 모든 시각적 요소는 CSS로 구현되도록 설계되었습니다.`;
     }
 
-    return `## 6. 이미지 생성 명세서
+    return `## 7. 이미지 생성 명세서
 
 아래의 이미지들을 AI 이미지 생성 도구(DALL-E, Midjourney, Stable Diffusion 등)를 사용하여 생성하고,
 지정된 경로에 저장한 후 HTML에서 참조하세요.
@@ -570,7 +509,7 @@ ${imagePrompts.join('\n\n---\n\n')}`;
     projectData: ProjectData,
     step3Result: Step3IntegratedResult
   ): string {
-    return `## 7. 프로젝트 폴더 구조 및 개발 가이드라인
+    return `## 8. 프로젝트 폴더 구조 및 개발 가이드라인
 
 ### 🛠️ 권장 프로젝트 구조
 다음과 같은 체계적인 폴더 구조로 결과물을 구성해주세요:
@@ -661,7 +600,7 @@ ${step3Result ? step3Result.pages.map((page, pageIndex) => {
   }
 
   private generateImplementationGuidelines(): string {
-    return `## 🚀 구현 가이드라인
+    return `## 9. 구현 가이드라인
 
 ### ⚠️ 필수 준수사항
 1. **개별 파일 생성**: 각 페이지를 1.html, 2.html, 3.html... 형태로 분리
@@ -709,7 +648,7 @@ ${step3Result ? step3Result.pages.map((page, pageIndex) => {
   }
 
   /**
-   * Step4 디자인 명세 AI 생성 (원본 Step4DesignSpecificationService 로직 사용)
+   * Step4 디자인 명세 AI 생성
    */
   private async generateStep4DesignSpecification(
     projectData: ProjectData,
@@ -750,7 +689,7 @@ ${step3Result ? step3Result.pages.map((page, pageIndex) => {
   }
 
   /**
-   * 모든 페이지 처리 (원본 Step4 로직)
+   * 모든 페이지 병렬 처리
    */
   private async processAllPages(
     step3Pages: any[],
@@ -782,7 +721,7 @@ ${step3Result ? step3Result.pages.map((page, pageIndex) => {
   }
 
   /**
-   * 개별 페이지 처리 (원본 Step4 로직)
+   * 개별 페이지 처리
    */
   private async processPage(
     step3PageData: any,
@@ -944,7 +883,7 @@ ${variables.pageContent}`,
 
 
   /**
-   * JSON 응답 파싱 (원본 로직)
+   * JSON 응답 파싱
    */
   private parseJsonResponse(textContent: string): any {
     try {
@@ -967,7 +906,7 @@ ${variables.pageContent}`,
   }
 
   /**
-   * JSON 데이터로부터 Step4 결과 조립 (원본 로직)
+   * JSON 데이터로부터 Step4 결과 조립
    */
   private assembleStep4FromJson(parsedData: any, step3PageData: any, layoutMode: 'fixed' | 'scrollable'): any {
     // 단순화된 결과 - AI 생성 텍스트만 사용
@@ -985,7 +924,7 @@ ${variables.pageContent}`,
   }
 
   /**
-   * 글로벌 기능 생성 (원본 로직)
+   * 글로벌 기능 생성
    */
   private generateGlobalFeatures(layoutMode: 'fixed' | 'scrollable'): any[] {
     return [
@@ -997,7 +936,7 @@ ${variables.pageContent}`,
   }
 
   /**
-   * 에러 페이지 결과 생성 (원본 로직)
+   * 에러 페이지 결과 생성
    */
   private createErrorPageResult(step3PageData: any, errorMessage: string): any {
     return {
