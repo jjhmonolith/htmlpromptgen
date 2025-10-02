@@ -619,6 +619,22 @@ function createDesignTokens(layoutMode: 'fixed' | 'scrollable'): LayoutDesignTok
       maxContentWidth: 1200,
       imageAspectRatios: ['16:9', '4:3', '1:1'],
       buttonSizes: ['sm', 'md', 'lg']
+    },
+    radius: {
+      sm: 4,
+      md: 8,
+      lg: 12
+    },
+    elevation: {
+      low: '0 2px 4px rgba(0,0,0,0.1)',
+      medium: '0 4px 8px rgba(0,0,0,0.15)',
+      high: '0 8px 16px rgba(0,0,0,0.2)'
+    },
+    zIndex: {
+      base: 0,
+      image: 10,
+      card: 20,
+      text: 30
     }
   };
 }

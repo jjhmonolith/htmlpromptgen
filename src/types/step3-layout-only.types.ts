@@ -76,6 +76,22 @@ export interface LayoutDesignTokens {
     imageAspectRatios: string[];
     buttonSizes: string[];
   };
+  radius: {
+    sm: number;
+    md: number;
+    lg: number;
+  };
+  elevation: {
+    low: string;
+    medium: string;
+    high: string;
+  };
+  zIndex: {
+    base: number;
+    image: number;
+    card: number;
+    text: number;
+  };
 }
 
 // Step3 입력 인터페이스
